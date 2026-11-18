@@ -1,6 +1,6 @@
 /*
  * Thème Sijil : jetons de design en propriétés CSS.
- * Contrastes vérifiés WCAG 2.1 AA (texte ≥ 4,5:1 sur le fond). Propriétés logiques
+ * Contrastes WCAG 2.1 AA vérifiés par theme.test.ts (texte ≥ 4,5:1, focus ≥ 3:1). Propriétés logiques
  * (inline/block) pour que la mise en page s'inverse en arabe (dir="rtl").
  */
 :root {
@@ -13,7 +13,7 @@
   --sijil-color-primary-text: #ffffff;
   --sijil-color-danger: #b42318;
   --sijil-color-danger-surface: #fdecea;
-  --sijil-color-focus: #f5a524;
+  --sijil-color-focus: #1d4ed8;
 
   --sijil-font-family: system-ui, "Segoe UI", "Noto Sans", "Noto Sans Arabic", sans-serif;
   --sijil-font-size: 1rem;

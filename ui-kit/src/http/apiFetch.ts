@@ -41,7 +41,12 @@ export async function apiFetch<T>(path: string, request: ApiRequest = {}): Promi
   if (response.status === 204) {
     return undefined as T;
   }
-  return (await response.json()) as T;
+  try {
+    return (await response.json()) as T;
+  } catch {
+    // Réponse 2xx illisible : on l'affiche comme une erreur standard, avec sa référence.
+    throw new ApiError(response.status, {}, response.headers.get(CORRELATION_HEADER) ?? undefined);
+  }
 }
 
 /** Convertit une réponse en erreur, que le corps soit un Problem Details ou non. */

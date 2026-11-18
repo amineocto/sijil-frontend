@@ -84,6 +84,19 @@ describe("apiFetch", () => {
     await expect(apiFetch("/api/documents/1", { method: "DELETE" })).resolves.toBeUndefined();
   });
 
+  it("reports an unreadable success body as an ApiError", async () => {
+    mockFetch(
+      new Response("<html>proxy</html>", {
+        status: 200,
+        headers: { "Content-Type": "text/html", "X-Correlation-Id": "c1f6-0004" },
+      }),
+    );
+    const error = (await apiFetch("/api/x").catch((e: unknown) => e)) as ApiError;
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error.correlationId).toBe("c1f6-0004");
+    expect(error.message).toBe("Une erreur inattendue est survenue.");
+  });
+
   it("converts Problem Details into ApiError with field errors", async () => {
     mockFetch(
       jsonResponse(400, {

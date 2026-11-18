@@ -1,5 +1,6 @@
 import { messages } from "@/i18n/messages";
 import type { ApiError } from "@/http/ApiError";
+import { Heading, type HeadingLevel } from "@/components/Heading";
 
 export interface ErrorStateProps {
   error: Pick<ApiError, "message" | "correlationId">;
@@ -7,6 +8,8 @@ export interface ErrorStateProps {
   /** Si fourni, un bouton permet de relancer la requête. */
   onRetry?: () => void;
   retryLabel?: string;
+  /** Niveau du titre dans la page (2 par défaut). */
+  headingLevel?: HeadingLevel;
 }
 
 /**
@@ -18,10 +21,11 @@ export function ErrorState({
   title = messages.errorTitle,
   onRetry,
   retryLabel = messages.errorRetry,
+  headingLevel = 2,
 }: ErrorStateProps) {
   return (
     <div className="sijil-state sijil-state--error" role="alert">
-      <h2 className="sijil-state__title">{title}</h2>
+      <Heading level={headingLevel}>{title}</Heading>
       <p>{error.message}</p>
       {error.correlationId && (
         <p className="sijil-state__reference">

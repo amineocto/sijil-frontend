@@ -47,7 +47,13 @@ describe("EmptyState", () => {
 
   it("has a default title", () => {
     render(<EmptyState />);
-    expect(screen.getByRole("heading", { name: "Aucun élément" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Aucun élément", level: 2 })).toBeInTheDocument();
+  });
+
+  it("is labelled by its title at the requested level", () => {
+    render(<EmptyState title="Aucun type" headingLevel={3} />);
+    expect(screen.getByRole("heading", { name: "Aucun type", level: 3 })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Aucun type" })).toBeInTheDocument();
   });
 });
 
@@ -61,6 +67,11 @@ describe("ErrorState", () => {
     expect(alert).toHaveTextContent("c1f6-0001");
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
     await expectNoAxeViolations(container);
+  });
+
+  it("uses the requested heading level", () => {
+    render(<ErrorState error={error} headingLevel={4} />);
+    expect(screen.getByRole("heading", { level: 4 })).toHaveTextContent("Une erreur est survenue");
   });
 
   it("offers a retry when asked", async () => {
