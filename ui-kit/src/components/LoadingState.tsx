@@ -1,4 +1,4 @@
-import { messages } from "@/i18n/messages";
+import { messages } from "../i18n/messages";
 
 export interface LoadingStateProps {
   label?: string;

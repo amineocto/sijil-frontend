@@ -1,6 +1,6 @@
-import { messages } from "@/i18n/messages";
-import type { ApiError } from "@/http/ApiError";
-import { Heading, type HeadingLevel } from "@/components/Heading";
+import { messages } from "../i18n/messages";
+import type { ApiError } from "../http/ApiError";
+import { Heading, type HeadingLevel } from "./Heading";
 
 export interface ErrorStateProps {
   error: Pick<ApiError, "message" | "correlationId">;

@@ -1,5 +1,5 @@
-import { ApiError, networkError, type ProblemDetails } from "@/http/ApiError";
-import { CSRF_HEADER, isUnsafeMethod, readCsrfToken } from "@/http/csrf";
+import { ApiError, networkError, type ProblemDetails } from "./ApiError";
+import { CSRF_HEADER, isUnsafeMethod, readCsrfToken } from "./csrf";
 
 const CORRELATION_HEADER = "X-Correlation-Id";
 

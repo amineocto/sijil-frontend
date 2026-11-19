@@ -1,0 +1,12 @@
+.sijil-skip-link {
+  position: absolute;
+  inset-inline-start: -10000px;
+}
+
+.sijil-skip-link:focus {
+  inset-inline-start: var(--sijil-space-3);
+  top: var(--sijil-space-2);
+  z-index: 1000;
+  background: var(--sijil-color-background);
+  padding: var(--sijil-space-2);
+}

@@ -1,6 +1,6 @@
 import { useId, type ReactNode } from "react";
-import { messages } from "@/i18n/messages";
-import { Heading, type HeadingLevel } from "@/components/Heading";
+import { messages } from "../i18n/messages";
+import { Heading, type HeadingLevel } from "./Heading";
 
 export interface EmptyStateProps {
   title?: string;

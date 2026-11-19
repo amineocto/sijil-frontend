@@ -1,4 +1,4 @@
-import { messages } from "@/i18n/messages";
+import { messages } from "../i18n/messages";
 
 /** Erreur de champ publiée dans `errors[]` d'un Problem Details. */
 export interface FieldError {
