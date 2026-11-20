@@ -1,8 +1,9 @@
-import { Alert, Anchor, AppShell, Group, Text, Title } from "@mantine/core";
-import { Link, Outlet } from "react-router";
-import { useSession } from "@/shared/session";
+import { Anchor, AppShell, Button, Group, Text, Title } from "@mantine/core";
+import { Link, NavLink, Outlet } from "react-router";
+import { logout } from "@/shared/logout";
+import { canReview, useSession } from "@/shared/session";
 
-/** Gabarit commun : lien d'évitement, en-tête, avertissement d'authentification provisoire. */
+/** Gabarit commun : lien d'évitement, en-tête, navigation, utilisateur connecté et déconnexion. */
 export function Layout() {
   const session = useSession();
   return (
@@ -18,19 +19,38 @@ export function Layout() {
                 Catalogue des documents
               </Anchor>
             </Title>
+            <nav aria-label="Navigation principale">
+              <Group gap="md">
+                <Anchor component={NavLink} to="/" end>
+                  Types
+                </Anchor>
+                {canReview(session.data) && (
+                  <Anchor component={NavLink} to="/revues">
+                    File de revue
+                  </Anchor>
+                )}
+              </Group>
+            </nav>
           </Group>
           {session.data && (
-            <Text size="sm" aria-label="Utilisateur connecté">
-              {session.data.user}
-            </Text>
+            <Group gap="sm">
+              <Text size="sm" aria-label="Utilisateur connecté">
+                {session.data.user}
+              </Text>
+              <Button
+                variant="subtle"
+                size="compact-sm"
+                onClick={() => {
+                  void logout();
+                }}
+              >
+                Se déconnecter
+              </Button>
+            </Group>
           )}
         </Group>
       </AppShell.Header>
       <AppShell.Main id="contenu">
-        <Alert color="yellow" title="Authentification simulée (provisoire)" mb="md" role="note">
-          Cet écran utilise une session de démonstration, en attendant le BFF du catalogue (L3-08)
-          et la décision sur l&apos;IAM (ADR 0011).
-        </Alert>
         <Outlet />
       </AppShell.Main>
     </AppShell>

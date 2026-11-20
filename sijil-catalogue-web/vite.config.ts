@@ -10,8 +10,18 @@ export default defineConfig(({ command }) => ({
     alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
   },
   server: {
-    // Le BFF (L3-08) servira le front et l'API sur la même origine ; en attendant, bouchons MSW.
+    // Bouchons MSW par défaut ; avec VITE_MOCKS=false, tout passe par le BFF local (même origine
+    // vue du navigateur : cookie de session, CSRF, redirections OIDC).
     port: 5173,
+    proxy:
+      process.env["VITE_MOCKS"] === "false"
+        ? Object.fromEntries(
+            ["/api", "/oauth2", "/login", "/logout"].map((path) => [
+              path,
+              { target: process.env["CATALOGUE_BFF_URL"] ?? "http://localhost:8083", xfwd: true },
+            ]),
+          )
+        : {},
   },
   test: {
     environment: "jsdom",

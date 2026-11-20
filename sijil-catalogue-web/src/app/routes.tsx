@@ -37,6 +37,18 @@ export const routes: RouteObject[] = [
           Component: (await import("@/features/submission/SubmissionPage")).SubmissionPage,
         }),
       },
+      {
+        path: "revues",
+        lazy: async () => ({
+          Component: (await import("@/features/review/ReviewQueuePage")).ReviewQueuePage,
+        }),
+      },
+      {
+        path: "types/:code/versions/:version/revue",
+        lazy: async () => ({
+          Component: (await import("@/features/review/ReviewPage")).ReviewPage,
+        }),
+      },
     ],
   },
 ];

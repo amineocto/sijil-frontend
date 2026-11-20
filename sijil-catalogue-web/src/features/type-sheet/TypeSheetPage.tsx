@@ -18,6 +18,7 @@ import { api, call, isApiError, type Schemas } from "@/shared/api";
 import { QueryState } from "@/shared/QueryState";
 import { StatusBadge } from "@/shared/StatusBadge";
 import { diffDefinitions } from "@/features/type-sheet/diff";
+import { ReuseSection } from "@/features/type-sheet/ReuseSection";
 
 type Version = Schemas["TypeVersion"];
 
@@ -105,6 +106,7 @@ function Sheet({ sheet }: { sheet: Schemas["TypeSheet"] }) {
         </Table.Tbody>
       </Table>
       {sheet.versions.length > 1 && <VersionDiff versions={sheet.versions} />}
+      <ReuseSection sheet={sheet} />
     </Stack>
   );
 }

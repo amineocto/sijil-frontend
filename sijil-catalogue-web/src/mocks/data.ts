@@ -18,12 +18,20 @@ export interface MockType {
   ownerParcours: string;
   referentParcours: string;
   versions: MockVersion[];
+  reuses: Schemas["Reuse"][];
 }
 
 export const SESSION: Schemas["Session"] = {
   user: "contributeur.demo",
   roles: ["catalogue-lecteur", "catalogue-contributeur"],
   parcours: ["eer"],
+};
+
+/** Réviseur du catalogue, sans parcours de contribution. */
+export const REVIEWER: Schemas["Session"] = {
+  user: "reviseur.demo",
+  roles: ["catalogue-lecteur", "catalogue-reviseur"],
+  parcours: [],
 };
 
 export const PARCOURS: Schemas["Parcours"][] = [
@@ -114,6 +122,46 @@ export function initialTypes(): MockType[] {
         },
         published,
       ],
+      reuses: [
+        {
+          parcours: "credit-immo",
+          purpose: "Pièce d'identité de l'emprunteur",
+          declaredBy: "contributeur.credit",
+          declaredAt: "2026-02-01T09:00:00Z",
+        },
+      ],
+    },
+    {
+      code: "ATTESTATION_SALAIRE",
+      family: "REVENUS",
+      ownerParcours: "credit-immo",
+      referentParcours: "credit-immo",
+      versions: [
+        {
+          ...published,
+          version: 2,
+          status: "EN_REVUE",
+          effectiveFrom: null,
+          submittedBy: "contributeur.credit",
+          reviewedBy: null,
+          definition: {
+            ...COMPLETE_DEFINITION,
+            labels: { fr: "Attestation de salaire" },
+            family: "REVENUS",
+            maxSizeMb: 5,
+          },
+          revision: 2,
+        },
+        {
+          ...published,
+          definition: {
+            ...COMPLETE_DEFINITION,
+            labels: { fr: "Attestation de salaire" },
+            family: "REVENUS",
+          },
+        },
+      ],
+      reuses: [],
     },
     {
       code: "OFFRE_PRET",
@@ -130,6 +178,7 @@ export function initialTypes(): MockType[] {
           },
         },
       ],
+      reuses: [],
     },
     {
       code: "RIB",
@@ -148,6 +197,7 @@ export function initialTypes(): MockType[] {
           revision: 0,
         },
       ],
+      reuses: [],
     },
   ];
 }

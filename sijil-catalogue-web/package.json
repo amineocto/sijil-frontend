@@ -2,7 +2,7 @@
   "name": "@sijil/catalogue-web",
   "version": "0.1.0",
   "private": true,
-  "description": "Front du catalogue des types de documents (lot 3, L3-09) ; parle à sijil-catalogue-bff (contrat provisoire)",
+  "description": "Front du catalogue des types de documents (lots 3A et 3B) ; parle à sijil-catalogue-bff (contracts/sijil-catalogue-bff.yaml)",
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -12,7 +12,7 @@ import {
 const PAGE_SIZE = 20;
 const CORRELATION = { "X-Correlation-Id": "demo-correlation-id" };
 
-/** Bouchon du BFF du catalogue (contrat provisoire), avec un état modifiable par instance. */
+/** Bouchon du BFF du catalogue (`contracts/sijil-catalogue-bff.yaml`), état modifiable par instance. */
 export class CatalogueStub {
   types: MockType[] = initialTypes();
   session: Schemas["Session"] = SESSION;
@@ -44,6 +44,21 @@ export class CatalogueStub {
       ),
       http.post("/api/types/:code/submission", ({ params, request }) =>
         this.submit(String(params["code"]), request.headers.get("If-Match")),
+      ),
+      http.post("/api/types/:code/reuses", async ({ params, request }) =>
+        this.reuse(String(params["code"]), (await request.json()) as Schemas["NewReuse"]),
+      ),
+      http.get("/api/reviews", () => this.reviews()),
+      http.get("/api/types/:code/versions/:version", ({ params }) =>
+        this.version(String(params["code"]), Number(params["version"])),
+      ),
+      http.post("/api/types/:code/versions/:version/review", async ({ params, request }) =>
+        this.review(
+          String(params["code"]),
+          Number(params["version"]),
+          request.headers.get("If-Match"),
+          (await request.json()) as Schemas["Review"],
+        ),
       ),
     ];
   }
@@ -83,7 +98,63 @@ export class CatalogueStub {
         reviewReason: v.reviewReason,
         definition: v.definition,
       })),
+      reuses: type.reuses,
     });
+  }
+
+  private reuse(code: string, body: Schemas["NewReuse"]) {
+    const type = this.find(code);
+    if (!type) return notFound();
+    const parcours = this.session.parcours[0];
+    if (!parcours || !this.session.roles.includes("catalogue-contributeur")) {
+      return problem(403, "Accès refusé");
+    }
+    if (type.ownerParcours === parcours) return problem(422, "Type de votre parcours");
+    if (type.reuses.some((r) => r.parcours === parcours)) {
+      return problem(409, "Ce parcours réutilise déjà ce type");
+    }
+    const reuse: Schemas["Reuse"] = {
+      parcours,
+      purpose: body.purpose,
+      declaredBy: this.session.user,
+      declaredAt: new Date().toISOString(),
+    };
+    type.reuses.push(reuse);
+    return HttpResponse.json(reuse, { status: 201 });
+  }
+
+  private reviews() {
+    const items = this.types.filter((t) => latest(t).status === "EN_REVUE").map(summary);
+    return HttpResponse.json<Schemas["TypePage"]>({ items, hasMore: false, nextCursor: null });
+  }
+
+  private version(code: string, number: number) {
+    const type = this.find(code);
+    const version = type?.versions.find((v) => v.version === number);
+    if (!type || !version) return notFound();
+    return HttpResponse.json(editorOf(type, version));
+  }
+
+  private review(code: string, number: number, ifMatch: string | null, body: Schemas["Review"]) {
+    const type = this.find(code);
+    const version = type?.versions.find((v) => v.version === number);
+    if (!type || !version) return notFound();
+    if (!this.session.roles.includes("catalogue-reviseur")) return problem(403, "Accès refusé");
+    if (version.submittedBy === this.session.user) {
+      return problem(403, "Vous ne pouvez pas revoir une version que vous avez soumise");
+    }
+    if (version.status !== "EN_REVUE") return problem(409, "Version qui n'est plus en revue");
+    if (ifMatch !== etagOf(type, version)) return problem(412, "Version modifiée entre-temps");
+    if (body.decision === "APPROVE") {
+      version.status = "PUBLIE";
+      version.effectiveFrom = body.effectiveFrom ?? null;
+    } else {
+      version.status = "BROUILLON";
+      version.reviewReason = body.reason ?? null;
+    }
+    version.reviewedBy = this.session.user;
+    version.revision += 1;
+    return HttpResponse.json(editorOf(type, version));
   }
 
   private editor(code: string) {
@@ -121,6 +192,7 @@ export class CatalogueStub {
       ownerParcours: parcours,
       referentParcours: parcours,
       versions: [blankDraft(1, body.definition)],
+      reuses: [],
     };
     this.types.push(type);
     return HttpResponse.json(editorOf(type, type.versions[0] as MockVersion), {
@@ -132,7 +204,7 @@ export class CatalogueStub {
     const type = this.find(code);
     const current = type && latest(type);
     if (!type || !current) return notFound();
-    if (current.status === "BROUILLON" || current.status === "SOUMIS") {
+    if (["BROUILLON", "SOUMIS", "EN_REVUE"].includes(current.status)) {
       return problem(409, "Un brouillon est déjà en cours");
     }
     const draft = blankDraft(current.version + 1, current.definition);
@@ -149,7 +221,8 @@ export class CatalogueStub {
       (key) => ({ field: `/${key}`, code: "REQUIRED" }),
     );
     if (errors.length > 0) return problem(422, "Contrôles en échec", errors);
-    draft.status = "SOUMIS";
+    // Comme le catalogue : contrôles réussis, la version passe directement EN_REVUE.
+    draft.status = "EN_REVUE";
     draft.submittedBy = this.session.user;
     draft.revision += 1;
     return HttpResponse.json(editorOf(type, draft));

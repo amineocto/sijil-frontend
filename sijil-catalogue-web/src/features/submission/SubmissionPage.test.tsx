@@ -30,8 +30,8 @@ describe("Soumission", () => {
     await user.click(
       await screen.findByRole("button", { name: "Lancer les contrôles et soumettre" }),
     );
-    expect(await screen.findByRole("status")).toHaveTextContent("état « Soumis »");
-    expect(stub.types.find((t) => t.code === "CIN")?.versions[0]?.status).toBe("SOUMIS");
+    expect(await screen.findByRole("status")).toHaveTextContent("état « En revue »");
+    expect(stub.types.find((t) => t.code === "CIN")?.versions[0]?.status).toBe("EN_REVUE");
   });
 
   it("n'a rien à soumettre pour une version publiée", async () => {

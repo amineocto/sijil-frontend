@@ -125,6 +125,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/types/{code}/reuses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Écran « Réutilisation » : le parcours de l'utilisateur réutilise le type, avec la finalité */
+        post: operations["declareReuse"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reviews": {
         parameters: {
             query?: never;
@@ -251,6 +268,8 @@ export interface components {
             referentParcours: string;
             /** @description Versions, de la plus récente à la plus ancienne. */
             versions: components["schemas"]["TypeVersion"][];
+            /** @description Parcours qui réutilisent le type, par date de déclaration. */
+            reuses: components["schemas"]["Reuse"][];
             /** @description L'utilisateur contribue pour le parcours propriétaire (le serveur refuse sinon). */
             canEdit: boolean;
         };
@@ -270,6 +289,16 @@ export interface components {
             definition: {
                 [key: string]: unknown;
             };
+        };
+        Reuse: {
+            parcours: string;
+            purpose: string;
+            declaredBy: string;
+            /** Format: date-time */
+            declaredAt: string;
+        };
+        NewReuse: {
+            purpose: string;
         };
         Review: {
             /** @enum {string} */
@@ -565,6 +594,58 @@ export interface operations {
             409: components["responses"]["Problem"];
             412: components["responses"]["Problem"];
             /** @description Contrôles en échec, erreurs par rubrique (pointeur JSON) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            502: components["responses"]["Problem"];
+        };
+    };
+    declareReuse: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Clé de rejeu d'un même envoi ; le BFF en crée une à défaut. */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                code: components["parameters"]["Code"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewReuse"];
+            };
+        };
+        responses: {
+            /** @description Réutilisation déclarée (journalisée, sans approbation) */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Reuse"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            /** @description Le parcours réutilise déjà ce type */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Type du parcours de l'utilisateur */
             422: {
                 headers: {
                     [name: string]: unknown;

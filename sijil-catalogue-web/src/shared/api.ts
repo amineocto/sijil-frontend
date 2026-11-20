@@ -29,6 +29,10 @@ export async function call<T>(request: Promise<FetchResult<T>>): Promise<T> {
     if (error instanceof Error && error.name === "AbortError") throw error;
     throw networkError();
   }
+  if (result.response.status === 401) {
+    // Session absente ou expirée : le BFF relance la connexion OIDC.
+    redirectToLogin();
+  }
   if (!result.response.ok || result.error !== undefined) {
     throw new ApiError(
       result.response.status,
@@ -41,4 +45,18 @@ export async function call<T>(request: Promise<FetchResult<T>>): Promise<T> {
 
 export function isApiError(error: unknown): error is ApiError {
   return error instanceof ApiError;
+}
+
+/** Point d'entrée de la connexion OIDC du BFF (code d'autorisation avec PKCE). */
+export const LOGIN_PATH = "/oauth2/authorization/sijil";
+
+/** Navigation hors de l'application (connexion, déconnexion) ; remplaçable dans les tests. */
+export const navigation = {
+  assign(url: string) {
+    globalThis.location.assign(url);
+  },
+};
+
+export function redirectToLogin() {
+  navigation.assign(LOGIN_PATH);
 }

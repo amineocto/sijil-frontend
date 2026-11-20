@@ -11,11 +11,11 @@ describe("Liste des types", () => {
 
     const table = await screen.findByRole("table");
     const rows = within(table).getAllByRole("row");
-    expect(rows).toHaveLength(4);
-    expect(rows[1]).toHaveTextContent("CIN");
-    expect(rows[1]).toHaveTextContent("Brouillon");
+    expect(rows).toHaveLength(5);
+    expect(rows[2]).toHaveTextContent("CIN");
+    expect(rows[2]).toHaveTextContent("Brouillon");
     expect(screen.getByRole("link", { name: "CIN" })).toHaveAttribute("href", "/types/CIN");
-    expect(screen.getByText("Authentification simulée (provisoire)")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Se déconnecter" })).toBeVisible();
     expect(await seriousViolations(container)).toEqual([]);
   });
 
@@ -102,5 +102,6 @@ function generated(i: number): MockType {
         revision: 0,
       },
     ],
+    reuses: [],
   };
 }
