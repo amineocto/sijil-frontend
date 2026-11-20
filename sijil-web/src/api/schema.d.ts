@@ -160,6 +160,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Recherche plein texte des documents Sijil d'une partie (L5-08, via la façade) */
+        get: operations["searchFullText"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/documents/{id}/thumbnail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Vignette de la version courante, relayée par le BFF (L5-08) */
+        get: operations["getThumbnail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/documents/{id}/versions": {
         parameters: {
             query?: never;
@@ -633,6 +667,65 @@ export interface operations {
                     "application/pdf": unknown;
                     "image/*": unknown;
                     "application/octet-stream": unknown;
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            502: components["responses"]["Problem"];
+        };
+    };
+    searchFullText: {
+        parameters: {
+            query: {
+                q: string;
+                partyType: "CLIENT" | "PERSONNE" | "COMPTE";
+                partyId: string;
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page de documents (forme `SearchResponse` de `vision360-api.yaml`) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JsonObject"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            502: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
+    getThumbnail: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Finalité saisie par l'utilisateur pour un document d'un autre parcours (ADR 0018), relayée. */
+                "X-Access-Purpose"?: components["parameters"]["AccessPurpose"];
+            };
+            path: {
+                id: components["parameters"]["DocumentId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Vignette PNG */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/png": unknown;
                 };
             };
             401: components["responses"]["Problem"];

@@ -5,6 +5,13 @@ import type { DocumentView, Party } from "@/shared/types";
 
 const CORRELATION = { "X-Correlation-Id": "demo-correlation-id" };
 const PDF = "%PDF-1.7 démonstration";
+/** Vignette factice (PNG d'un pixel). */
+const PNG = Uint8Array.from(
+  atob(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+  ),
+  (c) => c.charCodeAt(0),
+);
 
 /** Point d'envoi de la quarantaine : une autre origine que le BFF, comme l'ECS (AUD-20261120-317). */
 export const UPLOAD_URL = "https://stockage.example.test/quarantaine/objet";
@@ -97,6 +104,27 @@ export class SijilStub {
           request,
           () => new HttpResponse(PDF, { headers: { "Content-Type": "application/pdf" } }),
         ),
+      ),
+      http.get("/api/search", ({ request }) => {
+        const url = new URL(request.url);
+        const q = (url.searchParams.get("q") ?? "").toLowerCase();
+        const party = url.searchParams.get("partyId");
+        const items = this.visible()
+          .filter((d) => d.parties.some((p) => p.id === party))
+          .filter((d) => JSON.stringify(d.metadata).toLowerCase().includes(q) || q === "carte")
+          .map((d) => ({
+            id: `v360-${d.id}`,
+            type: { code: d.documentType, label: "Carte d'identité nationale" },
+            createdAt: d.createdAt,
+            sensitivity: d.sensitivity,
+            source: { system: "SIJIL", sijilId: d.id },
+          }));
+        return HttpResponse.json({ items, page: { size: 20, hasMore: false } });
+      }),
+      http.get("/api/documents/:id/thumbnail", ({ params }) =>
+        this.find(String(params["id"]))
+          ? new HttpResponse(PNG, { headers: { "Content-Type": "image/png" } })
+          : new HttpResponse(null, { status: 404 }),
       ),
       http.get("/api/documents/:id/reception", ({ params }) =>
         this.reception(String(params["id"])),

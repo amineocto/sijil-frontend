@@ -20,6 +20,9 @@ describe("Fiche document", () => {
 
     const metadata = await screen.findByRole("table", { name: "Métadonnées" });
     expect(metadata).toHaveTextContent("AB12345");
+    // Écart de type détecté par les traitements (lot 5).
+    expect(screen.getByText("Type à vérifier")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("PASSEPORT");
     expect(await seriousViolations(container)).toEqual([]);
 
     await user.click(screen.getByRole("button", { name: "Afficher l'aperçu" }));

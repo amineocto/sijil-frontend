@@ -7,6 +7,7 @@ import {
   Select,
   Stack,
   Table,
+  Tabs,
   Text,
   TextInput,
   Title,
@@ -14,11 +15,13 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { EmptyState } from "@sijil/ui-kit";
 import { Link } from "react-router";
+import { FullTextSearch } from "@/features/search/FullTextSearch";
 import { AccessFields } from "@/shared/AccessFields";
 import { accessHeaders, type Access } from "@/shared/access";
 import { api, call } from "@/shared/api";
 import { formatDate, PARTY_TYPE_LABELS, SENSITIVITY_LABELS } from "@/shared/labels";
 import { QueryState } from "@/shared/QueryState";
+import { Thumbnail } from "@/shared/Thumbnail";
 import type { DocumentPage, PartyType } from "@/shared/types";
 
 interface Criteria {
@@ -46,56 +49,70 @@ export function SearchPage() {
   return (
     <Stack>
       <Title order={2}>Rechercher des documents</Title>
-      <form
-        aria-label="Critères de recherche"
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (draft.partyId.trim()) setCriteria({ ...draft, partyId: draft.partyId.trim() });
-        }}
-      >
-        <Stack gap="sm" maw={720}>
-          <Group grow align="end">
-            <Select
-              label="Partie"
-              data={Object.entries(PARTY_TYPE_LABELS).map(([value, label]) => ({ value, label }))}
-              value={draft.partyType}
-              allowDeselect={false}
-              onChange={(value) => {
-                setDraft({ ...draft, partyType: (value ?? "CLIENT") as PartyType });
-              }}
-            />
-            <TextInput
-              label="Identifiant"
-              required
-              value={draft.partyId}
-              onChange={(e) => {
-                setDraft({ ...draft, partyId: e.currentTarget.value });
-              }}
-            />
-            <TextInput
-              label="Type de document (code)"
-              value={draft.documentType}
-              onChange={(e) => {
-                setDraft({ ...draft, documentType: e.currentTarget.value.toUpperCase() });
-              }}
-            />
-          </Group>
-          <AccessFields
-            value={draft.access}
-            onChange={(access) => {
-              setDraft({ ...draft, access });
+      <Tabs defaultValue="parties" keepMounted={false}>
+        <Tabs.List>
+          <Tabs.Tab value="parties">Par partie</Tabs.Tab>
+          <Tabs.Tab value="texte">Plein texte</Tabs.Tab>
+        </Tabs.List>
+        <Tabs.Panel value="texte" pt="md">
+          <FullTextSearch />
+        </Tabs.Panel>
+        <Tabs.Panel value="parties" pt="md">
+          <form
+            aria-label="Critères de recherche"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (draft.partyId.trim()) setCriteria({ ...draft, partyId: draft.partyId.trim() });
             }}
-          />
-          <Group>
-            <Button type="submit">Rechercher</Button>
-          </Group>
-        </Stack>
-      </form>
-      {criteria === null ? (
-        <Text c="dimmed">Saisissez un client, une personne ou un compte.</Text>
-      ) : (
-        <QueryState query={results}>{(page) => <Results page={page} />}</QueryState>
-      )}
+          >
+            <Stack gap="sm" maw={720}>
+              <Group grow align="end">
+                <Select
+                  label="Partie"
+                  data={Object.entries(PARTY_TYPE_LABELS).map(([value, label]) => ({
+                    value,
+                    label,
+                  }))}
+                  value={draft.partyType}
+                  allowDeselect={false}
+                  onChange={(value) => {
+                    setDraft({ ...draft, partyType: (value ?? "CLIENT") as PartyType });
+                  }}
+                />
+                <TextInput
+                  label="Identifiant"
+                  required
+                  value={draft.partyId}
+                  onChange={(e) => {
+                    setDraft({ ...draft, partyId: e.currentTarget.value });
+                  }}
+                />
+                <TextInput
+                  label="Type de document (code)"
+                  value={draft.documentType}
+                  onChange={(e) => {
+                    setDraft({ ...draft, documentType: e.currentTarget.value.toUpperCase() });
+                  }}
+                />
+              </Group>
+              <AccessFields
+                value={draft.access}
+                onChange={(access) => {
+                  setDraft({ ...draft, access });
+                }}
+              />
+              <Group>
+                <Button type="submit">Rechercher</Button>
+              </Group>
+            </Stack>
+          </form>
+          {criteria === null ? (
+            <Text c="dimmed">Saisissez un client, une personne ou un compte.</Text>
+          ) : (
+            <QueryState query={results}>{(page) => <Results page={page} />}</QueryState>
+          )}
+        </Tabs.Panel>
+      </Tabs>
     </Stack>
   );
 }
@@ -108,6 +125,7 @@ function Results({ page }: { page: DocumentPage }) {
     <Table striped aria-label="Documents trouvés">
       <Table.Thead>
         <Table.Tr>
+          <Table.Th scope="col">Aperçu</Table.Th>
           <Table.Th scope="col">Type</Table.Th>
           <Table.Th scope="col">Déposé le</Table.Th>
           <Table.Th scope="col">Sensibilité</Table.Th>
@@ -117,6 +135,9 @@ function Results({ page }: { page: DocumentPage }) {
       <Table.Tbody>
         {page.items.map((d) => (
           <Table.Tr key={d.id}>
+            <Table.Td>
+              <Thumbnail id={d.id} label={d.documentType} />
+            </Table.Td>
             <Table.Td>
               <Anchor component={Link} to={`/documents/${d.id}`}>
                 {d.documentType}

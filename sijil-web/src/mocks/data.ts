@@ -39,7 +39,10 @@ export const CIN: TypeVersion = {
 
 export function initialDocuments(): DocumentView[] {
   return [
-    document("2f1c2a54-7c1e-4a3b-9d55-0b2f5e9b1a11", "eer", "SENSIBLE", { numero: "AB12345" }),
+    {
+      ...document("2f1c2a54-7c1e-4a3b-9d55-0b2f5e9b1a11", "eer", "SENSIBLE", { numero: "AB12345" }),
+      verification: { status: "A_VERIFIER", detectedType: "PASSEPORT" },
+    },
     document("7b0e9f3a-1c2d-4e5f-8a9b-0c1d2e3f4a5b", "credit-immo", "STANDARD", {
       numero: "CD67890",
     }),

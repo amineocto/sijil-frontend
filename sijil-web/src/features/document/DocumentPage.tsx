@@ -86,6 +86,13 @@ function Sheet({
           <Badge variant="light">{SENSITIVITY_LABELS[document.sensitivity]}</Badge>
         </Group>
       </Group>
+      {document.verification && (
+        <Alert color="orange" title="Type à vérifier" role="status">
+          Les traitements ont détecté un document de type {document.verification.detectedType}, et
+          non {document.documentType}. Le parcours doit vérifier le type, et le corriger s&apos;il
+          le faut.
+        </Alert>
+      )}
       <Text size="sm" c="dimmed">
         Parcours {document.parcours} · déposé le {formatDate(document.createdAt)} · version{" "}
         {document.currentVersion} · {document.content.mediaType},{" "}

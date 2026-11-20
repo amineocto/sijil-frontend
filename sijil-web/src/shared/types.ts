@@ -22,6 +22,22 @@ export interface DocumentView {
   parties: Party[];
   metadata: Record<string, unknown>;
   content: { mediaType: string; size: number; sha256: string };
+  /** Écart entre le type déclaré et le type détecté par les traitements (lot 5). */
+  verification?: { status: "A_VERIFIER"; detectedType: string };
+}
+
+/** Document trouvé en plein texte (forme `Document` de la façade, source Sijil). */
+export interface FullTextItem {
+  id: string;
+  type: { code: string; label: string };
+  createdAt: string;
+  sensitivity: string;
+  source: { system: string; sijilId?: string };
+}
+
+export interface FullTextPage {
+  items: FullTextItem[];
+  page: { size: number; nextCursor?: string | null; hasMore: boolean };
 }
 
 export interface DocumentPage {
