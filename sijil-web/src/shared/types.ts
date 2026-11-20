@@ -1,0 +1,103 @@
+/** Formes rendues par le BFF, reprises de `contracts/sijil-api.yaml` et `sijil-catalogue.yaml`. */
+
+export type PartyType = "CLIENT" | "PERSONNE" | "COMPTE";
+export type PartyRole =
+  "TITULAIRE" | "CO_TITULAIRE" | "GARANT" | "MANDATAIRE" | "REPRESENTANT_LEGAL" | "AUTRE";
+
+export interface Party {
+  type: PartyType;
+  id: string;
+  role: PartyRole;
+}
+
+export interface DocumentView {
+  id: string;
+  documentType: string;
+  typeVersion: number;
+  parcours: string;
+  status: string;
+  sensitivity: "STANDARD" | "SENSIBLE" | "RESTREINT";
+  currentVersion: number;
+  createdAt: string;
+  parties: Party[];
+  metadata: Record<string, unknown>;
+  content: { mediaType: string; size: number; sha256: string };
+}
+
+export interface DocumentPage {
+  items: DocumentView[];
+  page: { size: number; nextCursor?: string | null; hasMore: boolean };
+}
+
+export interface Version {
+  number: number;
+  receivedAt: string;
+  status: "EN_QUARANTAINE" | "ACTIF" | "REJETE_TECHNIQUE";
+  current: boolean;
+  mediaType: string;
+  size: number;
+}
+
+export interface MetadataRevision {
+  number: number;
+  metadata: Record<string, unknown>;
+  reason?: string | null;
+  author: string;
+  revisedAt: string;
+}
+
+export interface Usage {
+  parcours: string;
+  purpose: string;
+  day: string;
+  clientId: string;
+}
+
+export interface Items<T> {
+  items: T[];
+}
+
+export interface Reception {
+  id: string;
+  status: string;
+  lastVersion: number;
+  pendingVersion: boolean;
+  revision: number;
+}
+
+export interface TypeSummary {
+  code: string;
+  label?: string | null;
+}
+
+/** Propriété du schéma de métadonnées d'un type (JSON Schema, sous-ensemble affiché). */
+export interface MetadataProperty {
+  type?: string;
+  format?: string;
+  title?: string;
+  enum?: string[];
+  maxLength?: number;
+}
+
+export interface MetadataSchema {
+  required?: string[];
+  properties?: Record<string, MetadataProperty>;
+}
+
+export interface TypeVersion {
+  code: string;
+  version: number;
+  definition: {
+    labels?: { fr?: string };
+    formats?: string[];
+    maxSizeMb?: number;
+    origins?: { channels?: string[] };
+    parties?: { roles?: PartyRole[] };
+    metadataSchema?: MetadataSchema;
+  };
+}
+
+export interface UploadSession {
+  id: string;
+  upload: { method: "PUT"; url: string; headers: Record<string, string> };
+}

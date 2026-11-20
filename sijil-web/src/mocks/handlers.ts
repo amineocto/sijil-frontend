@@ -1,0 +1,258 @@
+import { http, HttpResponse } from "msw";
+import { CIN, CONTRIBUTOR, initialDocuments } from "@/mocks/data";
+import type { Session } from "@/shared/session";
+import type { DocumentView, Party } from "@/shared/types";
+
+const CORRELATION = { "X-Correlation-Id": "demo-correlation-id" };
+const PDF = "%PDF-1.7 démonstration";
+
+interface Revision {
+  number: number;
+  metadata: Record<string, unknown>;
+  reason: string | null;
+  author: string;
+  revisedAt: string;
+}
+
+function problem(status: number, detail: string, errors?: { field: string; code: string }[]) {
+  return HttpResponse.json(
+    { type: `https://errors.sijil/${String(status)}`, title: "Refus", status, detail, errors },
+    { status, headers: { "Content-Type": "application/problem+json", ...CORRELATION } },
+  );
+}
+
+/**
+ * Bouchon de `sijil-bff` (`contracts/sijil-bff.yaml`) : documents, finalité exigée pour un autre
+ * parcours, dépôt avec envoi direct et quarantaine simulée (admis au deuxième suivi), versions,
+ * métadonnées, suppression logique et restauration.
+ */
+export class SijilStub {
+  session: Session = CONTRIBUTOR;
+  documents: DocumentView[] = initialDocuments();
+  revisions: Record<string, Revision[]> = {};
+  pending: Record<string, number> = {};
+  deleted: string[] = [];
+
+  reset() {
+    Object.assign(this, new SijilStub());
+  }
+
+  handlers() {
+    return [
+      http.get("/api/session", () => HttpResponse.json(this.session)),
+      http.get("/api/document-types", () =>
+        HttpResponse.json({ items: [{ code: "CIN", label: CIN.definition.labels?.fr }] }),
+      ),
+      http.get("/api/document-types/:code", ({ params }) =>
+        params["code"] === "CIN" ? HttpResponse.json(CIN) : problem(404, "Type inconnu."),
+      ),
+      http.get("/api/documents", ({ request }) => {
+        const url = new URL(request.url);
+        const party = url.searchParams.get("partyId");
+        const items = this.visible().filter((d) => d.parties.some((p) => p.id === party));
+        return HttpResponse.json({ items, page: { size: 20, hasMore: false } });
+      }),
+      http.get("/api/documents/:id", ({ params, request }) =>
+        this.read(String(params["id"]), request, (d) =>
+          HttpResponse.json(d, { headers: { ETag: `"v${String(this.revision(d.id))}"` } }),
+        ),
+      ),
+      http.get("/api/documents/:id/versions", ({ params, request }) =>
+        this.read(String(params["id"]), request, (d) =>
+          HttpResponse.json({
+            items: [
+              {
+                number: d.currentVersion,
+                receivedAt: d.createdAt,
+                status: "ACTIF",
+                current: true,
+                mediaType: d.content.mediaType,
+                size: d.content.size,
+                sha256: d.content.sha256,
+              },
+            ],
+          }),
+        ),
+      ),
+      http.get("/api/documents/:id/metadata-revisions", ({ params, request }) =>
+        this.read(String(params["id"]), request, (d) =>
+          HttpResponse.json({ items: this.revisionsOf(d) }),
+        ),
+      ),
+      http.get("/api/documents/:id/usages", ({ params, request }) =>
+        this.read(String(params["id"]), request, () => HttpResponse.json({ items: [] })),
+      ),
+      http.get("/api/documents/:id/preview", ({ params, request }) =>
+        this.read(
+          String(params["id"]),
+          request,
+          () => new HttpResponse(PDF, { headers: { "Content-Type": "application/pdf" } }),
+        ),
+      ),
+      http.get("/api/documents/:id/reception", ({ params }) =>
+        this.reception(String(params["id"])),
+      ),
+      http.post("/api/upload-sessions", () =>
+        HttpResponse.json(
+          {
+            id: crypto.randomUUID(),
+            upload: { method: "PUT", url: "/stockage/quarantaine/objet", headers: {} },
+          },
+          { status: 201 },
+        ),
+      ),
+      http.put("/stockage/quarantaine/objet", () => new HttpResponse(null, { status: 200 })),
+      http.post("/api/documents", async ({ request }) =>
+        this.create(
+          (await request.json()) as { parties: Party[]; metadata: Record<string, unknown> },
+        ),
+      ),
+      http.post("/api/documents/:id/versions", ({ params }) => {
+        const d = this.find(String(params["id"]));
+        if (!d) return problem(404, "Document inconnu.");
+        d.currentVersion += 1;
+        return HttpResponse.json(
+          { documentId: d.id, version: d.currentVersion, status: "EN_QUARANTAINE" },
+          { status: 202 },
+        );
+      }),
+      http.patch("/api/documents/:id", async ({ params, request }) =>
+        this.patch(String(params["id"]), request.headers.get("If-Match"), await request.json()),
+      ),
+      http.delete("/api/documents/:id", ({ params }) => {
+        const id = String(params["id"]);
+        this.deleted.push(id);
+        return HttpResponse.json({
+          documentId: id,
+          status: "SUPPRIME_LOGIQUE",
+          revision: this.revision(id) + 1,
+        });
+      }),
+      http.post("/api/documents/:id/restorations", ({ params }) => {
+        const id = String(params["id"]);
+        this.deleted = this.deleted.filter((d) => d !== id);
+        return HttpResponse.json({
+          documentId: id,
+          status: "ACTIF",
+          revision: this.revision(id) + 2,
+        });
+      }),
+    ];
+  }
+
+  private visible() {
+    return this.documents.filter((d) => !this.deleted.includes(d.id) && !(d.id in this.pending));
+  }
+
+  private find(id: string) {
+    return this.visible().find((d) => d.id === id);
+  }
+
+  private revision(id: string) {
+    return this.revisions[id]?.length ?? 1;
+  }
+
+  private revisionsOf(d: DocumentView): Revision[] {
+    return (
+      this.revisions[d.id] ?? [
+        { number: 1, metadata: d.metadata, reason: null, author: "T00002", revisedAt: d.createdAt },
+      ]
+    );
+  }
+
+  private read(id: string, request: Request, ok: (d: DocumentView) => Response) {
+    const d = this.find(id);
+    if (!d) return problem(404, "Document inconnu.");
+    if (d.parcours !== this.session.parcours && !request.headers.get("X-Access-Purpose")) {
+      return problem(
+        403,
+        "Finalité (X-Access-Purpose) obligatoire pour un document d'un autre parcours.",
+      );
+    }
+    return ok(d);
+  }
+
+  private reception(id: string) {
+    const polls = this.pending[id];
+    if (polls === undefined) {
+      const d = this.find(id);
+      return d
+        ? HttpResponse.json({
+            id,
+            status: "ACTIF",
+            lastVersion: 1,
+            pendingVersion: false,
+            revision: 2,
+          })
+        : problem(404, "Document inconnu.");
+    }
+    if (polls >= 1) {
+      // Contrôle de quarantaine terminé : le document devient actif.
+      Reflect.deleteProperty(this.pending, id);
+      return HttpResponse.json({
+        id,
+        status: "ACTIF",
+        lastVersion: 1,
+        pendingVersion: false,
+        revision: 2,
+      });
+    }
+    this.pending[id] = polls + 1;
+    return HttpResponse.json({
+      id,
+      status: "EN_QUARANTAINE",
+      lastVersion: 1,
+      pendingVersion: false,
+      revision: 1,
+    });
+  }
+
+  private create(body: { parties: Party[]; metadata: Record<string, unknown> }) {
+    if (typeof body.metadata["numero"] !== "string") {
+      return problem(422, "Métadonnées invalides.", [{ field: "numero", code: "REQUIRED" }]);
+    }
+    const id = crypto.randomUUID();
+    this.documents.push({
+      id,
+      documentType: "CIN",
+      typeVersion: 2,
+      parcours: this.session.parcours ?? "eer",
+      status: "ACTIF",
+      sensitivity: "SENSIBLE",
+      currentVersion: 1,
+      createdAt: new Date().toISOString(),
+      parties: body.parties,
+      metadata: body.metadata,
+      content: { mediaType: "application/pdf", size: 1024, sha256: "0".repeat(64) },
+    });
+    this.pending[id] = 0;
+    return HttpResponse.json(
+      { id, status: "EN_QUARANTAINE", documentType: "CIN", typeVersion: 2, version: 1 },
+      { status: 202 },
+    );
+  }
+
+  private patch(id: string, ifMatch: string | null, body: unknown) {
+    const d = this.find(id);
+    if (!d) return problem(404, "Document inconnu.");
+    if (ifMatch !== `"v${String(this.revision(id))}"`) return problem(412, "Révision périmée.");
+    const { metadata, reason } = body as { metadata: Record<string, unknown>; reason: string };
+    const revisions = this.revisionsOf(d);
+    d.metadata = { ...d.metadata, ...metadata };
+    this.revisions[id] = [
+      ...revisions,
+      {
+        number: revisions.length + 1,
+        metadata: d.metadata,
+        reason,
+        author: this.session.user,
+        revisedAt: new Date().toISOString(),
+      },
+    ];
+    return HttpResponse.json({
+      documentId: id,
+      metadataRevision: revisions.length + 1,
+      revision: this.revision(id),
+    });
+  }
+}

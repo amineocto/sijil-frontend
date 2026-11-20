@@ -1,0 +1,33 @@
+export const STATUS_LABELS: Record<string, string> = {
+  EN_QUARANTAINE: "En contrôle",
+  ACTIF: "Actif",
+  REJETE_TECHNIQUE: "Rejeté au contrôle",
+  SUPPRIME_LOGIQUE: "Supprimé",
+  RETENTION_ECHUE: "Rétention échue",
+};
+
+export const SENSITIVITY_LABELS: Record<string, string> = {
+  STANDARD: "Standard",
+  SENSIBLE: "Sensible",
+  RESTREINT: "Restreint",
+};
+
+export const PARTY_TYPE_LABELS: Record<string, string> = {
+  CLIENT: "Client",
+  PERSONNE: "Personne",
+  COMPTE: "Compte",
+};
+
+export function statusLabel(status: string): string {
+  return STATUS_LABELS[status] ?? status;
+}
+
+export function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("fr-FR");
+}
+
+export function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${String(bytes)} o`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} Ko`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} Mo`;
+}
