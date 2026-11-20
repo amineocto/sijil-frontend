@@ -1,4 +1,18 @@
-import { createTheme } from "@mantine/core";
+import {
+  createTheme,
+  defaultVariantColorsResolver,
+  type VariantColorsResolver,
+} from "@mantine/core";
+
+/**
+ * Variante « light » (badges de statut, alertes) : texte dans la couleur du texte, la teinte restant
+ * portée par le fond. Les teintes de Mantine sur leur fond clair (vert 3,8:1, orange 3,6:1)
+ * n'atteignent pas 4,5:1 (SC 1.4.3, mesuré par axe dans le scénario Playwright).
+ */
+export const readableLightVariant: VariantColorsResolver = (input) => {
+  const colors = defaultVariantColorsResolver(input);
+  return input.variant === "light" ? { ...colors, color: "var(--mantine-color-text)" } : colors;
+};
 
 /** Thème Mantine aligné sur les jetons de `@sijil/ui-kit` (couleur primaire, police, rayon). */
 export const theme = createTheme({
@@ -20,4 +34,5 @@ export const theme = createTheme({
   primaryShade: 6,
   fontFamily: 'system-ui, "Segoe UI", "Noto Sans", "Noto Sans Arabic", sans-serif',
   defaultRadius: "sm",
+  variantColorResolver: readableLightVariant,
 });

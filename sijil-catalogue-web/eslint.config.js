@@ -6,7 +6,14 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
-    ignores: ["dist", "coverage", "src/api/schema.d.ts", "public/mockServiceWorker.js"],
+    ignores: [
+      "dist",
+      "coverage",
+      "test-results",
+      "playwright-report",
+      "src/api/schema.d.ts",
+      "public/mockServiceWorker.js",
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.strictTypeChecked,
@@ -24,6 +31,10 @@ export default tseslint.config(
     },
   },
   jsxA11y.flatConfigs.strict,
+  {
+    files: ["e2e/**/*.ts", "playwright.config.ts"],
+    languageOptions: { globals: { ...globals.node } },
+  },
   {
     files: ["scripts/**/*.mjs"],
     languageOptions: { globals: { ...globals.node } },
