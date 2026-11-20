@@ -59,4 +59,41 @@ describe("Recherche plein texte", () => {
     await user.click(screen.getByRole("button", { name: "Chercher" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("c-7");
   });
+
+  it("charge la page suivante avec le curseur rendu par la façade", async () => {
+    const cursors: (string | null)[] = [];
+    const item = (n: number) => ({
+      id: `v360-${String(n)}`,
+      type: { code: "CIN", label: `CIN ${String(n)}` },
+      createdAt: "2026-11-20T08:00:00Z",
+      sensitivity: "SENSIBLE",
+      source: { system: "SIJIL", sijilId: `doc-${String(n)}` },
+    });
+    server.use(
+      http.get("/api/search", ({ request }) => {
+        const cursor = new URL(request.url).searchParams.get("cursor");
+        cursors.push(cursor);
+        return cursor === null
+          ? HttpResponse.json({
+              items: [item(1)],
+              page: { size: 20, hasMore: true, nextCursor: "page-2" },
+            })
+          : HttpResponse.json({ items: [item(2)], page: { size: 20, hasMore: false } });
+      }),
+    );
+    renderAt("/");
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("tab", { name: "Plein texte" }));
+    await user.type(screen.getByRole("textbox", { name: /Texte cherché/ }), "carte");
+    await user.type(screen.getByRole("textbox", { name: /Identifiant de la partie/ }), "CLI-42");
+    await user.click(screen.getByRole("button", { name: "Chercher" }));
+    expect(await screen.findByRole("link", { name: "CIN 1" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Résultats suivants" }));
+
+    expect(await screen.findByRole("link", { name: "CIN 2" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "CIN 1" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Résultats suivants" })).not.toBeInTheDocument();
+    expect(cursors).toEqual([null, "page-2"]);
+  });
 });

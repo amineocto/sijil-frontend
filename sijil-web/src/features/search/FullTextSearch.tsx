@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { Anchor, Button, Group, Select, Stack, Table, Text, TextInput } from "@mantine/core";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { EmptyState } from "@sijil/ui-kit";
 import { Link } from "react-router";
 import { api, call } from "@/shared/api";
 import { formatDate, PARTY_TYPE_LABELS } from "@/shared/labels";
 import { QueryState } from "@/shared/QueryState";
 import { Thumbnail } from "@/shared/Thumbnail";
-import type { FullTextPage, PartyType } from "@/shared/types";
+import type { FullTextItem, FullTextPage, PartyType } from "@/shared/types";
 
 interface Criteria {
   q: string;
@@ -17,15 +17,20 @@ interface Criteria {
 
 /**
  * Recherche plein texte (lot 5, L5-08) dans le texte OCR et les métadonnées des documents Sijil
- * d'une partie ; la façade n'interroge que les types que l'utilisateur a le droit de voir.
+ * d'une partie ; la façade n'interroge que les types que l'utilisateur a le droit de voir. Les
+ * résultats arrivent par pages de 20, « Résultats suivants » charge la page d'après
+ * (AUD-20261120-374).
  */
 export function FullTextSearch() {
   const [draft, setDraft] = useState<Criteria>({ q: "", partyType: "CLIENT", partyId: "" });
   const [criteria, setCriteria] = useState<Criteria | null>(null);
-  const results = useQuery({
+  const results = useInfiniteQuery({
     queryKey: ["fulltext", criteria],
     enabled: criteria !== null,
-    queryFn: () => search(criteria as Criteria),
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam }) => search(criteria as Criteria, pageParam),
+    getNextPageParam: (last: FullTextPage) =>
+      last.page.hasMore && last.page.nextCursor ? last.page.nextCursor : undefined,
   });
   return (
     <Stack>
@@ -77,53 +82,83 @@ export function FullTextSearch() {
       {criteria === null ? (
         <Text c="dimmed">Saisissez un texte et une partie.</Text>
       ) : (
-        <QueryState query={results}>{(page) => <Results page={page} />}</QueryState>
+        <QueryState query={results}>
+          {(data) => (
+            <Results
+              items={data.pages.flatMap((page) => page.items)}
+              hasMore={results.hasNextPage}
+              loadingMore={results.isFetchingNextPage}
+              onMore={() => void results.fetchNextPage()}
+            />
+          )}
+        </QueryState>
       )}
     </Stack>
   );
 }
 
-function Results({ page }: { page: FullTextPage }) {
-  if (page.items.length === 0) {
+interface ResultsProps {
+  items: FullTextItem[];
+  hasMore: boolean;
+  loadingMore: boolean;
+  onMore: () => void;
+}
+
+function Results({ items, hasMore, loadingMore, onMore }: ResultsProps) {
+  if (items.length === 0) {
     return <EmptyState title="Aucun document" description="Aucun document ne contient ce texte." />;
   }
   return (
-    <Table striped aria-label="Documents trouvés en plein texte">
-      <Table.Thead>
-        <Table.Tr>
-          <Table.Th scope="col">Aperçu</Table.Th>
-          <Table.Th scope="col">Type</Table.Th>
-          <Table.Th scope="col">Déposé le</Table.Th>
-        </Table.Tr>
-      </Table.Thead>
-      <Table.Tbody>
-        {page.items.map((d) => (
-          <Table.Tr key={d.id}>
-            <Table.Td>
-              {d.source.sijilId && <Thumbnail id={d.source.sijilId} label={d.type.label} />}
-            </Table.Td>
-            <Table.Td>
-              {d.source.sijilId ? (
-                <Anchor component={Link} to={`/documents/${d.source.sijilId}`}>
-                  {d.type.label}
-                </Anchor>
-              ) : (
-                d.type.label
-              )}
-            </Table.Td>
-            <Table.Td>{formatDate(d.createdAt)}</Table.Td>
+    <Stack>
+      <Table striped aria-label="Documents trouvés en plein texte">
+        <Table.Thead>
+          <Table.Tr>
+            <Table.Th scope="col">Aperçu</Table.Th>
+            <Table.Th scope="col">Type</Table.Th>
+            <Table.Th scope="col">Déposé le</Table.Th>
           </Table.Tr>
-        ))}
-      </Table.Tbody>
-    </Table>
+        </Table.Thead>
+        <Table.Tbody>
+          {items.map((d) => (
+            <Table.Tr key={d.id}>
+              <Table.Td>
+                {d.source.sijilId && <Thumbnail id={d.source.sijilId} label={d.type.label} />}
+              </Table.Td>
+              <Table.Td>
+                {d.source.sijilId ? (
+                  <Anchor component={Link} to={`/documents/${d.source.sijilId}`}>
+                    {d.type.label}
+                  </Anchor>
+                ) : (
+                  d.type.label
+                )}
+              </Table.Td>
+              <Table.Td>{formatDate(d.createdAt)}</Table.Td>
+            </Table.Tr>
+          ))}
+        </Table.Tbody>
+      </Table>
+      {hasMore && (
+        <Group>
+          <Button variant="default" loading={loadingMore} onClick={onMore}>
+            Résultats suivants
+          </Button>
+        </Group>
+      )}
+    </Stack>
   );
 }
 
-function search(criteria: Criteria): Promise<FullTextPage> {
+function search(criteria: Criteria, cursor: string | undefined): Promise<FullTextPage> {
   return call(
     api.GET("/api/search", {
       params: {
-        query: { q: criteria.q, partyType: criteria.partyType, partyId: criteria.partyId },
+        query: {
+          q: criteria.q,
+          partyType: criteria.partyType,
+          partyId: criteria.partyId,
+          ...(cursor ? { cursor } : {}),
+        },
       },
     }),
   ) as unknown as Promise<FullTextPage>;
