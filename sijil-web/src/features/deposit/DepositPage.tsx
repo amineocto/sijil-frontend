@@ -94,15 +94,17 @@ function Form({ type }: { type: TypeVersion }) {
   const [partyId, setPartyId] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [progress, setProgress] = useState(0);
+  // Une clé par intention de dépôt : un nouvel essai après une coupure ne crée pas de doublon.
+  const [key] = useState(() => crypto.randomUUID());
   const maxBytes = (type.definition.maxSizeMb ?? 50) * 1024 * 1024;
   const tooLarge = file !== null && file.size > maxBytes;
   const deposit = useMutation({
     mutationFn: async () => {
       if (!file) throw new Error("Choisissez un fichier.");
-      const session = await sendFile(type, file, setProgress);
+      const session = await sendFile(type, file, key, setProgress);
       return call(
         api.POST("/api/documents", {
-          params: { header: { "Idempotency-Key": crypto.randomUUID() } },
+          params: { header: { "Idempotency-Key": key } },
           body: {
             uploadSession: session,
             parties: [{ type: partyType, id: partyId.trim(), role: "TITULAIRE" }],

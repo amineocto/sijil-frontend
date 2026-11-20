@@ -187,15 +187,16 @@ function NewVersion({
   const type = useType(document.documentType);
   const [file, setFile] = useState<File | null>(null);
   const [progress, setProgress] = useState(0);
+  const [key] = useState(() => crypto.randomUUID());
   const send = useMutation({
     mutationFn: async () => {
       if (!file || !type.data) throw new Error("Choisissez un fichier.");
-      const session = await sendFile(type.data, file, setProgress);
+      const session = await sendFile(type.data, file, key, setProgress);
       return call(
         api.POST("/api/documents/{id}/versions", {
           params: {
             path: { id: document.id },
-            header: { "If-Match": etag, "Idempotency-Key": crypto.randomUUID() },
+            header: { "If-Match": etag, "Idempotency-Key": key },
           },
           body: { uploadSession: session },
         }),

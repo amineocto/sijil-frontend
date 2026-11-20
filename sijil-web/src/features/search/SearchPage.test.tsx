@@ -1,8 +1,9 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
+import { READER } from "@/mocks/data";
 import { renderAt, seriousViolations } from "@/test/render";
-import { server } from "@/test/setup";
+import { server, stub } from "@/test/setup";
 
 describe("Recherche", () => {
   it("cherche les documents d'un client et relaie la finalité en en-tête", async () => {
@@ -25,6 +26,30 @@ describe("Recherche", () => {
     expect(table).toHaveTextContent("credit-immo");
     expect(purpose).toBe("Instruction");
     expect(await seriousViolations(container)).toEqual([]);
+  });
+
+  it("ne propose le motif de bris de glace qu'au rôle dédié", async () => {
+    renderAt("/");
+    expect(await screen.findByRole("textbox", { name: /Finalité/ })).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: /bris de glace/ })).not.toBeInTheDocument();
+  });
+
+  it("relaie le motif de bris de glace pour le rôle dédié", async () => {
+    stub.session = { ...READER, roles: ["sijil-lecteur", "sijil-bris-de-glace"] };
+    let reason: string | null = null;
+    server.use(
+      http.get("/api/documents", ({ request }) => {
+        reason = request.headers.get("X-Break-Glass-Reason");
+        return undefined;
+      }),
+    );
+    renderAt("/");
+    const user = userEvent.setup();
+    await user.type(await screen.findByRole("textbox", { name: /bris de glace/ }), "Litige");
+    await user.type(screen.getByRole("textbox", { name: /Identifiant/ }), "CLI-42");
+    await user.click(screen.getByRole("button", { name: "Rechercher" }));
+    await screen.findByRole("table", { name: "Documents trouvés" });
+    expect(reason).toBe("Litige");
   });
 
   it("dit qu'aucun document ne correspond", async () => {

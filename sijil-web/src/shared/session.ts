@@ -5,7 +5,7 @@ export interface Session {
   user: string;
   profil?: string | null;
   parcours?: string | null;
-  roles: ("sijil-lecteur" | "sijil-contributeur" | "sijil-admin")[];
+  roles: ("sijil-lecteur" | "sijil-contributeur" | "sijil-admin" | "sijil-bris-de-glace")[];
 }
 
 /**
@@ -24,4 +24,9 @@ export function useSession() {
 export function canContribute(session: Session | undefined, parcours?: string): boolean {
   if (!session?.roles.includes("sijil-contributeur")) return false;
   return parcours === undefined || session.parcours === parcours;
+}
+
+/** Bris de glace : rôle dédié (ADR 0011) ; le champ du motif n'est montré qu'à ce rôle. */
+export function canBreakGlass(session: Session | undefined): boolean {
+  return session?.roles.includes("sijil-bris-de-glace") ?? false;
 }

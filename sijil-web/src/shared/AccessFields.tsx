@@ -1,9 +1,10 @@
 import { Stack, Textarea } from "@mantine/core";
 import type { Access } from "@/shared/access";
+import { canBreakGlass, useSession } from "@/shared/session";
 
 /**
  * Accès hors de son parcours : finalité de l'usage (ADR 0018) et, pour un document restreint, motif
- * de bris de glace. Les deux sont tracés par `sijil-api`.
+ * de bris de glace, proposé au seul rôle dédié (ADR 0011). Les deux sont tracés par `sijil-api`.
  */
 export function AccessFields({
   value,
@@ -12,6 +13,7 @@ export function AccessFields({
   value: Access;
   onChange: (access: Access) => void;
 }) {
+  const session = useSession();
   return (
     <Stack gap="xs">
       <Textarea
@@ -25,17 +27,19 @@ export function AccessFields({
           onChange({ ...value, purpose: e.currentTarget.value });
         }}
       />
-      <Textarea
-        label="Motif de bris de glace (document restreint)"
-        description="Accès exceptionnel, tracé et contrôlé."
-        autosize
-        minRows={1}
-        maxLength={255}
-        value={value.breakGlassReason ?? ""}
-        onChange={(e) => {
-          onChange({ ...value, breakGlassReason: e.currentTarget.value });
-        }}
-      />
+      {canBreakGlass(session.data) && (
+        <Textarea
+          label="Motif de bris de glace (document restreint)"
+          description="Accès exceptionnel, tracé et contrôlé."
+          autosize
+          minRows={1}
+          maxLength={255}
+          value={value.breakGlassReason ?? ""}
+          onChange={(e) => {
+            onChange({ ...value, breakGlassReason: e.currentTarget.value });
+          }}
+        />
+      )}
     </Stack>
   );
 }

@@ -6,6 +6,15 @@ import type { DocumentView, Party } from "@/shared/types";
 const CORRELATION = { "X-Correlation-Id": "demo-correlation-id" };
 const PDF = "%PDF-1.7 démonstration";
 
+/** Point d'envoi de la quarantaine : une autre origine que le BFF, comme l'ECS (AUD-20261120-317). */
+export const UPLOAD_URL = "https://stockage.example.test/quarantaine/objet";
+
+const UPLOAD_CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "PUT",
+  "Access-Control-Allow-Headers": "*",
+};
+
 interface Revision {
   number: number;
   metadata: Record<string, unknown>;
@@ -96,12 +105,14 @@ export class SijilStub {
         HttpResponse.json(
           {
             id: crypto.randomUUID(),
-            upload: { method: "PUT", url: "/stockage/quarantaine/objet", headers: {} },
+            upload: { method: "PUT", url: UPLOAD_URL, headers: {} },
           },
           { status: 201 },
         ),
       ),
-      http.put("/stockage/quarantaine/objet", () => new HttpResponse(null, { status: 200 })),
+      // CORS du bucket de quarantaine, à configurer aussi sur l'ECS (B-021).
+      http.options(UPLOAD_URL, () => new HttpResponse(null, { status: 204, headers: UPLOAD_CORS })),
+      http.put(UPLOAD_URL, () => new HttpResponse(null, { status: 200, headers: UPLOAD_CORS })),
       http.post("/api/documents", async ({ request }) =>
         this.create(
           (await request.json()) as { parties: Party[]; metadata: Record<string, unknown> },

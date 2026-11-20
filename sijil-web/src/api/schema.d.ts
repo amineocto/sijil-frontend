@@ -227,7 +227,7 @@ export interface components {
             user: string;
             profil?: string | null;
             parcours?: string | null;
-            roles: ("sijil-lecteur" | "sijil-contributeur" | "sijil-admin")[];
+            roles: ("sijil-lecteur" | "sijil-contributeur" | "sijil-admin" | "sijil-bris-de-glace")[];
         };
         Problem: {
             type: string;
@@ -257,7 +257,10 @@ export interface components {
         IfMatch: string;
         /** @description Finalité saisie par l'utilisateur pour un document d'un autre parcours (ADR 0018), relayée. */
         AccessPurpose: string;
-        /** @description Motif de bris de glace saisi par l'utilisateur pour du RESTREINT, relayé. */
+        /**
+         * @description Motif de bris de glace saisi par l'utilisateur pour du RESTREINT, relayé seulement pour le
+         *     rôle `sijil-bris-de-glace` (403 sinon, ADR 0011).
+         */
         BreakGlassReason: string;
     };
     requestBodies: never;
@@ -347,7 +350,10 @@ export interface operations {
             header?: {
                 /** @description Finalité saisie par l'utilisateur pour un document d'un autre parcours (ADR 0018), relayée. */
                 "X-Access-Purpose"?: components["parameters"]["AccessPurpose"];
-                /** @description Motif de bris de glace saisi par l'utilisateur pour du RESTREINT, relayé. */
+                /**
+                 * @description Motif de bris de glace saisi par l'utilisateur pour du RESTREINT, relayé seulement pour le
+                 *     rôle `sijil-bris-de-glace` (403 sinon, ADR 0011).
+                 */
                 "X-Break-Glass-Reason"?: components["parameters"]["BreakGlassReason"];
             };
             path?: never;
@@ -440,7 +446,10 @@ export interface operations {
             header?: {
                 /** @description Finalité saisie par l'utilisateur pour un document d'un autre parcours (ADR 0018), relayée. */
                 "X-Access-Purpose"?: components["parameters"]["AccessPurpose"];
-                /** @description Motif de bris de glace saisi par l'utilisateur pour du RESTREINT, relayé. */
+                /**
+                 * @description Motif de bris de glace saisi par l'utilisateur pour du RESTREINT, relayé seulement pour le
+                 *     rôle `sijil-bris-de-glace` (403 sinon, ADR 0011).
+                 */
                 "X-Break-Glass-Reason"?: components["parameters"]["BreakGlassReason"];
             };
             path: {
@@ -602,7 +611,10 @@ export interface operations {
             header?: {
                 /** @description Finalité saisie par l'utilisateur pour un document d'un autre parcours (ADR 0018), relayée. */
                 "X-Access-Purpose"?: components["parameters"]["AccessPurpose"];
-                /** @description Motif de bris de glace saisi par l'utilisateur pour du RESTREINT, relayé. */
+                /**
+                 * @description Motif de bris de glace saisi par l'utilisateur pour du RESTREINT, relayé seulement pour le
+                 *     rôle `sijil-bris-de-glace` (403 sinon, ADR 0011).
+                 */
                 "X-Break-Glass-Reason"?: components["parameters"]["BreakGlassReason"];
             };
             path: {
@@ -635,7 +647,10 @@ export interface operations {
             header?: {
                 /** @description Finalité saisie par l'utilisateur pour un document d'un autre parcours (ADR 0018), relayée. */
                 "X-Access-Purpose"?: components["parameters"]["AccessPurpose"];
-                /** @description Motif de bris de glace saisi par l'utilisateur pour du RESTREINT, relayé. */
+                /**
+                 * @description Motif de bris de glace saisi par l'utilisateur pour du RESTREINT, relayé seulement pour le
+                 *     rôle `sijil-bris-de-glace` (403 sinon, ADR 0011).
+                 */
                 "X-Break-Glass-Reason"?: components["parameters"]["BreakGlassReason"];
             };
             path: {
@@ -703,7 +718,10 @@ export interface operations {
             header?: {
                 /** @description Finalité saisie par l'utilisateur pour un document d'un autre parcours (ADR 0018), relayée. */
                 "X-Access-Purpose"?: components["parameters"]["AccessPurpose"];
-                /** @description Motif de bris de glace saisi par l'utilisateur pour du RESTREINT, relayé. */
+                /**
+                 * @description Motif de bris de glace saisi par l'utilisateur pour du RESTREINT, relayé seulement pour le
+                 *     rôle `sijil-bris-de-glace` (403 sinon, ADR 0011).
+                 */
                 "X-Break-Glass-Reason"?: components["parameters"]["BreakGlassReason"];
             };
             path: {
@@ -734,7 +752,10 @@ export interface operations {
             header?: {
                 /** @description Finalité saisie par l'utilisateur pour un document d'un autre parcours (ADR 0018), relayée. */
                 "X-Access-Purpose"?: components["parameters"]["AccessPurpose"];
-                /** @description Motif de bris de glace saisi par l'utilisateur pour du RESTREINT, relayé. */
+                /**
+                 * @description Motif de bris de glace saisi par l'utilisateur pour du RESTREINT, relayé seulement pour le
+                 *     rôle `sijil-bris-de-glace` (403 sinon, ADR 0011).
+                 */
                 "X-Break-Glass-Reason"?: components["parameters"]["BreakGlassReason"];
             };
             path: {
