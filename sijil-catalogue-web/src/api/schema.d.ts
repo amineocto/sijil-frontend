@@ -11,7 +11,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Utilisateur connecté, ses rôles et ses parcours (PROVISOIRE, authentification simulée) */
+        /** Utilisateur connecté, ses rôles et ses parcours (affichage seulement) */
         get: operations["getSession"];
         put?: never;
         post?: never;
@@ -125,6 +125,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Écran « File de revue » : types dont une version est EN_REVUE */
+        get: operations["listReviews"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/types/{code}/versions/{version}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Écran « Revue » : une version et son `etag` */
+        get: operations["getVersion"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/types/{code}/versions/{version}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approuver avec une date d'effet, ou demander des modifications avec un motif */
+        post: operations["reviewVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/types/{code}/versions/{version}/deprecation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Déprécier une version publiée */
+        post: operations["deprecateVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -203,6 +271,14 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        Review: {
+            /** @enum {string} */
+            decision: "APPROVE" | "REQUEST_CHANGES";
+            /** Format: date */
+            effectiveFrom?: string;
+            reason?: string;
+            comment?: string;
+        };
         DraftUpdate: {
             definition: {
                 [key: string]: unknown;
@@ -233,6 +309,9 @@ export interface components {
     };
     parameters: {
         Code: string;
+        Version: number;
+        /** @description Clé de rejeu d'un même envoi ; le BFF en crée une à défaut. */
+        IdempotencyKey: string;
         IfMatch: string;
     };
     requestBodies: never;
@@ -280,6 +359,8 @@ export interface operations {
                     "application/json": components["schemas"]["Parcours"][];
                 };
             };
+            401: components["responses"]["Problem"];
+            502: components["responses"]["Problem"];
         };
     };
     listTypes: {
@@ -307,12 +388,17 @@ export interface operations {
                 };
             };
             400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            502: components["responses"]["Problem"];
         };
     };
     createType: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Clé de rejeu d'un même envoi ; le BFF en crée une à défaut. */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -331,9 +417,11 @@ export interface operations {
                     "application/json": components["schemas"]["Editor"];
                 };
             };
+            401: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
             422: components["responses"]["Problem"];
+            502: components["responses"]["Problem"];
         };
     };
     getTypeSheet: {
@@ -356,7 +444,9 @@ export interface operations {
                     "application/json": components["schemas"]["TypeSheet"];
                 };
             };
+            401: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
+            502: components["responses"]["Problem"];
         };
     };
     getEditor: {
@@ -379,7 +469,9 @@ export interface operations {
                     "application/json": components["schemas"]["Editor"];
                 };
             };
+            401: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
+            502: components["responses"]["Problem"];
         };
     };
     saveDraft: {
@@ -408,16 +500,21 @@ export interface operations {
                     "application/json": components["schemas"]["Editor"];
                 };
             };
+            401: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
             412: components["responses"]["Problem"];
             422: components["responses"]["Problem"];
+            502: components["responses"]["Problem"];
         };
     };
     createVersion: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Clé de rejeu d'un même envoi ; le BFF en crée une à défaut. */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
             path: {
                 code: components["parameters"]["Code"];
             };
@@ -434,8 +531,10 @@ export interface operations {
                     "application/json": components["schemas"]["Editor"];
                 };
             };
+            401: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
+            502: components["responses"]["Problem"];
         };
     };
     submitDraft: {
@@ -460,6 +559,10 @@ export interface operations {
                     "application/json": components["schemas"]["Editor"];
                 };
             };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
             412: components["responses"]["Problem"];
             /** @description Contrôles en échec, erreurs par rubrique (pointeur JSON) */
             422: {
@@ -470,6 +573,131 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            502: components["responses"]["Problem"];
+        };
+    };
+    listReviews: {
+        parameters: {
+            query?: {
+                cursor?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page de types */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TypePage"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            502: components["responses"]["Problem"];
+        };
+    };
+    getVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: components["parameters"]["Code"];
+                version: components["parameters"]["Version"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Version ; `etag` à renvoyer dans `If-Match` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Editor"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            502: components["responses"]["Problem"];
+        };
+    };
+    reviewVersion: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": components["parameters"]["IfMatch"];
+            };
+            path: {
+                code: components["parameters"]["Code"];
+                version: components["parameters"]["Version"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Review"];
+            };
+        };
+        responses: {
+            /** @description Version après la revue */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Editor"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            /** @description Pas réviseur, ou réviseur auteur de la version (quatre yeux) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            409: components["responses"]["Problem"];
+            412: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+            502: components["responses"]["Problem"];
+        };
+    };
+    deprecateVersion: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": components["parameters"]["IfMatch"];
+            };
+            path: {
+                code: components["parameters"]["Code"];
+                version: components["parameters"]["Version"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Version dépréciée */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Editor"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            412: components["responses"]["Problem"];
+            502: components["responses"]["Problem"];
         };
     };
 }
