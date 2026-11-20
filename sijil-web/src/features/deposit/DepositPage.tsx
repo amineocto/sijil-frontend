@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Alert,
   Anchor,
@@ -94,8 +94,9 @@ function Form({ type }: { type: TypeVersion }) {
   const [partyId, setPartyId] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [progress, setProgress] = useState(0);
-  // Une clé par intention de dépôt : un nouvel essai après une coupure ne crée pas de doublon.
-  const [key] = useState(() => crypto.randomUUID());
+  // Une clé par intention (ce fichier) : un nouvel essai après une coupure ne crée pas de doublon ;
+  // un autre fichier est une autre intention (AUD-20261120-339).
+  const key = useMemo(() => (file ? crypto.randomUUID() : ""), [file]);
   const maxBytes = (type.definition.maxSizeMb ?? 50) * 1024 * 1024;
   const tooLarge = file !== null && file.size > maxBytes;
   const deposit = useMutation({

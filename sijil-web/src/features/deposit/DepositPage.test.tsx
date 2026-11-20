@@ -50,6 +50,37 @@ describe("Dépôt", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("Métadonnées invalides.");
   });
 
+  it("garde la clé d'un fichier d'un essai à l'autre, et en change avec le fichier", async () => {
+    const keys: (string | null)[] = [];
+    server.use(
+      http.post("/api/documents", ({ request }) => {
+        keys.push(request.headers.get("Idempotency-Key"));
+        return HttpResponse.json({ title: "Indisponible", status: 503 }, { status: 503 });
+      }),
+    );
+    renderAt("/depot");
+    const user = userEvent.setup();
+    await chooseCin(user);
+    await fillAndSend(user, "EE1");
+    await screen.findByText("Dépôt refusé");
+    await user.click(screen.getByRole("button", { name: "Déposer" }));
+    await waitFor(() => {
+      expect(keys).toHaveLength(2);
+    });
+    const input = document.querySelector<HTMLInputElement>('input[type="file"]');
+    if (!input) throw new Error("champ fichier absent");
+    await user.upload(
+      input,
+      new File(["%PDF-1.7 autre"], "autre.pdf", { type: "application/pdf" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Déposer" }));
+    await waitFor(() => {
+      expect(keys).toHaveLength(3);
+    });
+    expect(keys[0]).toBe(keys[1]);
+    expect(keys[2]).not.toBe(keys[0]);
+  });
+
   it("signale un rejet au contrôle", async () => {
     server.use(
       http.get("/api/documents/:id/reception", ({ params }) =>

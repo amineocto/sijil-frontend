@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Alert, Button, FileInput, Group, Progress, Stack, Textarea, Title } from "@mantine/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, call, isApiError } from "@/shared/api";
@@ -187,7 +187,8 @@ function NewVersion({
   const type = useType(document.documentType);
   const [file, setFile] = useState<File | null>(null);
   const [progress, setProgress] = useState(0);
-  const [key] = useState(() => crypto.randomUUID());
+  // Une clé par fichier envoyé (AUD-20261120-339).
+  const key = useMemo(() => (file ? crypto.randomUUID() : ""), [file]);
   const send = useMutation({
     mutationFn: async () => {
       if (!file || !type.data) throw new Error("Choisissez un fichier.");
