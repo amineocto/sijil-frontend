@@ -1,8 +1,13 @@
 import "@testing-library/jest-dom/vitest";
-import { cleanup } from "@testing-library/react";
+import { cleanup, configure } from "@testing-library/react";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll } from "vitest";
 import { CatalogueStub } from "@/mocks/handlers";
+
+// Les findBy* attendent 1 s par défaut : trop court quand la CI tourne sur une machine chargée
+// (échecs intermittents constatés le 2026-11-21, charge moyenne ~30). Le délai d'un test reste
+// borné par testTimeout.
+configure({ asyncUtilTimeout: 5000 });
 
 /** Bouchon du BFF partagé par les tests, remis à zéro après chacun. */
 export const stub = new CatalogueStub();
