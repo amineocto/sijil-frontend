@@ -96,4 +96,48 @@ describe("Recherche plein texte", () => {
     expect(screen.queryByRole("button", { name: "Résultats suivants" })).not.toBeInTheDocument();
     expect(cursors).toEqual([null, "page-2"]);
   });
+
+  it("garde la première page quand la suivante échoue, et propose de réessayer", async () => {
+    let failNext = true;
+    const item = (n: number) => ({
+      id: `v360-${String(n)}`,
+      type: { code: "CIN", label: `CIN ${String(n)}` },
+      createdAt: "2026-11-20T08:00:00Z",
+      sensitivity: "SENSIBLE",
+      source: { system: "SIJIL", sijilId: `doc-${String(n)}` },
+    });
+    server.use(
+      http.get("/api/search", ({ request }) => {
+        const cursor = new URL(request.url).searchParams.get("cursor");
+        if (cursor === null) {
+          return HttpResponse.json({
+            items: [item(1)],
+            page: { size: 20, hasMore: true, nextCursor: "page-2" },
+          });
+        }
+        if (failNext) {
+          failNext = false;
+          return HttpResponse.json(
+            { title: "Indisponible", status: 503, correlationId: "c-9" },
+            { status: 503 },
+          );
+        }
+        return HttpResponse.json({ items: [item(2)], page: { size: 20, hasMore: false } });
+      }),
+    );
+    renderAt("/");
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("tab", { name: "Plein texte" }));
+    await user.type(screen.getByRole("textbox", { name: /Texte cherché/ }), "carte");
+    await user.type(screen.getByRole("textbox", { name: /Identifiant de la partie/ }), "CLI-42");
+    await user.click(screen.getByRole("button", { name: "Chercher" }));
+    await user.click(await screen.findByRole("button", { name: "Résultats suivants" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Résultats suivants indisponibles");
+    expect(screen.getByRole("link", { name: "CIN 1" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Réessayer" }));
+    expect(await screen.findByRole("link", { name: "CIN 2" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "CIN 1" })).toBeInTheDocument();
+  });
 });

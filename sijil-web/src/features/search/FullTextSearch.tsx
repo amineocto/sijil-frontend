@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Anchor, Button, Group, Select, Stack, Table, Text, TextInput } from "@mantine/core";
+import { Alert, Anchor, Button, Group, Select, Stack, Table, Text, TextInput } from "@mantine/core";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { EmptyState } from "@sijil/ui-kit";
 import { Link } from "react-router";
@@ -81,6 +81,15 @@ export function FullTextSearch() {
       </form>
       {criteria === null ? (
         <Text c="dimmed">Saisissez un texte et une partie.</Text>
+      ) : // Une page suivante en échec garde les résultats déjà affichés (AUD-20261120-399).
+      results.data && results.isFetchNextPageError ? (
+        <Results
+          items={results.data.pages.flatMap((page) => page.items)}
+          hasMore={results.hasNextPage}
+          loadingMore={results.isFetchingNextPage}
+          moreFailed
+          onMore={() => void results.fetchNextPage()}
+        />
       ) : (
         <QueryState query={results}>
           {(data) => (
@@ -88,6 +97,7 @@ export function FullTextSearch() {
               items={data.pages.flatMap((page) => page.items)}
               hasMore={results.hasNextPage}
               loadingMore={results.isFetchingNextPage}
+              moreFailed={false}
               onMore={() => void results.fetchNextPage()}
             />
           )}
@@ -101,10 +111,11 @@ interface ResultsProps {
   items: FullTextItem[];
   hasMore: boolean;
   loadingMore: boolean;
+  moreFailed: boolean;
   onMore: () => void;
 }
 
-function Results({ items, hasMore, loadingMore, onMore }: ResultsProps) {
+function Results({ items, hasMore, loadingMore, moreFailed, onMore }: ResultsProps) {
   if (items.length === 0) {
     return <EmptyState title="Aucun document" description="Aucun document ne contient ce texte." />;
   }
@@ -138,10 +149,15 @@ function Results({ items, hasMore, loadingMore, onMore }: ResultsProps) {
           ))}
         </Table.Tbody>
       </Table>
+      {moreFailed && (
+        <Alert color="red" role="alert" title="Résultats suivants indisponibles">
+          Les résultats suivants n&apos;ont pas pu être chargés ; ceux affichés restent valables.
+        </Alert>
+      )}
       {hasMore && (
         <Group>
           <Button variant="default" loading={loadingMore} onClick={onMore}>
-            Résultats suivants
+            {moreFailed ? "Réessayer" : "Résultats suivants"}
           </Button>
         </Group>
       )}
