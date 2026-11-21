@@ -75,7 +75,7 @@ export const COMPLETE_DEFINITION: Definition = {
   origins: { channels: ["AGENCE"], parcours: ["eer"] },
   processing: { ocr: true },
   sensitivity: "SENSIBLE",
-  visibility: { client: true, subsidiaries: false },
+  visibility: { portfolio: true, subsidiaries: false },
   reuse: { allowed: true },
   filenet: { documentClass: "EER_PER_DOC", typeValue: "CIN" },
 };
