@@ -268,6 +268,8 @@ export interface components {
             title: string;
             status: number;
             detail?: string;
+            /** @description Code stable de l'erreur métier (ADR 0027 §2), absent pour une erreur de protocole */
+            code?: string;
             correlationId?: string;
             errors?: Record<string, never>[];
         };
