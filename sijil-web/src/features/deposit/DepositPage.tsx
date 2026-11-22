@@ -26,6 +26,8 @@ import type { Items, PartyType, Reception, TypeSummary, TypeVersion } from "@/sh
 
 /** Intervalle de suivi de la quarantaine. */
 export const RECEPTION_POLL_MS = 2000;
+/** Quatre minutes de suivi à l'intervalle courant ; au-delà, l'état se relit sur la fiche. */
+const RECEPTION_MAX_POLLS = 120;
 
 /**
  * Écran « Dépôt » : type publié, métadonnées générées depuis son schéma, titulaire, fichier envoyé
@@ -183,10 +185,14 @@ function Follow({ id }: { id: string }) {
       call(
         api.GET("/api/documents/{id}/reception", { params: { path: { id } } }),
       ) as unknown as Promise<Reception>,
+    // Suivi borné : arrêt sur erreur et après RECEPTION_MAX_POLLS relances (AUD-20261120-335).
     refetchInterval: (query) =>
-      query.state.data?.status === "EN_QUARANTAINE" || !query.state.data
+      query.state.status !== "error" &&
+      query.state.dataUpdateCount < RECEPTION_MAX_POLLS &&
+      (query.state.data?.status === "EN_QUARANTAINE" || !query.state.data)
         ? RECEPTION_POLL_MS
         : false,
+    retry: false,
   });
   return (
     <QueryState query={reception}>

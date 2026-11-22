@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button, NativeSelect, Stack, TextInput, Title } from "@mantine/core";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
@@ -41,10 +42,13 @@ function NewTypeForm({ parcours }: { parcours: string[] }) {
     },
     mode: "onBlur",
   });
+  // Une clé par intention : un double envoi du formulaire crée un seul type (AUD-20261120-240).
+  const [idempotencyKey] = useState(() => crypto.randomUUID());
   const create = useMutation({
     mutationFn: (values: NewTypeValues) =>
       call(
         api.POST("/api/types", {
+          params: { header: { "Idempotency-Key": idempotencyKey } },
           body: {
             code: values.code,
             referentParcours: values.referentParcours,

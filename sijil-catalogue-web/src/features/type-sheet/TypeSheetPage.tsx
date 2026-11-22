@@ -40,11 +40,12 @@ export function TypeSheetPage() {
 function Sheet({ sheet }: { sheet: Schemas["TypeSheet"] }) {
   const navigate = useNavigate();
   const latest = sheet.versions[0];
+  const [idempotencyKey] = useState(() => crypto.randomUUID());
   const newVersion = useMutation({
     mutationFn: () =>
       call(
         api.POST("/api/types/{code}/new-version", {
-          params: { path: { code: sheet.code } },
+          params: { path: { code: sheet.code }, header: { "Idempotency-Key": idempotencyKey } },
         }),
       ),
     onSuccess: () => void navigate(`/types/${sheet.code}/brouillon`),

@@ -41,9 +41,15 @@ function ReuseForm({ code, parcours }: { code: string; parcours: string }) {
   const queryClient = useQueryClient();
   const [purpose, setPurpose] = useState("");
   const [error, setError] = useState<string>();
+  const [idempotencyKey] = useState(() => crypto.randomUUID());
   const declare = useMutation({
     mutationFn: (body: Schemas["NewReuse"]) =>
-      call(api.POST("/api/types/{code}/reuses", { params: { path: { code } }, body })),
+      call(
+        api.POST("/api/types/{code}/reuses", {
+          params: { path: { code }, header: { "Idempotency-Key": idempotencyKey } },
+          body,
+        }),
+      ),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["type", code] }),
   });
   if (declare.isSuccess) {

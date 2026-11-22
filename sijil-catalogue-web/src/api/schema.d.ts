@@ -341,7 +341,7 @@ export interface components {
     parameters: {
         Code: string;
         Version: number;
-        /** @description Clé de rejeu d'un même envoi ; le BFF en crée une à défaut. */
+        /** @description Clé de rejeu d'une même intention, tirée par l'écran ; obligatoire, le BFF n'en invente jamais (04-conventions-api, AUD-20261120-240, AUD-20261120-345). */
         IdempotencyKey: string;
         IfMatch: string;
     };
@@ -426,9 +426,9 @@ export interface operations {
     createType: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description Clé de rejeu d'un même envoi ; le BFF en crée une à défaut. */
-                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            header: {
+                /** @description Clé de rejeu d'une même intention, tirée par l'écran ; obligatoire, le BFF n'en invente jamais (04-conventions-api, AUD-20261120-240, AUD-20261120-345). */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
             };
             path?: never;
             cookie?: never;
@@ -542,9 +542,9 @@ export interface operations {
     createVersion: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description Clé de rejeu d'un même envoi ; le BFF en crée une à défaut. */
-                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            header: {
+                /** @description Clé de rejeu d'une même intention, tirée par l'écran ; obligatoire, le BFF n'en invente jamais (04-conventions-api, AUD-20261120-240, AUD-20261120-345). */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
             };
             path: {
                 code: components["parameters"]["Code"];
@@ -610,9 +610,9 @@ export interface operations {
     declareReuse: {
         parameters: {
             query?: never;
-            header?: {
-                /** @description Clé de rejeu d'un même envoi ; le BFF en crée une à défaut. */
-                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            header: {
+                /** @description Clé de rejeu d'une même intention, tirée par l'écran ; obligatoire, le BFF n'en invente jamais (04-conventions-api, AUD-20261120-240, AUD-20261120-345). */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
             };
             path: {
                 code: components["parameters"]["Code"];
