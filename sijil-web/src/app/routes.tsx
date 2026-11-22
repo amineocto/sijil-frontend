@@ -64,6 +64,27 @@ export const routes: RouteObject[] = [
         }),
       },
       {
+        path: "catalogue/exigences",
+        lazy: async () => ({
+          Component: (await import("@/features/catalogue/requirements/RequirementSetsPage"))
+            .RequirementSetsPage,
+        }),
+      },
+      {
+        path: "catalogue/exigences/nouveau",
+        lazy: async () => ({
+          Component: (await import("@/features/catalogue/requirements/RequirementSetEditorPage"))
+            .NewRequirementSetPage,
+        }),
+      },
+      {
+        path: "catalogue/exigences/:code/versions/:version",
+        lazy: async () => ({
+          Component: (await import("@/features/catalogue/requirements/RequirementSetEditorPage"))
+            .RequirementSetEditorPage,
+        }),
+      },
+      {
         path: "catalogue/revues",
         lazy: async () => ({
           Component: (await import("@/features/catalogue/review/ReviewQueuePage")).ReviewQueuePage,

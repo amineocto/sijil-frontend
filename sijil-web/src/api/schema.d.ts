@@ -246,6 +246,80 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/requirement-sets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Jeux d'exigences documentaires, dernière version de chacun (lot 7) */
+        get: operations["listRequirementSets"];
+        put?: never;
+        /** Nouvelle version en brouillon (contributeur du parcours propriétaire) */
+        post: operations["createRequirementSet"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/requirement-sets/{code}/versions/{version}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Une version, avec son ETag */
+        get: operations["getRequirementSetVersion"];
+        /** Modification du brouillon, à la révision lue */
+        put: operations["saveRequirementSet"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/requirement-sets/{code}/versions/{version}/publication": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Publication par un réviseur du catalogue qui n'a pas rédigé la version (quatre yeux) */
+        post: operations["publishRequirementSet"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/completeness-evaluations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Complétude documentaire d'un dossier (panneau de la fiche, simulateur de l'éditeur)
+         * @description Relais de `POST /v1/completeness-evaluations` de la façade, avec les droits de l'utilisateur.
+         *     Une `definition` simulée exige le rôle `catalogue-contributeur` (ADR 0033 §7).
+         */
+        post: operations["evaluateCompleteness"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/parcours": {
         parameters: {
             query?: never;
@@ -546,6 +620,98 @@ export interface components {
             definition: {
                 [key: string]: unknown;
             };
+        };
+        /** @description Voir `schemas/requirement-set-definition.schema.json` (vérifiée par le catalogue). */
+        RequirementSetDefinition: {
+            label: string;
+            requirements: {
+                id: string;
+                label?: string;
+                anyOf: string[];
+                count?: number;
+                for?: {
+                    roles?: string[];
+                    level?: string;
+                };
+                freshness: string;
+                minAssurance?: string;
+                reusable?: boolean;
+                when?: {
+                    [key: string]: unknown;
+                };
+            }[];
+        };
+        RequirementSet: {
+            code: string;
+            version: number;
+            parcours: string;
+            /** @enum {unknown} */
+            status: "BROUILLON" | "PUBLIE" | "REMPLACE";
+            definition: components["schemas"]["RequirementSetDefinition"];
+            draftedBy: string;
+            /** Format: date-time */
+            draftedAt: string;
+            publishedBy?: string | null;
+            /** Format: date-time */
+            publishedAt?: string | null;
+            /** @description À renvoyer dans If-Match (lecture d'une version) */
+            etag?: string | null;
+        };
+        CompletenessParty: {
+            /** @enum {unknown} */
+            kind: "CLIENT" | "PERSONNE" | "COMPTE";
+            externalId: string;
+            /** @enum {unknown} */
+            role: "TITULAIRE" | "CO_TITULAIRE" | "GARANT" | "MANDATAIRE" | "REPRESENTANT_LEGAL" | "AUTRE";
+        };
+        CompletenessRequest: {
+            requirementSet?: string;
+            definition?: components["schemas"]["RequirementSetDefinition"];
+            context?: {
+                [key: string]: string;
+            };
+            /** Format: date */
+            evaluationDate?: string;
+            parties: components["schemas"]["CompletenessParty"][];
+            collectedDocumentIds?: string[];
+        };
+        /** @enum {string} */
+        CompletenessState: "SATISFAITE" | "MANQUANTE" | "EXPIREE" | "INSUFFISANTE" | "NON_APPLICABLE";
+        /** @description Forme reprise de `vision360-api.yaml` (CompletenessResult). */
+        CompletenessResult: {
+            requirementSet: string;
+            version: number;
+            /** Format: date */
+            evaluationDate: string;
+            complete: boolean;
+            partial: boolean;
+            hiddenByAccessPolicy: number;
+            requirements: {
+                id: string;
+                label?: string | null;
+                anyOf: string[];
+                parties: {
+                    party?: components["schemas"]["CompletenessParty"] | null;
+                    state: components["schemas"]["CompletenessState"];
+                    required: number;
+                    candidates: {
+                        id: string;
+                        type: string;
+                        source: string;
+                        status: string;
+                        /** Format: date-time */
+                        createdAt: string;
+                        /** Format: date */
+                        expiresAt?: string | null;
+                    }[];
+                }[];
+            }[];
+            toRequest: {
+                requirementId: string;
+                party?: components["schemas"]["CompletenessParty"] | null;
+                anyOf: string[];
+                state: components["schemas"]["CompletenessState"];
+            }[];
         };
         Problem: {
             type: string;
@@ -1160,6 +1326,197 @@ export interface operations {
             403: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
             502: components["responses"]["Problem"];
+        };
+    };
+    listRequirementSets: {
+        parameters: {
+            query?: {
+                parcours?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Jeux d'exigences */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequirementSet"][];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            502: components["responses"]["Problem"];
+        };
+    };
+    createRequirementSet: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Clé de rejeu d'une même intention, tirée par l'écran ; obligatoire, le BFF n'en invente jamais (04-conventions-api, AUD-20261120-240, AUD-20261120-345). */
+                "Idempotency-Key": components["parameters"]["RequiredIdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    code: string;
+                    definition: components["schemas"]["RequirementSetDefinition"];
+                };
+            };
+        };
+        responses: {
+            /** @description Brouillon créé */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequirementSet"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+            502: components["responses"]["Problem"];
+        };
+    };
+    getRequirementSetVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: components["parameters"]["Code"];
+                version: components["parameters"]["Version"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Version */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequirementSet"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            502: components["responses"]["Problem"];
+        };
+    };
+    saveRequirementSet: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": components["parameters"]["IfMatch"];
+            };
+            path: {
+                code: components["parameters"]["Code"];
+                version: components["parameters"]["Version"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    definition: components["schemas"]["RequirementSetDefinition"];
+                };
+            };
+        };
+        responses: {
+            /** @description Brouillon modifié */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequirementSet"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            412: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+            428: components["responses"]["Problem"];
+            502: components["responses"]["Problem"];
+        };
+    };
+    publishRequirementSet: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": components["parameters"]["IfMatch"];
+            };
+            path: {
+                code: components["parameters"]["Code"];
+                version: components["parameters"]["Version"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Version publiée */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequirementSet"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            412: components["responses"]["Problem"];
+            428: components["responses"]["Problem"];
+            502: components["responses"]["Problem"];
+        };
+    };
+    evaluateCompleteness: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompletenessRequest"];
+            };
+        };
+        responses: {
+            /** @description Résultat */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompletenessResult"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            502: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
         };
     };
     listParcours: {

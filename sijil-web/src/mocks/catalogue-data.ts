@@ -201,3 +201,48 @@ export function initialTypes(): MockType[] {
     },
   ];
 }
+
+/** Jeu d'exigences du crédit immobilier (lot 7), publié, rédigé par un autre utilisateur. */
+export function initialRequirementSets(): Schemas["RequirementSet"][] {
+  return [
+    {
+      code: "CREDIT_IMMO_PARTICULIER",
+      version: 1,
+      parcours: "credit-immo",
+      status: "PUBLIE",
+      definition: {
+        label: "Crédit immobilier particulier",
+        requirements: [
+          {
+            id: "identite",
+            label: "Pièce d'identité",
+            anyOf: ["CIN", "PASSEPORT"],
+            for: { roles: ["TITULAIRE", "CO_TITULAIRE"] },
+            freshness: "VALID_ON_DATE",
+            minAssurance: "CONTROLE_AUTO",
+          },
+        ],
+      },
+      draftedBy: "C0042",
+      draftedAt: "2026-11-20T10:00:00Z",
+      publishedBy: "R0007",
+      publishedAt: "2026-11-21T10:00:00Z",
+      etag: '"1-0"',
+    },
+    {
+      code: "EER_OUVERTURE",
+      version: 1,
+      parcours: "eer",
+      status: "BROUILLON",
+      definition: {
+        label: "Ouverture de compte",
+        requirements: [{ id: "identite", anyOf: ["CIN"], freshness: "VALID_ON_DATE" }],
+      },
+      draftedBy: "contributeur.demo",
+      draftedAt: "2026-11-22T09:00:00Z",
+      publishedBy: null,
+      publishedAt: null,
+      etag: '"1-0"',
+    },
+  ];
+}

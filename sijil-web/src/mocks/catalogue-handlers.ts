@@ -1,6 +1,7 @@
 import { http, HttpResponse } from "msw";
 import type { Definition, Schemas } from "@/shared/api";
 import {
+  initialRequirementSets,
   PARCOURS,
   REQUIRED_FOR_SUBMISSION,
   SESSION,
@@ -17,14 +18,18 @@ export class CatalogueStub {
   types: MockType[] = initialTypes();
   session: Schemas["Session"] = SESSION;
 
+  requirementSets: Schemas["RequirementSet"][] = initialRequirementSets();
+
   reset() {
     this.types = initialTypes();
     this.session = SESSION;
+    this.requirementSets = initialRequirementSets();
   }
 
   handlers() {
     return [
       http.get("/api/parcours", () => HttpResponse.json(PARCOURS)),
+      ...this.requirementHandlers(),
       http.get("/api/types", ({ request }) => this.list(new URL(request.url).searchParams)),
       http.post("/api/types", async ({ request }) =>
         this.createType((await request.json()) as Schemas["NewType"]),
@@ -179,6 +184,67 @@ export class CatalogueStub {
     return HttpResponse.json(editorOf(type, draft), {
       headers: { ETag: etagOf(type, draft) },
     });
+  }
+
+  /** Jeux d'exigences (lot 7) : brouillon, révision par ETag, publication à quatre yeux. */
+  private requirementHandlers() {
+    const path = "/api/requirement-sets/:code/versions/:version";
+    return [
+      http.get("/api/requirement-sets", () =>
+        HttpResponse.json(this.requirementSets.map((s) => ({ ...s, etag: null }))),
+      ),
+      http.get(path, ({ params }) => {
+        const set = this.findSet(String(params["code"]), Number(params["version"]));
+        return set ? HttpResponse.json(set) : problem(404, "Jeu d'exigences inconnu");
+      }),
+      http.post("/api/requirement-sets", async ({ request }) => {
+        const body = (await request.json()) as {
+          code: string;
+          definition: Schemas["RequirementSetDefinition"];
+        };
+        if (this.requirementSets.some((s) => s.code === body.code))
+          return problem(409, "Ce jeu a déjà un brouillon");
+        const set: Schemas["RequirementSet"] = {
+          code: body.code,
+          version: 1,
+          parcours: this.session.parcours[0] ?? "eer",
+          status: "BROUILLON",
+          definition: body.definition,
+          draftedBy: this.session.user,
+          draftedAt: new Date().toISOString(),
+          publishedBy: null,
+          publishedAt: null,
+          etag: '"1-0"',
+        };
+        this.requirementSets.push(set);
+        return HttpResponse.json(set, { status: 201 });
+      }),
+      http.put(path, async ({ params, request }) => {
+        const set = this.findSet(String(params["code"]), Number(params["version"]));
+        if (!set) return problem(404, "Jeu d'exigences inconnu");
+        if (request.headers.get("If-Match") !== set.etag)
+          return problem(412, "Le jeu a changé depuis sa lecture");
+        const body = (await request.json()) as { definition: Schemas["RequirementSetDefinition"] };
+        set.definition = body.definition;
+        set.etag = `"${String(set.version)}-${String(Number(set.etag?.split("-")[1]?.replace('"', "") ?? 0) + 1)}"`;
+        return HttpResponse.json(set);
+      }),
+      http.post(`${path}/publication`, ({ params }) => {
+        const set = this.findSet(String(params["code"]), Number(params["version"]));
+        if (!set) return problem(404, "Jeu d'exigences inconnu");
+        if (!this.session.roles.includes("catalogue-reviseur")) return problem(403, "Accès refusé");
+        if (set.draftedBy === this.session.user)
+          return problem(403, "Le réviseur d'un jeu d'exigences n'en est pas rédacteur.");
+        set.status = "PUBLIE";
+        set.publishedBy = this.session.user;
+        set.publishedAt = new Date().toISOString();
+        return HttpResponse.json(set);
+      }),
+    ];
+  }
+
+  private findSet(code: string, version: number) {
+    return this.requirementSets.find((s) => s.code === code && s.version === version);
   }
 
   private createType(body: Schemas["NewType"]) {

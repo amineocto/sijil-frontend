@@ -15,6 +15,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { EmptyState } from "@sijil/ui-kit";
 import { Link } from "react-router";
+import { CompletenessPanel } from "@/features/completeness/CompletenessPanel";
 import { FullTextSearch } from "@/features/search/FullTextSearch";
 import { AccessFields } from "@/shared/AccessFields";
 import { accessHeaders, type Access } from "@/shared/access";
@@ -53,7 +54,11 @@ export function SearchPage() {
         <Tabs.List>
           <Tabs.Tab value="parties">Par partie</Tabs.Tab>
           <Tabs.Tab value="texte">Plein texte</Tabs.Tab>
+          <Tabs.Tab value="completude">Complétude</Tabs.Tab>
         </Tabs.List>
+        <Tabs.Panel value="completude" pt="md">
+          <CompletenessPanel />
+        </Tabs.Panel>
         <Tabs.Panel value="texte" pt="md">
           <FullTextSearch />
         </Tabs.Panel>

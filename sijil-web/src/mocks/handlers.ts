@@ -58,6 +58,9 @@ export class SijilStub extends CatalogueStub {
     return [
       http.get("/api/session", () => HttpResponse.json(this.session)),
       ...super.handlers(),
+      http.post("/api/completeness-evaluations", async ({ request }) =>
+        HttpResponse.json(completeness((await request.json()) as CompletenessRequest)),
+      ),
       http.get("/api/document-types", () =>
         HttpResponse.json({ items: [{ code: "CIN", label: CIN.definition.labels?.fr }] }),
       ),
@@ -296,4 +299,59 @@ export class SijilStub extends CatalogueStub {
       revision: this.revision(id),
     });
   }
+}
+
+type CompletenessRequest = import("@/features/completeness/completeness").CompletenessRequest;
+type CompletenessResult = import("@/features/completeness/completeness").CompletenessResult;
+
+/**
+ * Calcul de démonstration : l'identité du titulaire P0012345 est satisfaite (CIN valide), toute
+ * autre partie manque sa pièce ; une date après 2031 rend la CIN expirée.
+ */
+function completeness(request: CompletenessRequest): CompletenessResult {
+  const date = request.evaluationDate ?? "2026-11-22";
+  const parties = request.parties.map((party) => {
+    const known = party.externalId === "P0012345";
+    const state: CompletenessResult["requirements"][number]["parties"][number]["state"] = !known
+      ? "MANQUANTE"
+      : date > "2031-03-10"
+        ? "EXPIREE"
+        : "SATISFAITE";
+    return {
+      party,
+      state,
+      required: 1,
+      candidates: known
+        ? [
+            {
+              id: "doc-cin-1",
+              type: "CIN",
+              source: "FILENET",
+              status: "VALIDE",
+              createdAt: "2025-03-12T03:41:00Z",
+              expiresAt: "2031-03-10",
+            },
+          ]
+        : [],
+    };
+  });
+  return {
+    requirementSet: request.requirementSet ?? "SIMULATION",
+    version: request.requirementSet ? 1 : 0,
+    evaluationDate: date,
+    complete: parties.every((p) => p.state === "SATISFAITE"),
+    partial: false,
+    hiddenByAccessPolicy: 0,
+    requirements: [
+      { id: "identite", label: "Pièce d'identité", anyOf: ["CIN", "PASSEPORT"], parties },
+    ],
+    toRequest: parties
+      .filter((p) => p.state !== "SATISFAITE")
+      .map((p) => ({
+        requirementId: "identite",
+        party: p.party,
+        anyOf: ["CIN", "PASSEPORT"],
+        state: p.state,
+      })),
+  };
 }

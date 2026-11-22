@@ -34,6 +34,11 @@ export function Layout() {
                     Catalogue
                   </Anchor>
                 )}
+                {canSeeCatalogue(session.data) && (
+                  <Anchor component={NavLink} to="/catalogue/exigences">
+                    Exigences
+                  </Anchor>
+                )}
                 {canReview(session.data) && (
                   <Anchor component={NavLink} to="/catalogue/revues">
                     File de revue
