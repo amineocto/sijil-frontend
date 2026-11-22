@@ -73,11 +73,11 @@ describe("code partagé", () => {
   });
 
   it("réserve les modifications aux contributeurs du parcours propriétaire", () => {
-    const session = { user: "u", parcours: "eer", roles: ["sijil-contributeur" as const] };
+    const session = { user: "u", parcours: ["eer"], roles: ["sijil-contributeur" as const] };
     expect(canContribute(session)).toBe(true);
     expect(canContribute(session, "eer")).toBe(true);
     expect(canContribute(session, "credit-immo")).toBe(false);
-    expect(canContribute({ user: "l", roles: ["sijil-lecteur"] })).toBe(false);
+    expect(canContribute({ user: "l", parcours: [], roles: ["sijil-lecteur"] })).toBe(false);
     expect(canContribute(undefined)).toBe(false);
   });
 });

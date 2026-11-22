@@ -1,7 +1,7 @@
 import { Anchor, AppShell, Button, Group, Text, Title } from "@mantine/core";
 import { Link, NavLink, Outlet } from "react-router";
 import { logout } from "@/shared/logout";
-import { canContribute, useSession } from "@/shared/session";
+import { canContribute, canReview, canSeeCatalogue, useSession } from "@/shared/session";
 
 /** Gabarit commun : lien d'évitement, en-tête, navigation, utilisateur connecté et déconnexion. */
 export function Layout() {
@@ -16,7 +16,7 @@ export function Layout() {
           <Group>
             <Title order={1} size="h3">
               <Anchor component={Link} to="/" underline="never" c="inherit">
-                Sijil — Documents
+                Sijil
               </Anchor>
             </Title>
             <nav aria-label="Navigation principale">
@@ -29,6 +29,16 @@ export function Layout() {
                     Déposer un document
                   </Anchor>
                 )}
+                {canSeeCatalogue(session.data) && (
+                  <Anchor component={NavLink} to="/catalogue" end>
+                    Catalogue
+                  </Anchor>
+                )}
+                {canReview(session.data) && (
+                  <Anchor component={NavLink} to="/catalogue/revues">
+                    File de revue
+                  </Anchor>
+                )}
               </Group>
             </nav>
           </Group>
@@ -36,7 +46,7 @@ export function Layout() {
             <Group gap="sm">
               <Text size="sm" aria-label="Utilisateur connecté">
                 {session.data.user}
-                {session.data.parcours ? ` · ${session.data.parcours}` : ""}
+                {session.data.parcours.length > 0 ? ` · ${session.data.parcours.join(", ")}` : ""}
               </Text>
               <Button
                 variant="subtle"

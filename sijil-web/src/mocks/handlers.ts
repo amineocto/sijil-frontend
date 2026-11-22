@@ -1,4 +1,5 @@
 import { http, HttpResponse } from "msw";
+import { CatalogueStub } from "@/mocks/catalogue-handlers";
 import { CIN, CONTRIBUTOR, initialDocuments } from "@/mocks/data";
 import type { Session } from "@/shared/session";
 import type { DocumentView, Party } from "@/shared/types";
@@ -42,20 +43,21 @@ function problem(status: number, detail: string, errors?: { field: string; code:
  * parcours, dépôt avec envoi direct et quarantaine simulée (admis au deuxième suivi), versions,
  * métadonnées, suppression logique et restauration.
  */
-export class SijilStub {
-  session: Session = CONTRIBUTOR;
+export class SijilStub extends CatalogueStub {
+  override session: Session = CONTRIBUTOR;
   documents: DocumentView[] = initialDocuments();
   revisions: Record<string, Revision[]> = {};
   pending: Record<string, number> = {};
   deleted: string[] = [];
 
-  reset() {
+  override reset() {
     Object.assign(this, new SijilStub());
   }
 
-  handlers() {
+  override handlers() {
     return [
       http.get("/api/session", () => HttpResponse.json(this.session)),
+      ...super.handlers(),
       http.get("/api/document-types", () =>
         HttpResponse.json({ items: [{ code: "CIN", label: CIN.definition.labels?.fr }] }),
       ),
@@ -202,7 +204,7 @@ export class SijilStub {
   private read(id: string, request: Request, ok: (d: DocumentView) => Response) {
     const d = this.find(id);
     if (!d) return problem(404, "Document inconnu.");
-    if (d.parcours !== this.session.parcours && !request.headers.get("X-Access-Purpose")) {
+    if (!this.session.parcours.includes(d.parcours) && !request.headers.get("X-Access-Purpose")) {
       return problem(
         403,
         "Finalité (X-Access-Purpose) obligatoire pour un document d'un autre parcours.",
@@ -255,7 +257,7 @@ export class SijilStub {
       id,
       documentType: "CIN",
       typeVersion: 2,
-      parcours: this.session.parcours ?? "eer",
+      parcours: this.session.parcours[0] ?? "eer",
       status: "ACTIF",
       sensitivity: "SENSIBLE",
       currentVersion: 1,

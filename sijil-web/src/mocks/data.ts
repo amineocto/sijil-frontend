@@ -4,15 +4,15 @@ import type { DocumentView, TypeVersion } from "@/shared/types";
 export const CONTRIBUTOR: Session = {
   user: "T00002",
   profil: "CONSEILLER",
-  parcours: "eer",
-  roles: ["sijil-contributeur"],
+  parcours: ["eer"],
+  roles: ["catalogue-contributeur", "catalogue-lecteur", "sijil-contributeur"],
 };
 
 export const READER: Session = {
   user: "L0001",
   profil: null,
-  parcours: null,
-  roles: ["sijil-lecteur"],
+  parcours: [],
+  roles: ["catalogue-lecteur", "sijil-lecteur"],
 };
 
 export const CIN: TypeVersion = {

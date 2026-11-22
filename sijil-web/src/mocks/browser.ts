@@ -1,17 +1,21 @@
 import { setupWorker } from "msw/browser";
+import { REVIEWER, SESSION } from "@/mocks/catalogue-data";
 import { READER } from "@/mocks/data";
 import { SijilStub } from "@/mocks/handlers";
 
 /**
  * Bouchon du BFF dans le navigateur, en développement seulement (`npm run dev`). L'état survit à un
- * rechargement (stockage de session de l'onglet) ; `?demo=lecteur` change d'utilisateur.
+ * rechargement (stockage de session de l'onglet) ; `?demo=lecteur`, `?demo=reviseur` ou
+ * `?demo=contributeur` change d'utilisateur de démonstration (scénarios Playwright).
  */
 const STORAGE_KEY = "sijil-web-demo";
 const stub = new SijilStub();
 
 restore();
-if (new URLSearchParams(globalThis.location.search).get("demo") === "lecteur")
-  stub.session = READER;
+const demo = new URLSearchParams(globalThis.location.search).get("demo");
+if (demo === "lecteur") stub.session = READER;
+if (demo === "reviseur") stub.session = REVIEWER;
+if (demo === "contributeur") stub.session = SESSION;
 save();
 
 export const worker = setupWorker(...stub.handlers());
@@ -28,10 +32,10 @@ function restore() {
 
 function save() {
   try {
-    const { session, documents, revisions, pending, deleted } = stub;
+    const { session, documents, revisions, pending, deleted, types } = stub;
     globalThis.sessionStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ session, documents, revisions, pending, deleted }),
+      JSON.stringify({ session, documents, revisions, pending, deleted, types }),
     );
   } catch {
     // Stockage indisponible : l'état reste en mémoire.

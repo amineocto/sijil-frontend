@@ -121,7 +121,7 @@ describe("Fiche document", () => {
 
   it("ne propose aucune action à un lecteur", async () => {
     stub.session = READER;
-    stub.session = { ...READER, parcours: "eer" };
+    stub.session = { ...READER, parcours: ["eer"] };
     renderAt(OWN);
     expect(await screen.findByRole("table", { name: "Métadonnées" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Supprimer" })).not.toBeInTheDocument();

@@ -3,6 +3,8 @@ import { ApiError, csrfMiddleware, networkError } from "@sijil/ui-kit";
 import type { components, paths } from "@/api/schema";
 
 export type Schemas = components["schemas"];
+export type TypeStatus = Schemas["TypeStatus"];
+export type Definition = Record<string, unknown>;
 
 /** Client du BFF (même origine, cookie de session, jeton CSRF sur les écritures). */
 export const api = createClient<paths>({
