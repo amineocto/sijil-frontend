@@ -25,11 +25,18 @@ export function TextField({
   description,
   error,
   required,
+  hideLabel,
   className,
   ...input
 }: FieldProps & Native<InputHTMLAttributes<HTMLInputElement>>) {
   return (
-    <Field label={label} description={description} error={error} required={required}>
+    <Field
+      label={label}
+      description={description}
+      error={error}
+      required={required}
+      hideLabel={hideLabel}
+    >
       {(ids) => (
         <input
           {...input}
@@ -81,6 +88,7 @@ export function SelectField({
   required,
   options,
   placeholder,
+  hideLabel,
   ...select
 }: FieldProps &
   Native<SelectHTMLAttributes<HTMLSelectElement>, HTMLSelectElement> & {
@@ -88,7 +96,13 @@ export function SelectField({
     placeholder?: string;
   }) {
   return (
-    <Field label={label} description={description} error={error} required={required}>
+    <Field
+      label={label}
+      description={description}
+      error={error}
+      required={required}
+      hideLabel={hideLabel}
+    >
       {(ids) => (
         <select {...select} {...ids} required={required} className={CONTROL}>
           {placeholder !== undefined && <option value="">{placeholder}</option>}

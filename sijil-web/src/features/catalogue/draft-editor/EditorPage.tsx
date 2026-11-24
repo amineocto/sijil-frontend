@@ -6,6 +6,7 @@ import { useParams } from "react-router";
 import { ErrorState } from "@sijil/ui-kit";
 import { api, call, isApiError, type Schemas } from "@/shared/api";
 import { errorLabel, STATUS_LABELS } from "@/features/catalogue/shared/labels";
+import { Page } from "@/shared/ui/page";
 import { QueryState } from "@/shared/QueryState";
 import { RUBRIQUES, type Rubrique } from "@/features/catalogue/shared/rubriques";
 import {
@@ -21,7 +22,6 @@ import { MetadataPreview } from "@/features/catalogue/draft-editor/MetadataPrevi
 import {
   Button,
   ButtonLink,
-  Heading,
   Notice,
   Panel,
   SelectField,
@@ -40,12 +40,15 @@ export function EditorPage() {
     queryFn: () => call(api.GET("/api/types/{code}/editor", { params: { path: { code } } })),
   });
   return (
-    <div className="flex flex-col gap-6">
-      <Heading>Brouillon du type {code}</Heading>
+    <Page
+      title={<>Brouillon du type {code}</>}
+      subtitle="La version publiée reste en vigueur pour les dépôts jusqu'à la publication de ce brouillon."
+      width="wide"
+    >
       <QueryState query={editor}>
         {(data) => <EditorForm key={String(data.version)} initial={data} />}
       </QueryState>
-    </div>
+    </Page>
   );
 }
 

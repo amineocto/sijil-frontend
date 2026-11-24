@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { EmptyState } from "@sijil/ui-kit";
 import { api, call } from "@/shared/api";
+import { Page } from "@/shared/ui/page";
 import { QueryState } from "@/shared/QueryState";
 import { canContributeToCatalogue, useSession } from "@/shared/session";
-import { ButtonLink, Heading, Table, Tag, Td, TextLink, Th } from "@/shared/ui";
+import { ButtonLink, Table, Tag, Td, TextLink, Th } from "@/shared/ui";
 
 export const SET_STATUS_LABELS: Record<string, string> = {
   BROUILLON: "Brouillon",
@@ -19,13 +20,15 @@ export function RequirementSetsPage() {
     queryFn: () => call(api.GET("/api/requirement-sets", {})),
   });
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Heading>Exigences documentaires</Heading>
-        {canContributeToCatalogue(session.data) && (
+    <Page
+      title="Exigences documentaires"
+      subtitle="Les pièces attendues pour un dossier, par parcours ; un simulateur montre ce qui manquerait à un client."
+      actions={
+        canContributeToCatalogue(session.data) && (
           <ButtonLink to="/catalogue/exigences/nouveau">Nouveau jeu d&apos;exigences</ButtonLink>
-        )}
-      </div>
+        )
+      }
+    >
       <QueryState query={sets}>
         {(items) =>
           items.length === 0 ? (
@@ -63,6 +66,6 @@ export function RequirementSetsPage() {
           )
         }
       </QueryState>
-    </div>
+    </Page>
   );
 }

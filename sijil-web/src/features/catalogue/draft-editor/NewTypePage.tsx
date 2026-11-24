@@ -6,9 +6,10 @@ import { useNavigate } from "react-router";
 import { z } from "zod";
 import { ErrorState } from "@sijil/ui-kit";
 import { api, call, isApiError } from "@/shared/api";
+import { Page } from "@/shared/ui/page";
 import { QueryState } from "@/shared/QueryState";
 import { useSession } from "@/shared/session";
-import { Button, Heading, Panel, SelectField, TextField } from "@/shared/ui";
+import { Button, Panel, SelectField, TextField } from "@/shared/ui";
 
 const newTypeSchema = z.object({
   code: z
@@ -24,10 +25,13 @@ type NewTypeValues = z.infer<typeof newTypeSchema>;
 export function NewTypePage() {
   const session = useSession();
   return (
-    <div className="flex flex-col gap-6">
-      <Heading>Nouveau type de document</Heading>
+    <Page
+      title="Nouveau type de document"
+      subtitle="Le type naît en brouillon (version 1) ; il sera publié après contrôles et revue."
+      width="narrow"
+    >
       <QueryState query={session}>{(data) => <NewTypeForm parcours={data.parcours} />}</QueryState>
-    </div>
+    </Page>
   );
 }
 

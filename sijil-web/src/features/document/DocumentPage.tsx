@@ -18,9 +18,12 @@ import { QueryState } from "@/shared/QueryState";
 import { canContribute, useSession } from "@/shared/session";
 import type { DocumentView } from "@/shared/types";
 import { DocumentActions } from "@/features/document/DocumentActions";
+import { typeLabel } from "@/features/dossier/dossier";
+import { useTypeIndex } from "@/features/dossier/typeIndex";
 import { DocumentHistory } from "@/features/document/DocumentHistory";
 import { Preview } from "@/features/document/Preview";
-import { Button, Heading, Muted, Notice, Panel, Table, Tabs, Tag, Td, Th } from "@/shared/ui";
+import { Button, Heading, Notice, Panel, Table, Tabs, Tag, Td, Th } from "@/shared/ui";
+import { KeyValues, Page, Section } from "@/shared/ui/page";
 
 /**
  * Écran « Fiche document » : métadonnées, parties, aperçu, versions, historique et usages. Un
@@ -29,14 +32,23 @@ import { Button, Heading, Muted, Notice, Panel, Table, Tabs, Tag, Td, Th } from 
  */
 export function DocumentPage() {
   const { id = "" } = useParams();
-  return <DocumentSheet id={id} />;
+  return <DocumentSheet id={id} frame="page" />;
 }
 
 /**
  * Fiche d'un document, en pleine page ou dans le volet du dossier client. `title` : libellé du type
  * quand l'écran appelant le connaît (son code à défaut).
  */
-export function DocumentSheet({ id, title }: { id: string; title?: string }) {
+export function DocumentSheet({
+  id,
+  title,
+  frame = "drawer",
+}: {
+  id: string;
+  title?: string;
+  /** Pleine page (bandeau du poste CRC) ou volet du dossier (en-tête compact). */
+  frame?: "page" | "drawer";
+}) {
   const [access, setAccess] = useState<Access>({});
   const [draft, setDraft] = useState<Access>({});
   const document = useQuery({
@@ -50,9 +62,8 @@ export function DocumentSheet({ id, title }: { id: string; title?: string }) {
   });
 
   if (document.error && isApiError(document.error) && [403, 404].includes(document.error.status)) {
-    return (
+    const form = (
       <div className="flex max-w-3xl flex-col gap-4">
-        <Heading>Document</Heading>
         <Notice tone="warning" title="Accès à justifier">
           Ce document appartient à un autre parcours, ou il est restreint : indiquez pourquoi vous
           le consultez. Votre réponse est enregistrée.
@@ -74,10 +85,22 @@ export function DocumentSheet({ id, title }: { id: string; title?: string }) {
         </Panel>
       </div>
     );
+    return frame === "page" ? (
+      <Page title={title ?? "Document"} width="narrow">
+        {form}
+      </Page>
+    ) : (
+      <div className="flex flex-col gap-4">
+        <Heading>{title ?? "Document"}</Heading>
+        {form}
+      </div>
+    );
   }
   return (
     <QueryState query={document}>
-      {({ data, etag }) => <Sheet document={data} etag={etag} access={access} title={title} />}
+      {({ data, etag }) => (
+        <Sheet document={data} etag={etag} access={access} title={title} frame={frame} />
+      )}
     </QueryState>
   );
 }
@@ -87,26 +110,29 @@ function Sheet({
   etag,
   access,
   title,
+  frame,
 }: {
   document: DocumentView;
   etag: string;
   access: Access;
   title: string | undefined;
+  frame: "page" | "drawer";
 }) {
   const session = useSession();
+  const types = useTypeIndex();
   if (session.isPending) return <LoadingState />;
-  return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Heading>{title ?? document.documentType}</Heading>
-        <div className="flex gap-2">
-          <Tag variant="info">{statusLabel(document.status)}</Tag>
-          <Tag>{SENSITIVITY_LABELS[document.sensitivity]}</Tag>
-          {document.sharedInPortfolio && (
-            <Tag variant="success">Partagé dans le portefeuille client</Tag>
-          )}
-        </div>
-      </div>
+  const heading = title ?? typeLabel(document.documentType, types);
+  const tags = (
+    <>
+      <Tag variant="info">{statusLabel(document.status)}</Tag>
+      <Tag>{SENSITIVITY_LABELS[document.sensitivity]}</Tag>
+      {document.sharedInPortfolio && (
+        <Tag variant="success">Partagé dans le portefeuille client</Tag>
+      )}
+    </>
+  );
+  const body = (
+    <>
       {document.verification && (
         <Notice tone="warning" title="Type à vérifier" role="status">
           Les traitements ont détecté un document de type {document.verification.detectedType}, et
@@ -114,60 +140,94 @@ function Sheet({
           le faut.
         </Notice>
       )}
-      <Muted>
-        Parcours {document.parcours} · déposé le {formatDate(document.createdAt)} · version{" "}
-        {document.currentVersion} · {document.content.mediaType},{" "}
-        {formatSize(document.content.size)}
-      </Muted>
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Panel className="flex flex-col gap-3">
-          <Heading level={3}>Métadonnées</Heading>
-          <Table aria-label="Métadonnées">
-            <tbody>
-              {Object.entries(document.metadata).map(([name, value]) => (
-                <tr key={name}>
-                  <Th scope="row" className="w-1/3">
-                    {humanize(name)}
-                  </Th>
-                  <Td>{displayValue(value)}</Td>
-                </tr>
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+        <section className="min-w-0 rounded-xl border border-gray-200 bg-white p-5 shadow-xs">
+          <Tabs
+            label="Contenu du document"
+            tabs={[
+              {
+                id: "apercu",
+                label: "Aperçu",
+                content: <Preview document={document} access={access} />,
+              },
+              {
+                id: "historique",
+                label: "Versions et historique",
+                content: <DocumentHistory id={document.id} access={access} />,
+              },
+            ]}
+          />
+        </section>
+        <div className="flex min-w-0 flex-col gap-5">
+          <Section title="Informations" bodyClassName="p-0">
+            <Table aria-label="Métadonnées" className="[&_tr:last-child>*]:border-b-0">
+              <tbody>
+                {Object.entries(document.metadata).map(([name, value]) => (
+                  <tr key={name}>
+                    <Th scope="row" className="w-2/5 bg-white font-medium text-gray-600">
+                      {humanize(name)}
+                    </Th>
+                    <Td>{displayValue(value)}</Td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          </Section>
+          <Section title="Parties">
+            <ul className="flex flex-col gap-2 text-sm text-gray-900">
+              {document.parties.map((p) => (
+                <li
+                  key={`${p.type}-${p.id}-${p.role}`}
+                  className="flex items-center justify-between gap-3"
+                >
+                  <span>
+                    {PARTY_TYPE_LABELS[p.type] ?? p.type} {p.id}
+                  </span>
+                  <Tag>{PARTY_ROLE_LABELS[p.role] ?? p.role}</Tag>
+                </li>
               ))}
-            </tbody>
-          </Table>
-        </Panel>
-        <Panel className="flex flex-col gap-3">
-          <Heading level={3}>Parties</Heading>
-          <ul className="list-disc ps-5 text-sm text-gray-900">
-            {document.parties.map((p) => (
-              <li key={`${p.type}-${p.id}-${p.role}`}>
-                {PARTY_TYPE_LABELS[p.type] ?? p.type} {p.id} ({PARTY_ROLE_LABELS[p.role] ?? p.role})
-              </li>
-            ))}
-          </ul>
-        </Panel>
+            </ul>
+          </Section>
+          <Section title="Conservation et traçabilité">
+            <KeyValues
+              items={[
+                ["Type", `${document.documentType} · version ${String(document.typeVersion)}`],
+                ["Parcours", document.parcours],
+                ["Déposé le", formatDate(document.createdAt)],
+                ["Version du fichier", String(document.currentVersion)],
+                ["Format", `${document.content.mediaType}, ${formatSize(document.content.size)}`],
+                [
+                  "Empreinte",
+                  <code key="h" className="text-xs break-all">
+                    sha256 {document.content.sha256.slice(0, 12)}…
+                  </code>,
+                ],
+              ]}
+            />
+          </Section>
+          {canContribute(session.data, document.parcours) && (
+            <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-xs">
+              <DocumentActions document={document} etag={etag} />
+            </section>
+          )}
+        </div>
       </div>
-      {canContribute(session.data, document.parcours) && (
-        <Panel>
-          <DocumentActions document={document} etag={etag} />
-        </Panel>
-      )}
-      <Panel>
-        <Tabs
-          label="Contenu du document"
-          tabs={[
-            {
-              id: "apercu",
-              label: "Aperçu",
-              content: <Preview document={document} access={access} />,
-            },
-            {
-              id: "historique",
-              label: "Versions et historique",
-              content: <DocumentHistory id={document.id} access={access} />,
-            },
-          ]}
-        />
-      </Panel>
+    </>
+  );
+  if (frame === "page") {
+    return (
+      <Page title={heading} subtitle={tags}>
+        {body}
+      </Page>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-2">
+        <Heading>{heading}</Heading>
+        <div className="flex flex-wrap gap-2">{tags}</div>
+      </div>
+      {body}
     </div>
   );
 }

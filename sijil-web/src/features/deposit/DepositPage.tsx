@@ -7,15 +7,14 @@ import { sendFile } from "@/shared/deposit";
 import { PARTY_OPTIONS, statusLabel } from "@/shared/labels";
 import { fieldsOf, toMetadata } from "@/shared/metadata";
 import { MetadataFields } from "@/shared/MetadataFields";
+import { Page, Section } from "@/shared/ui/page";
 import { QueryState } from "@/shared/QueryState";
 import { canContribute, useSession } from "@/shared/session";
 import type { Items, PartyType, Reception, TypeSummary, TypeVersion } from "@/shared/types";
 import {
   Button,
   FileField,
-  Heading,
   Notice,
-  Panel,
   ProgressBar,
   SelectField,
   TextField,
@@ -44,38 +43,68 @@ export function DepositPage() {
   if (session.isPending) return <LoadingState />;
   if (!canContribute(session.data)) {
     return (
-      <EmptyState
-        title="Dépôt réservé aux contributeurs"
-        description="Votre profil ne permet pas de déposer de document."
-      />
+      <Page title="Déposer un document">
+        <EmptyState
+          title="Dépôt réservé aux contributeurs"
+          description="Votre profil ne permet pas de déposer de document."
+        />
+      </Page>
     );
   }
   return (
-    <div className="flex max-w-2xl flex-col gap-6">
-      <Heading>Déposer un document</Heading>
-      <QueryState query={types}>
-        {({ items }) =>
-          items.length === 0 ? (
-            <EmptyState
-              title="Aucun type publié"
-              description="Le catalogue ne propose aucun type."
-            />
-          ) : (
-            <SelectField
-              label="Type de document"
-              required
-              placeholder="Choisir un type publié"
-              options={items.map((t) => ({ value: t.code, label: t.label ?? t.code }))}
-              value={code ?? ""}
-              onChange={(e) => {
-                setCode(e.currentTarget.value || null);
-              }}
-            />
-          )
-        }
-      </QueryState>
-      {code && <DepositForm key={code} code={code} />}
-    </div>
+    <Page
+      title="Déposer un document"
+      subtitle="Le document passe en quarantaine (antivirus, format, empreinte), puis devient consultable."
+      width="wide"
+    >
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className="flex min-w-0 flex-col gap-5">
+          <Section title="1 · Type de document">
+            <QueryState query={types}>
+              {({ items }) =>
+                items.length === 0 ? (
+                  <EmptyState
+                    title="Aucun type publié"
+                    description="Le catalogue ne propose aucun type."
+                  />
+                ) : (
+                  <SelectField
+                    label="Type de document"
+                    required
+                    placeholder="Choisir un type publié"
+                    options={items.map((t) => ({ value: t.code, label: t.label ?? t.code }))}
+                    value={code ?? ""}
+                    onChange={(e) => {
+                      setCode(e.currentTarget.value || null);
+                    }}
+                  />
+                )
+              }
+            </QueryState>
+          </Section>
+          {code && <DepositForm key={code} code={code} />}
+        </div>
+        <aside className="flex flex-col gap-5 lg:sticky lg:top-0 lg:self-start">
+          <Section title="Comment se passe un dépôt">
+            <ol className="flex flex-col gap-3 text-sm text-gray-700">
+              {[
+                "Choisissez un type publié : il fixe les informations demandées.",
+                "Renseignez ses informations et son titulaire.",
+                "Envoyez le fichier : il part directement en quarantaine.",
+                "Antivirus, format et empreinte sont contrôlés ; le document devient consultable dès son admission.",
+              ].map((step, i) => (
+                <li key={step} className="flex gap-3">
+                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-orange-50 text-xs font-bold text-orange-700">
+                    {i + 1}
+                  </span>
+                  <span>{step}</span>
+                </li>
+              ))}
+            </ol>
+          </Section>
+        </aside>
+      </div>
+    </Page>
   );
 }
 
@@ -125,21 +154,27 @@ function Form({ type }: { type: TypeVersion }) {
     },
   });
 
-  if (deposit.data) return <Follow id={deposit.data.id} />;
+  if (deposit.data) {
+    return (
+      <Section title="Suivi du dépôt">
+        <Follow id={deposit.data.id} />
+      </Section>
+    );
+  }
   const errors = isApiError(deposit.error) ? deposit.error.errorsByField() : {};
   return (
-    <Panel>
-      <form
-        aria-label="Dépôt"
-        className="flex flex-col gap-4"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (!tooLarge) deposit.mutate();
-        }}
-      >
-        <Heading level={3}>Métadonnées</Heading>
+    <form
+      aria-label="Dépôt"
+      className="flex flex-col gap-5"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!tooLarge) deposit.mutate();
+      }}
+    >
+      <Section title="2 · Informations">
         <MetadataFields fields={fields} values={values} errors={errors} onChange={setValues} />
-        <Heading level={3}>Titulaire</Heading>
+      </Section>
+      <Section title="3 · Titulaire">
         <div className="grid gap-4 md:grid-cols-2">
           <SelectField
             label="Partie"
@@ -159,6 +194,8 @@ function Form({ type }: { type: TypeVersion }) {
             }}
           />
         </div>
+      </Section>
+      <Section title="4 · Fichier">
         <FileField
           label="Fichier"
           description={`Formats : ${(type.definition.formats ?? []).join(", ")} ; ${String(type.definition.maxSizeMb ?? 50)} Mo au plus.`}
@@ -167,19 +204,23 @@ function Form({ type }: { type: TypeVersion }) {
           onFile={setFile}
           error={tooLarge ? "Fichier trop volumineux pour ce type." : undefined}
         />
-        {deposit.isPending && <ProgressBar value={progress} label="Envoi du fichier" />}
-        {deposit.error && (
-          <Notice tone="danger" role="alert" title="Dépôt refusé">
-            {deposit.error.message}
-          </Notice>
+        {deposit.isPending && (
+          <div className="mt-4">
+            <ProgressBar value={progress} label="Envoi du fichier" />
+          </div>
         )}
-        <div>
-          <Button type="submit" loading={deposit.isPending}>
-            Déposer
-          </Button>
-        </div>
-      </form>
-    </Panel>
+      </Section>
+      {deposit.error && (
+        <Notice tone="danger" role="alert" title="Dépôt refusé">
+          {deposit.error.message}
+        </Notice>
+      )}
+      <div className="flex justify-end">
+        <Button type="submit" loading={deposit.isPending}>
+          Déposer
+        </Button>
+      </div>
+    </form>
   );
 }
 

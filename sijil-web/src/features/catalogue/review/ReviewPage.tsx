@@ -4,6 +4,7 @@ import { useParams } from "react-router";
 import { ErrorState } from "@sijil/ui-kit";
 import { api, call, isApiError, type Schemas } from "@/shared/api";
 import { STATUS_LABELS } from "@/features/catalogue/shared/labels";
+import { Page } from "@/shared/ui/page";
 import { QueryState } from "@/shared/QueryState";
 import { diffDefinitions } from "@/features/catalogue/type-sheet/diff";
 import { reviewSchema, today, type ReviewForm } from "@/features/catalogue/review/form";
@@ -38,16 +39,21 @@ export function ReviewPage() {
     queryFn: () => call(api.GET("/api/types/{code}", { params: { path: { code } } })),
   });
   return (
-    <div className="flex flex-col gap-6">
-      <Heading>
-        Revue du type {code}, version {version}
-      </Heading>
+    <Page
+      title={
+        <>
+          Revue du type {code}, version {version}
+        </>
+      }
+      subtitle="Différences avec la version publiée, puis votre décision."
+      width="wide"
+    >
       <QueryState query={reviewed}>
         {(data) => (
           <QueryState query={sheet}>{(type) => <Review reviewed={data} sheet={type} />}</QueryState>
         )}
       </QueryState>
-    </div>
+    </Page>
   );
 }
 

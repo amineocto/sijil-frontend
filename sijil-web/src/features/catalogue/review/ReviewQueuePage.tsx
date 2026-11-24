@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { EmptyState } from "@sijil/ui-kit";
 import { api, call } from "@/shared/api";
+import { Page } from "@/shared/ui/page";
 import { QueryState } from "@/shared/QueryState";
-import { Heading, Muted, Table, Td, TextLink, Th } from "@/shared/ui";
+import { Muted, Table, Td, TextLink, Th } from "@/shared/ui";
 
 /** Écran « File de revue » : versions soumises qui attendent un réviseur. */
 export function ReviewQueuePage() {
@@ -11,8 +12,10 @@ export function ReviewQueuePage() {
     queryFn: () => call(api.GET("/api/reviews")),
   });
   return (
-    <div className="flex flex-col gap-6">
-      <Heading>File de revue</Heading>
+    <Page
+      title="File de revue"
+      subtitle="Approuver avec une date d'effet, ou demander des modifications avec un motif."
+    >
       <QueryState query={queue}>
         {(page) =>
           page.items.length === 0 ? (
@@ -51,6 +54,6 @@ export function ReviewQueuePage() {
       {queue.data?.hasMore && (
         <Muted>D&apos;autres versions attendent : affinez la liste des types.</Muted>
       )}
-    </div>
+    </Page>
   );
 }

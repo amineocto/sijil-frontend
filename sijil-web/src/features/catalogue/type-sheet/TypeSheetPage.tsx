@@ -3,6 +3,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router";
 import { ErrorState } from "@sijil/ui-kit";
 import { api, call, isApiError, type Schemas } from "@/shared/api";
+import { Page, Section } from "@/shared/ui/page";
 import { QueryState } from "@/shared/QueryState";
 import { StatusBadge } from "@/features/catalogue/shared/StatusBadge";
 import { diffDefinitions } from "@/features/catalogue/type-sheet/diff";
@@ -29,11 +30,11 @@ export function TypeSheetPage() {
     queryKey: ["type", code],
     queryFn: () => call(api.GET("/api/types/{code}", { params: { path: { code } } })),
   });
+  if (sheet.data) return <Sheet sheet={sheet.data} />;
   return (
-    <div className="flex flex-col gap-6">
-      <Heading>Type {code}</Heading>
-      <QueryState query={sheet}>{(data) => <Sheet sheet={data} />}</QueryState>
-    </div>
+    <Page title={`Type ${code}`}>
+      <QueryState query={sheet}>{() => null}</QueryState>
+    </Page>
   );
 }
 
@@ -51,39 +52,52 @@ function Sheet({ sheet }: { sheet: Schemas["TypeSheet"] }) {
     onSuccess: () => void navigate(`/catalogue/types/${sheet.code}/brouillon`),
   });
   const draftInProgress = latest?.status === "BROUILLON";
+  const label = (latest?.definition as { labels?: { fr?: string } } | undefined)?.labels?.fr;
   return (
-    <div className="flex flex-col gap-6">
-      <p className="text-sm text-gray-900">
-        Parcours propriétaire : <strong>{sheet.ownerParcours}</strong> — référent :{" "}
-        <strong>{sheet.referentParcours}</strong> — famille : {sheet.family ?? "non renseignée"}
-      </p>
+    <Page
+      title={
+        <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          {label ?? `Type ${sheet.code}`}
+          <code className="rounded-md bg-gray-100 px-2 py-0.5 text-sm font-semibold text-gray-700">
+            {sheet.code}
+          </code>
+        </span>
+      }
+      subtitle={
+        <>
+          <span>
+            {sheet.family ?? "Famille non renseignée"} · parcours {sheet.ownerParcours} · référent{" "}
+            {sheet.referentParcours}
+          </span>
+          {latest && <StatusBadge status={latest.status} />}
+        </>
+      }
+      actions={
+        sheet.canEdit &&
+        (draftInProgress ? (
+          <ButtonLink to={`/catalogue/types/${sheet.code}/brouillon`}>
+            Modifier le brouillon
+          </ButtonLink>
+        ) : (
+          <Button
+            onClick={() => {
+              newVersion.mutate();
+            }}
+            loading={newVersion.isPending}
+          >
+            Nouvelle version
+          </Button>
+        ))
+      }
+    >
       {latest?.reviewReason && (
         <Notice tone="warning" title="Modifications demandées par la revue" role="note">
           {latest.reviewReason}
         </Notice>
       )}
-      {sheet.canEdit && (
-        <div>
-          {draftInProgress ? (
-            <ButtonLink to={`/catalogue/types/${sheet.code}/brouillon`}>
-              Modifier le brouillon
-            </ButtonLink>
-          ) : (
-            <Button
-              onClick={() => {
-                newVersion.mutate();
-              }}
-              loading={newVersion.isPending}
-            >
-              Nouvelle version
-            </Button>
-          )}
-        </div>
-      )}
       {isApiError(newVersion.error) && <ErrorState error={newVersion.error} headingLevel={3} />}
-      <Panel className="flex flex-col gap-4">
-        <Heading level={3}>Versions</Heading>
-        <Table>
+      <Section title="Versions" bodyClassName="p-0">
+        <Table aria-label="Versions" className="[&_tr:last-child>td]:border-b-0">
           <thead>
             <tr>
               <Th scope="col">Version</Th>
@@ -107,10 +121,10 @@ function Sheet({ sheet }: { sheet: Schemas["TypeSheet"] }) {
             ))}
           </tbody>
         </Table>
-      </Panel>
+      </Section>
       {sheet.versions.length > 1 && <VersionDiff versions={sheet.versions} />}
       <ReuseSection sheet={sheet} />
-    </div>
+    </Page>
   );
 }
 

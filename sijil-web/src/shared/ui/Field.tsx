@@ -5,6 +5,8 @@ export interface FieldProps {
   description?: string | undefined;
   error?: string | undefined;
   required?: boolean | undefined;
+  /** Libellé lu par les lecteurs d'écran mais non affiché (filtre d'une barre d'outils). */
+  hideLabel?: boolean | undefined;
 }
 
 interface FieldIds {
@@ -22,13 +24,14 @@ export function Field({
   description,
   error,
   required,
+  hideLabel,
   children,
 }: FieldProps & { children: (ids: FieldIds) => ReactNode }) {
   const id = useId();
   const described = [description && `${id}-aide`, error && `${id}-erreur`].filter(Boolean);
   return (
     <div className="flex w-full flex-col gap-1.5">
-      <label htmlFor={id} className="text-sm font-medium text-gray-700">
+      <label htmlFor={id} className={hideLabel ? "sr-only" : "text-sm font-medium text-gray-700"}>
         {label}
         {required && (
           <span className="ms-0.5 text-red-700" aria-hidden="true">

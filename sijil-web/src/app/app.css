@@ -3,7 +3,11 @@
  * fichiers (la CSP n'admet pas de police en `data:`). La feuille d'`@awb/ui` est importée à part
  * (main.tsx) pour passer par le greffon qui en retire les polices embarquées (theme.ts).
  */
+/* Ordre des couches : la charte d'@awb/ui (couche awb, theme.ts) passe après le reset et avant les utilitaires de Sijil. */
+@layer theme, base, awb, components, utilities;
 @import "tailwindcss";
+/* Classes des composants d'@awb/ui compilées par le Tailwind de Sijil : un seul ordre d'utilitaires (px-4 puis pl-10…), au lieu de deux compilations qui s'écrasent. */
+@source "../../../../node_modules/@awb/ui/dist/components";
 @import "@fontsource-variable/inter";
 
 @theme {

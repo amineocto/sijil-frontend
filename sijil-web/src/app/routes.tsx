@@ -20,9 +20,27 @@ export const routes: RouteObject[] = [
         }),
       },
       {
+        path: "recherche/plein-texte",
+        lazy: async () => ({
+          Component: (await import("@/features/search/SearchPage")).FullTextSearchPage,
+        }),
+      },
+      {
+        path: "recherche/completude",
+        lazy: async () => ({
+          Component: (await import("@/features/search/SearchPage")).CompletenessSearchPage,
+        }),
+      },
+      {
         path: "dossiers/:partyType/:partyId",
         lazy: async () => ({
           Component: (await import("@/features/dossier/DossierPage")).DossierPage,
+        }),
+      },
+      {
+        path: "dossiers/:partyType/:partyId/completude",
+        lazy: async () => ({
+          Component: (await import("@/features/dossier/DossierPage")).DossierCompletenessPage,
         }),
       },
       {

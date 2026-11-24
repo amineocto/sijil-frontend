@@ -7,14 +7,26 @@ import { server, stub } from "@/test/setup";
 
 const SHEET = /^Fiche : /;
 
+/** Bouton d'ouverture de la pièce dont la ligne contient `text`. */
+async function pieceOf(pieces: HTMLElement, text: string): Promise<HTMLElement> {
+  const table = await within(pieces).findByRole("table", { name: "Pièces" });
+  const line = within(table)
+    .getAllByRole("row")
+    .find((r) => r.textContent.includes(text));
+  if (!line) throw new Error(`ligne « ${text} » absente`);
+  return within(line).getByRole("button", { name: "Carte d'identité nationale" });
+}
+
 describe("Dossier client", () => {
-  it("groupe les pièces par famille avec leurs étiquettes, sans violation axe", async () => {
+  it("liste les pièces avec leur famille et leurs étiquettes, sans violation axe", async () => {
     const { container } = renderAt("/dossiers/client/CLI-42");
 
     const pieces = await screen.findByRole("region", { name: "Pièces du dossier" });
-    expect(await within(pieces).findByRole("heading", { name: "Identité" })).toBeInTheDocument();
-    const rows = within(pieces).getAllByRole("button", { name: /Carte d'identité nationale/ });
+    const table = await within(pieces).findByRole("table", { name: "Pièces" });
+    const rows = within(table).getAllByRole("row").slice(1);
     expect(rows).toHaveLength(2);
+    expect(rows.every((r) => r.textContent.includes("Carte d'identité nationale"))).toBe(true);
+    expect(rows.every((r) => r.textContent.includes("Identité"))).toBe(true);
     // Contributeur du parcours eer : la pièce du crédit immobilier est d'un autre parcours.
     expect(rows.some((r) => r.textContent.includes("Autre parcours"))).toBe(true);
     expect(rows.some((r) => r.textContent.includes("Type à vérifier"))).toBe(true);
@@ -22,7 +34,40 @@ describe("Dossier client", () => {
       "href",
       "/depot?partieType=CLIENT&partie=CLI-42",
     );
+    expect(screen.getByRole("link", { name: "Complétude" })).toHaveAttribute(
+      "href",
+      "/dossiers/client/CLI-42/completude",
+    );
     expect(await seriousViolations(container)).toEqual([]);
+  });
+
+  it("filtre les pièces par texte et par validité", async () => {
+    server.use(
+      http.get("/api/documents", () =>
+        HttpResponse.json({
+          items: [
+            document("f1", "eer", "STANDARD", { dateExpiration: "2020-01-31" }),
+            document("f2", "eer", "STANDARD", { dateExpiration: "2099-12-31" }),
+          ],
+          page: { size: 20, hasMore: false },
+        }),
+      ),
+    );
+    renderAt("/dossiers/client/CLI-42");
+    const user = userEvent.setup();
+    const pieces = await screen.findByRole("region", { name: "Pièces du dossier" });
+    await within(pieces).findByRole("table", { name: "Pièces" });
+
+    await user.selectOptions(within(pieces).getByRole("combobox", { name: "Validité" }), "EXPIREE");
+    expect(within(pieces).getByRole("status")).toHaveTextContent("1 sur 2");
+    expect(within(pieces).getByText("Expirée le 31/01/2020")).toBeInTheDocument();
+
+    await user.selectOptions(within(pieces).getByRole("combobox", { name: "Validité" }), "");
+    await user.type(
+      within(pieces).getByRole("searchbox", { name: "Rechercher une pièce" }),
+      "passeport",
+    );
+    expect(within(pieces).getByRole("status")).toHaveTextContent("0 sur 2");
   });
 
   it("signale les pièces expirées ou proches de l'échéance", async () => {
@@ -50,8 +95,7 @@ describe("Dossier client", () => {
     renderAt("/dossiers/client/CLI-42");
     const user = userEvent.setup();
     const pieces = await screen.findByRole("region", { name: "Pièces du dossier" });
-    const row = (await within(pieces).findAllByRole("button", { name: /Type à vérifier/ }))[0];
-    if (!row) throw new Error("ligne absente");
+    const row = await pieceOf(pieces, "Type à vérifier");
 
     await user.click(row);
     const drawer = await screen.findByRole("dialog", { name: SHEET });
@@ -80,8 +124,7 @@ describe("Dossier client", () => {
     renderAt("/dossiers/client/CLI-42");
     const user = userEvent.setup();
     const pieces = await screen.findByRole("region", { name: "Pièces du dossier" });
-    const row = (await within(pieces).findAllByRole("button", { name: /Autre parcours/ }))[0];
-    if (!row) throw new Error("ligne absente");
+    const row = await pieceOf(pieces, "Autre parcours");
 
     await user.click(row);
     const drawer = await screen.findByRole("dialog", { name: SHEET });

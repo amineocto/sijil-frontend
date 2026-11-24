@@ -5,9 +5,9 @@ import { renderAt, seriousViolations } from "@/test/render";
 async function openPanel() {
   const user = userEvent.setup();
   const view = renderAt("/");
-  await user.click(await screen.findByRole("tab", { name: "Complétude" }));
+  await user.click(await screen.findByRole("link", { name: "Complétude" }));
   await user.selectOptions(
-    screen.getByRole("combobox", { name: "Jeu d'exigences" }),
+    await screen.findByRole("combobox", { name: "Jeu d'exigences" }),
     await screen.findByRole("option", { name: /Crédit immobilier particulier/ }),
   );
   await user.type(screen.getByLabelText("Identifiant de la partie 1"), "P0012345");

@@ -4,21 +4,12 @@ import { useSearchParams } from "react-router";
 import { EmptyState } from "@sijil/ui-kit";
 import { api, call, type TypeStatus } from "@/shared/api";
 import { STATUS_LABELS } from "@/features/catalogue/shared/labels";
+import { DataTable, Page } from "@/shared/ui/page";
+import { familyLabel } from "@/features/dossier/dossier";
 import { QueryState } from "@/shared/QueryState";
 import { canContributeToCatalogue, useSession } from "@/shared/session";
 import { StatusBadge } from "@/features/catalogue/shared/StatusBadge";
-import {
-  Button,
-  ButtonLink,
-  Heading,
-  Panel,
-  SelectField,
-  Table,
-  Td,
-  TextField,
-  TextLink,
-  Th,
-} from "@/shared/ui";
+import { Button, ButtonLink, Panel, SelectField, TextField, TextLink } from "@/shared/ui";
 
 const STATUSES = Object.keys(STATUS_LABELS) as TypeStatus[];
 
@@ -68,14 +59,16 @@ export function TypesListPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Heading>Types de documents</Heading>
-        {canContributeToCatalogue(session.data) && (
+    <Page
+      title="Catalogue des types"
+      subtitle="Chaque type décrit ses métadonnées, sa conservation, sa sensibilité et son stockage."
+      actions={
+        canContributeToCatalogue(session.data) && (
           <ButtonLink to="/catalogue/types/nouveau">Nouveau type</ButtonLink>
-        )}
-      </div>
-      <Panel>
+        )
+      }
+    >
+      <Panel className="p-4">
         <form
           onSubmit={applyFilters}
           aria-label="Filtres"
@@ -129,38 +122,60 @@ export function TypesListPage() {
           }
           return (
             <>
-              <Table>
-                <caption className="sr-only">
-                  {items.length} type{items.length > 1 ? "s" : ""} affiché
-                  {items.length > 1 ? "s" : ""}
-                </caption>
-                <thead>
-                  <tr>
-                    <Th scope="col">Code</Th>
-                    <Th scope="col">Libellé</Th>
-                    <Th scope="col">Famille</Th>
-                    <Th scope="col">Parcours</Th>
-                    <Th scope="col">Dernière version</Th>
-                    <Th scope="col">Statut</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((type) => (
-                    <tr key={type.code}>
-                      <Td>
-                        <TextLink to={`/catalogue/types/${type.code}`}>{type.code}</TextLink>
-                      </Td>
-                      <Td>{type.label ?? "—"}</Td>
-                      <Td>{type.family ?? "—"}</Td>
-                      <Td>{type.ownerParcours}</Td>
-                      <Td>v{type.latest.version}</Td>
-                      <Td>
+              <DataTable
+                label={`${String(items.length)} type${items.length > 1 ? "s" : ""} affiché${items.length > 1 ? "s" : ""}`}
+                rows={items}
+                rowKey={(type) => type.code}
+                columns={[
+                  {
+                    header: "Type",
+                    cell: (type) => (
+                      <div className="flex flex-col gap-0.5">
+                        <span className="font-semibold text-gray-900">
+                          {type.label ?? type.code}
+                        </span>
+                        <TextLink
+                          to={`/catalogue/types/${type.code}`}
+                          className="font-mono text-xs"
+                        >
+                          {type.code}
+                        </TextLink>
+                      </div>
+                    ),
+                  },
+                  {
+                    header: "Famille",
+                    cell: (type) => (type.family ? familyLabel(type.family) : "—"),
+                  },
+                  { header: "Parcours", cell: (type) => type.ownerParcours },
+                  {
+                    header: "Dernière version",
+                    cell: (type) => (
+                      <span className="flex items-center gap-2">
+                        <span className="text-gray-700">v{type.latest.version}</span>
                         <StatusBadge status={type.latest.status} />
-                      </Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
+                      </span>
+                    ),
+                  },
+                ]}
+                mobile={(type) => (
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 flex-col gap-0.5">
+                      <span className="font-semibold text-gray-900">{type.label ?? type.code}</span>
+                      <TextLink to={`/catalogue/types/${type.code}`} className="font-mono text-xs">
+                        {type.code}
+                      </TextLink>
+                      <span className="text-sm text-gray-600">
+                        {type.family ? familyLabel(type.family) : "—"} · {type.ownerParcours}
+                      </span>
+                    </div>
+                    <span className="flex shrink-0 items-center gap-2">
+                      v{type.latest.version}
+                      <StatusBadge status={type.latest.status} />
+                    </span>
+                  </div>
+                )}
+              />
               {types.hasNextPage && (
                 <Button
                   variant="secondary"
@@ -174,6 +189,6 @@ export function TypesListPage() {
           );
         }}
       </QueryState>
-    </div>
+    </Page>
   );
 }

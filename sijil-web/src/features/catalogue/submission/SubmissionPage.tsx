@@ -3,9 +3,10 @@ import { useParams } from "react-router";
 import { ErrorState } from "@sijil/ui-kit";
 import { api, call, isApiError, type Schemas } from "@/shared/api";
 import { errorLabel, STATUS_LABELS } from "@/features/catalogue/shared/labels";
+import { Page } from "@/shared/ui/page";
 import { QueryState } from "@/shared/QueryState";
 import { RUBRIQUES, rubriqueOf } from "@/features/catalogue/shared/rubriques";
-import { Button, Heading, Notice, Panel, TextLink } from "@/shared/ui";
+import { Button, Notice, Panel, TextLink } from "@/shared/ui";
 
 /** Écran « Soumission » : contrôles automatiques du serveur, erreurs par rubrique. */
 export function SubmissionPage() {
@@ -15,10 +16,13 @@ export function SubmissionPage() {
     queryFn: () => call(api.GET("/api/types/{code}/editor", { params: { path: { code } } })),
   });
   return (
-    <div className="flex flex-col gap-6">
-      <Heading>Soumission du type {code}</Heading>
+    <Page
+      title={<>Soumission du type {code}</>}
+      subtitle="Contrôles automatiques de la version, puis envoi en revue : personne ne publie seul son propre travail."
+      width="wide"
+    >
       <QueryState query={editor}>{(data) => <Submission draft={data} />}</QueryState>
-    </div>
+    </Page>
   );
 }
 

@@ -6,6 +6,7 @@ import { EvaluationForm } from "@/features/completeness/EvaluationForm";
 import { evaluate } from "@/features/completeness/completeness";
 import { SET_STATUS_LABELS } from "@/features/catalogue/requirements/RequirementSetsPage";
 import { api, call, isApiError, type Schemas } from "@/shared/api";
+import { Page } from "@/shared/ui/page";
 import { QueryState } from "@/shared/QueryState";
 import { canContributeToCatalogue, canReview, useSession } from "@/shared/session";
 import { Button, Heading, Notice, Panel, Tag, TextAreaField, TextField } from "@/shared/ui";
@@ -103,13 +104,11 @@ function Editor({ set }: { set: RequirementSet | undefined }) {
   const simulate = useMutation({ mutationFn: evaluate });
 
   return (
-    <div className="flex max-w-5xl flex-col gap-6">
-      <div className="flex flex-wrap items-center gap-3">
-        <Heading>
-          {set ? `Jeu ${set.code}, version ${String(set.version)}` : "Nouveau jeu d'exigences"}
-        </Heading>
-        {set && <Tag>{SET_STATUS_LABELS[set.status] ?? set.status}</Tag>}
-      </div>
+    <Page
+      title={set ? `Jeu ${set.code}, version ${String(set.version)}` : "Nouveau jeu d'exigences"}
+      subtitle={set && <Tag>{SET_STATUS_LABELS[set.status] ?? set.status}</Tag>}
+      width="wide"
+    >
       <Panel className="flex flex-col gap-4">
         {set === undefined && (
           <TextField
@@ -175,7 +174,7 @@ function Editor({ set }: { set: RequirementSet | undefined }) {
           {simulate.data && <CompletenessResultView result={simulate.data} />}
         </Panel>
       )}
-    </div>
+    </Page>
   );
 }
 

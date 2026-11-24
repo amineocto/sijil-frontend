@@ -18,12 +18,24 @@ export function withoutEmbeddedFonts(css: string): string {
   return stripped;
 }
 
+/**
+ * Range la feuille d'`@awb/ui` dans la couche `awb`, déclarée entre `base` et `utilities` (app.css).
+ * Hors couche, ses utilitaires compilés (`.hidden`, `.flex`…) l'emporteraient toujours sur ceux de
+ * Sijil, rangés en couches par Tailwind 4 : une classe responsive (`lg:flex`) ou un ajustement passé
+ * à un composant serait sans effet. Après `base`, le reset de Tailwind n'efface pas la charte.
+ */
+export function inAwbLayer(css: string): string {
+  return `@layer awb{${css}}`;
+}
+
 export function awbStylesheetFonts(): Plugin {
   return {
     name: "sijil-awb-polices",
     enforce: "pre",
     transform(code, id) {
-      return id.split("?")[0]?.endsWith(AWB_STYLESHEET) ? withoutEmbeddedFonts(code) : null;
+      return id.split("?")[0]?.endsWith(AWB_STYLESHEET)
+        ? inAwbLayer(withoutEmbeddedFonts(code))
+        : null;
     },
   };
 }

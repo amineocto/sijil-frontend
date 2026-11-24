@@ -109,19 +109,17 @@ export function tourSteps(session: Session): TourStep[] {
     {
       target: "menu",
       title: "Réduire le menu",
-      body: "Repliez le menu pour gagner de la place : il ne garde que ses icônes, et votre choix est mémorisé dans ce navigateur.",
+      body: "Cette bascule replie le menu pour gagner de la place : il ne garde que ses icônes, et votre choix est mémorisé dans ce navigateur.",
     },
     {
       target: "utilisateur",
-      below: true,
       title: "Votre profil",
       body: "Votre matricule et vos parcours. Le menu suit vos droits ; chaque service les vérifie à nouveau à chaque demande, et chaque consultation est tracée.",
     },
     {
       target: "visite",
-      below: true,
       title: "Revoir la visite",
-      body: "Relancez cette visite à tout moment depuis ce bouton, en haut de l'écran.",
+      body: "Relancez cette visite à tout moment depuis ce bouton, sous votre profil.",
     },
   );
   return steps;

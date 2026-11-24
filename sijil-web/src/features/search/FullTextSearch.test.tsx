@@ -22,8 +22,8 @@ describe("Recherche plein texte", () => {
     );
     const { container } = renderAt("/");
     const user = userEvent.setup();
-    await user.click(await screen.findByRole("tab", { name: "Plein texte" }));
-    await user.type(screen.getByRole("textbox", { name: /Texte cherché/ }), "carte");
+    await user.click(await screen.findByRole("link", { name: "Plein texte" }));
+    await user.type(await screen.findByRole("textbox", { name: /Texte cherché/ }), "carte");
     await user.type(screen.getByRole("textbox", { name: /Identifiant de la partie/ }), "CLI-42");
     await user.click(screen.getByRole("button", { name: "Chercher" }));
 
@@ -40,8 +40,8 @@ describe("Recherche plein texte", () => {
   it("dit qu'aucun document ne contient le texte, et rend l'erreur de la façade", async () => {
     renderAt("/");
     const user = userEvent.setup();
-    await user.click(await screen.findByRole("tab", { name: "Plein texte" }));
-    await user.type(screen.getByRole("textbox", { name: /Texte cherché/ }), "introuvable");
+    await user.click(await screen.findByRole("link", { name: "Plein texte" }));
+    await user.type(await screen.findByRole("textbox", { name: /Texte cherché/ }), "introuvable");
     await user.type(screen.getByRole("textbox", { name: /Identifiant de la partie/ }), "CLI-42");
     await user.click(screen.getByRole("button", { name: "Chercher" }));
     expect(await screen.findByText("Aucun document")).toBeInTheDocument();
@@ -55,7 +55,7 @@ describe("Recherche plein texte", () => {
       ),
     );
     await user.clear(screen.getByRole("textbox", { name: /Texte cherché/ }));
-    await user.type(screen.getByRole("textbox", { name: /Texte cherché/ }), "autre texte");
+    await user.type(await screen.findByRole("textbox", { name: /Texte cherché/ }), "autre texte");
     await user.click(screen.getByRole("button", { name: "Chercher" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("c-7");
   });
@@ -83,8 +83,8 @@ describe("Recherche plein texte", () => {
     );
     renderAt("/");
     const user = userEvent.setup();
-    await user.click(await screen.findByRole("tab", { name: "Plein texte" }));
-    await user.type(screen.getByRole("textbox", { name: /Texte cherché/ }), "carte");
+    await user.click(await screen.findByRole("link", { name: "Plein texte" }));
+    await user.type(await screen.findByRole("textbox", { name: /Texte cherché/ }), "carte");
     await user.type(screen.getByRole("textbox", { name: /Identifiant de la partie/ }), "CLI-42");
     await user.click(screen.getByRole("button", { name: "Chercher" }));
     expect(await screen.findByRole("link", { name: "CIN 1" })).toBeInTheDocument();
@@ -127,8 +127,8 @@ describe("Recherche plein texte", () => {
     );
     renderAt("/");
     const user = userEvent.setup();
-    await user.click(await screen.findByRole("tab", { name: "Plein texte" }));
-    await user.type(screen.getByRole("textbox", { name: /Texte cherché/ }), "carte");
+    await user.click(await screen.findByRole("link", { name: "Plein texte" }));
+    await user.type(await screen.findByRole("textbox", { name: /Texte cherché/ }), "carte");
     await user.type(screen.getByRole("textbox", { name: /Identifiant de la partie/ }), "CLI-42");
     await user.click(screen.getByRole("button", { name: "Chercher" }));
     await user.click(await screen.findByRole("button", { name: "Résultats suivants" }));

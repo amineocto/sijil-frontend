@@ -3,12 +3,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { EmptyState, LoadingState } from "@sijil/ui-kit";
 import { api, call, isApiError, type Schemas } from "@/shared/api";
 import { formatDate } from "@/shared/labels";
+import { Page } from "@/shared/ui/page";
 import { QueryState } from "@/shared/QueryState";
 import { canAdministerSharing, useSession } from "@/shared/session";
 import {
   Button,
   Heading,
-  Muted,
   Notice,
   Panel,
   SelectField,
@@ -35,19 +35,19 @@ export function SharingPage() {
   if (session.isPending) return <LoadingState />;
   if (!canAdministerSharing(session.data) || parcours === undefined) {
     return (
-      <EmptyState
-        title="Partage réservé à l'administration du domaine"
-        description="Votre profil ne permet pas de régler le partage dans le portefeuille client."
-      />
+      <Page title="Partage 360">
+        <EmptyState
+          title="Partage réservé à l'administration du domaine"
+          description="Votre profil ne permet pas de régler le partage dans le portefeuille client."
+        />
+      </Page>
     );
   }
   return (
-    <div className="flex flex-col gap-6">
-      <Heading>Partage dans le portefeuille client 360</Heading>
-      <Muted>
-        Un type partagé apparaît dans le 360 pour les documents ACTIFS rattachés à un client ;
-        chaque lecteur reste soumis à ses droits sur la sensibilité du document.
-      </Muted>
+    <Page
+      title="Partage dans le portefeuille client 360"
+      subtitle="Un type partagé apparaît dans le 360 pour les documents actifs rattachés à un client ; chaque lecteur reste soumis à ses droits sur la sensibilité du document."
+    >
       {parcoursList.length > 1 && (
         <div className="max-w-xs">
           <SelectField
@@ -61,7 +61,7 @@ export function SharingPage() {
         </div>
       )}
       <SharingList key={parcours} parcours={parcours} />
-    </div>
+    </Page>
   );
 }
 
