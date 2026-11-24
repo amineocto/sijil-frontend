@@ -29,6 +29,14 @@ import { Button, Heading, Muted, Notice, Panel, Table, Tabs, Tag, Td, Th } from 
  */
 export function DocumentPage() {
   const { id = "" } = useParams();
+  return <DocumentSheet id={id} />;
+}
+
+/**
+ * Fiche d'un document, en pleine page ou dans le volet du dossier client. `title` : libellé du type
+ * quand l'écran appelant le connaît (son code à défaut).
+ */
+export function DocumentSheet({ id, title }: { id: string; title?: string }) {
   const [access, setAccess] = useState<Access>({});
   const [draft, setDraft] = useState<Access>({});
   const document = useQuery({
@@ -69,7 +77,7 @@ export function DocumentPage() {
   }
   return (
     <QueryState query={document}>
-      {({ data, etag }) => <Sheet document={data} etag={etag} access={access} />}
+      {({ data, etag }) => <Sheet document={data} etag={etag} access={access} title={title} />}
     </QueryState>
   );
 }
@@ -78,17 +86,19 @@ function Sheet({
   document,
   etag,
   access,
+  title,
 }: {
   document: DocumentView;
   etag: string;
   access: Access;
+  title: string | undefined;
 }) {
   const session = useSession();
   if (session.isPending) return <LoadingState />;
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Heading>{document.documentType}</Heading>
+        <Heading>{title ?? document.documentType}</Heading>
         <div className="flex gap-2">
           <Tag variant="info">{statusLabel(document.status)}</Tag>
           <Tag>{SENSITIVITY_LABELS[document.sensitivity]}</Tag>

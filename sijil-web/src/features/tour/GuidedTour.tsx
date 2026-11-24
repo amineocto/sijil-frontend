@@ -18,9 +18,10 @@ export default function GuidedTour({ steps, onClose }: { steps: TourStep[]; onCl
         selector: tourSelector(step.target),
         content: step.title,
         ...(step.centered && { position: "center" as const }),
+        ...(step.below && { position: "bottom" as const }),
       }))}
       ContentComponent={(props) => <StepDialog {...props} steps={steps} />}
-      // Tous les repères sont dans la barre latérale : la bulle se place à sa droite.
+      // Repères du menu latéral : la bulle à sa droite ; ceux de l'en-tête la placent dessous.
       position="right"
       padding={{ mask: 6, popover: 16 }}
       styles={{

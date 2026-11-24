@@ -29,7 +29,7 @@ async function seriousViolations(page: Page): Promise<string[]> {
   });
 }
 
-test("un contributeur dépose un document, qui passe la quarantaine et se retrouve dans la recherche", async ({
+test("un contributeur dépose un document, qui passe la quarantaine et se retrouve dans le dossier du client", async ({
   page,
 }) => {
   await page.goto("/depot");
@@ -52,13 +52,12 @@ test("un contributeur dépose un document, qui passe la quarantaine et se retrou
   await expect(page.getByRole("table", { name: "Métadonnées" })).toContainText("EE778899");
   expect(await seriousViolations(page)).toEqual([]);
 
-  // Le document est trouvé par son titulaire.
-  await page.getByRole("link", { name: "Recherche" }).click();
-  await page
-    .getByRole("textbox", { name: /Identifiant/ })
-    .first()
-    .fill("CLI-77");
-  await page.getByRole("button", { name: "Rechercher" }).click();
-  await expect(page.getByRole("table", { name: "Documents trouvés" })).toContainText("CIN");
+  // Le document est dans le dossier de son titulaire, ouvert depuis l'en-tête.
+  const lookup = page.getByRole("search", { name: "Ouvrir un dossier" });
+  await lookup.getByRole("searchbox", { name: "Identifiant de la partie" }).fill("CLI-77");
+  await lookup.getByRole("searchbox", { name: "Identifiant de la partie" }).press("Enter");
+  await expect(page.getByRole("region", { name: "Pièces du dossier" })).toContainText(
+    "Carte d'identité nationale",
+  );
   expect(await seriousViolations(page)).toEqual([]);
 });

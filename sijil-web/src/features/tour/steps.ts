@@ -15,6 +15,8 @@ export interface TourStep {
   body: string;
   /** Bulle au centre de l'écran (accueil) plutôt qu'à côté de l'élément. */
   centered?: boolean;
+  /** Bulle sous l'élément (en-tête) plutôt qu'à sa droite (menu latéral). */
+  below?: boolean;
 }
 
 /** Sélecteur de l'élément d'une étape. */
@@ -53,13 +55,19 @@ export function tourSteps(session: Session): TourStep[] {
       body: `Sijil est la plateforme documentaire de la banque : chaque document y est classé par type, rattaché à ses clients, conservé selon sa règle de rétention et tracé. Cette visite présente les écrans ouverts à votre profil : ${profileLabel(session)}.`,
     },
     {
+      target: "recherche-globale",
+      below: true,
+      title: "Ouvrir un dossier",
+      body:
+        "Saisissez l'identifiant d'un client, d'une personne ou d'un compte : son dossier regroupe ses pièces par famille avec leur validité, vérifie sa complétude, et ouvre la fiche de chaque document en volet. Un document d'un autre parcours demande une finalité, enregistrée." +
+        (canBreakGlass(session)
+          ? " Les documents restreints demandent en plus un motif de bris de glace, tracé et contrôlé."
+          : ""),
+    },
+    {
       target: "nav-recherche",
       title: "Rechercher",
-      body:
-        "Retrouvez les documents d'un client, d'une personne ou d'un compte. Trois onglets : par partie, plein texte dans le contenu des documents, et complétude d'un dossier face à un jeu d'exigences. Un document d'un autre parcours demande une finalité, enregistrée." +
-        (canBreakGlass(session)
-          ? " Un document restreint demande en plus un motif de bris de glace, tracé et contrôlé."
-          : ""),
+      body: "Trois façons de chercher : le dossier d'une partie, le plein texte dans le contenu des documents, et la complétude d'un dossier à plusieurs parties face à un jeu d'exigences.",
     },
   ];
   if (canContribute(session)) {
@@ -99,14 +107,21 @@ export function tourSteps(session: Session): TourStep[] {
   }
   steps.push(
     {
+      target: "menu",
+      title: "Réduire le menu",
+      body: "Repliez le menu pour gagner de la place : il ne garde que ses icônes, et votre choix est mémorisé dans ce navigateur.",
+    },
+    {
       target: "utilisateur",
+      below: true,
       title: "Votre profil",
       body: "Votre matricule et vos parcours. Le menu suit vos droits ; chaque service les vérifie à nouveau à chaque demande, et chaque consultation est tracée.",
     },
     {
       target: "visite",
+      below: true,
       title: "Revoir la visite",
-      body: "Relancez cette visite à tout moment depuis ce bouton.",
+      body: "Relancez cette visite à tout moment depuis ce bouton, en haut de l'écran.",
     },
   );
   return steps;

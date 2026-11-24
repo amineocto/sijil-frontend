@@ -19,9 +19,11 @@ describe("Visite guidée", () => {
   it("ne présente que les écrans ouverts au profil connecté", () => {
     expect(targets(READER)).toEqual([
       "accueil",
+      "recherche-globale",
       "nav-recherche",
       "nav-catalogue",
       "nav-exigences",
+      "menu",
       "utilisateur",
       "visite",
     ]);
@@ -53,6 +55,8 @@ describe("Visite guidée", () => {
     expect(await seriousViolations(container.ownerDocument.body)).toEqual([]);
 
     await user.click(within(dialog).getByRole("button", { name: "Suivant" }));
+    expect(await screen.findByRole("dialog", { name: "Ouvrir un dossier" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Suivant" }));
     expect(await screen.findByRole("dialog", { name: "Rechercher" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Suivant" }));
     expect(await screen.findByRole("dialog", { name: "Déposer un document" })).toBeInTheDocument();

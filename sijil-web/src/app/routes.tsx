@@ -20,6 +20,12 @@ export const routes: RouteObject[] = [
         }),
       },
       {
+        path: "dossiers/:partyType/:partyId",
+        lazy: async () => ({
+          Component: (await import("@/features/dossier/DossierPage")).DossierPage,
+        }),
+      },
+      {
         path: "depot",
         lazy: async () => ({
           Component: (await import("@/features/deposit/DepositPage")).DepositPage,

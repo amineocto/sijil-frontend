@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router";
 import { EmptyState, LoadingState } from "@sijil/ui-kit";
 import { api, call, isApiError } from "@/shared/api";
 import { sendFile } from "@/shared/deposit";
@@ -92,8 +93,14 @@ function DepositForm({ code }: { code: string }) {
 function Form({ type }: { type: TypeVersion }) {
   const fields = fieldsOf(type.definition.metadataSchema);
   const [values, setValues] = useState<Record<string, string>>({});
-  const [partyType, setPartyType] = useState<PartyType>("CLIENT");
-  const [partyId, setPartyId] = useState("");
+  // Titulaire prérempli depuis le dossier client (« Déposer pour ce client »).
+  const [params] = useSearchParams();
+  const [partyType, setPartyType] = useState<PartyType>(
+    PARTY_OPTIONS.some((o) => o.value === params.get("partieType"))
+      ? (params.get("partieType") as PartyType)
+      : "CLIENT",
+  );
+  const [partyId, setPartyId] = useState(params.get("partie") ?? "");
   const [file, setFile] = useState<File | null>(null);
   const [progress, setProgress] = useState(0);
   // Une clé par intention (ce fichier) : un nouvel essai après une coupure ne crée pas de doublon ;
