@@ -59,3 +59,22 @@ export function formatValue(value: unknown): string {
   if (typeof value === "number" || typeof value === "boolean") return String(value);
   return JSON.stringify(value);
 }
+
+/** Libellé de repli d'un champ sans « title » : « dateExpiration » devient « Date expiration ». */
+export function humanize(name: string): string {
+  const words = name
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/[_-]+/g, " ")
+    .toLowerCase()
+    .trim();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/** Valeur à lire : une date ISO s'affiche au format français (« 30/06/2030 »). */
+export function displayValue(value: unknown): string {
+  const text = formatValue(value);
+  const date = ISO_DATE.exec(text);
+  return date ? `${date[3] ?? ""}/${date[2] ?? ""}/${date[1] ?? ""}` : text;
+}

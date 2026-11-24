@@ -71,6 +71,26 @@ export const navigation = {
   },
 };
 
+/** Page à rouvrir après la connexion (le BFF ramène toujours à l'accueil). */
+export const RETURN_KEY = "sijil-retour";
+
 export function redirectToLogin() {
+  const here = globalThis.location.pathname + globalThis.location.search;
+  try {
+    if (here !== "/") sessionStorage.setItem(RETURN_KEY, here);
+  } catch {
+    // Stockage indisponible (navigation privée) : retour à l'accueil.
+  }
   navigation.assign(LOGIN_PATH);
+}
+
+/** Chemin à rouvrir après une connexion, une seule fois ; jamais une adresse externe. */
+export function takeReturnPath(): string | null {
+  try {
+    const path = sessionStorage.getItem(RETURN_KEY);
+    sessionStorage.removeItem(RETURN_KEY);
+    return path?.startsWith("/") && !path.startsWith("//") ? path : null;
+  } catch {
+    return null;
+  }
 }

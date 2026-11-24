@@ -85,6 +85,12 @@ export const routes: RouteObject[] = [
         }),
       },
       {
+        path: "catalogue/partage",
+        lazy: async () => ({
+          Component: (await import("@/features/catalogue/sharing/SharingPage")).SharingPage,
+        }),
+      },
+      {
         path: "catalogue/revues",
         lazy: async () => ({
           Component: (await import("@/features/catalogue/review/ReviewQueuePage")).ReviewQueuePage,

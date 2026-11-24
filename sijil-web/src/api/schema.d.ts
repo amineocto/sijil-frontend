@@ -299,6 +299,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/parcours/{parcours}/sharing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Écran « Partage 360 » (ADR 0025, ajout 2.2.0) ; types éligibles au portefeuille client et leur partage par ce parcours
+         * @description Réservé au rôle `catalogue-admin-domaine`, pour un parcours de l'utilisateur (403 sinon) ;
+         *     le catalogue vérifie de nouveau le rôle et le parcours sur le jeton échangé.
+         */
+        get: operations["listTypeSharing"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/parcours/{parcours}/sharing/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Partage d'un type par le parcours, ou retrait du partage (ADR 0025, ajout 2.2.0)
+         * @description Mêmes droits que la liste. Seul un type éligible peut être partagé (422) ; la décision est
+         *     tracée par le catalogue et émet `document-type.sharing-changed.v1`.
+         */
+        put: operations["setTypeSharing"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/completeness-evaluations": {
         parameters: {
             query?: never;
@@ -513,6 +555,18 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        TypeSharing: {
+            typeCode: string;
+            shared: boolean;
+            decidedBy?: string | null;
+            /** Format: date-time */
+            decidedAt?: string | null;
+            reason?: string | null;
+        };
+        TypeSharingRequest: {
+            shared: boolean;
+            reason?: string;
+        };
         /** @description Forme reprise de l'API appelée (`sijil-api.yaml` ou `sijil-catalogue.yaml`). */
         JsonObject: {
             [key: string]: unknown;
@@ -526,7 +580,7 @@ export interface components {
             /** @description Parcours pour lesquels l'utilisateur contribue. */
             parcours: string[];
             /** @description Rôles des écrans, documents et catalogue (ADR 0032). */
-            roles: ("sijil-lecteur" | "sijil-contributeur" | "sijil-admin" | "sijil-bris-de-glace" | "catalogue-lecteur" | "catalogue-contributeur" | "catalogue-reviseur")[];
+            roles: ("sijil-lecteur" | "sijil-contributeur" | "sijil-admin" | "sijil-bris-de-glace" | "catalogue-lecteur" | "catalogue-contributeur" | "catalogue-reviseur" | "catalogue-admin-domaine")[];
         };
         /** @enum {string} */
         TypeStatus: "BROUILLON" | "SOUMIS" | "EN_REVUE" | "PUBLIE" | "DEPRECIE" | "RETIRE";
@@ -741,6 +795,7 @@ export interface components {
         /** @description Clé de rejeu d'un même envoi ; le BFF en crée une à défaut. */
         IdempotencyKey: string;
         IfMatch: string;
+        ParcoursPath: string;
         Version: number;
         /** @description Clé de rejeu d'une même intention, tirée par l'écran ; obligatoire, le BFF n'en invente jamais (04-conventions-api, AUD-20261120-240, AUD-20261120-345). */
         RequiredIdempotencyKey: string;
@@ -1486,6 +1541,68 @@ export interface operations {
             409: components["responses"]["Problem"];
             412: components["responses"]["Problem"];
             428: components["responses"]["Problem"];
+            502: components["responses"]["Problem"];
+        };
+    };
+    listTypeSharing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                parcours: components["parameters"]["ParcoursPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Partage des types éligibles, triés par code */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: components["schemas"]["TypeSharing"][];
+                    };
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            502: components["responses"]["Problem"];
+        };
+    };
+    setTypeSharing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                parcours: components["parameters"]["ParcoursPath"];
+                code: components["parameters"]["Code"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TypeSharingRequest"];
+            };
+        };
+        responses: {
+            /** @description État du partage après la décision */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TypeSharing"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
             502: components["responses"]["Problem"];
         };
     };

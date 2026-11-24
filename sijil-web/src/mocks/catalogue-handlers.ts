@@ -2,6 +2,7 @@ import { http, HttpResponse } from "msw";
 import type { Definition, Schemas } from "@/shared/api";
 import {
   initialRequirementSets,
+  initialSharing,
   PARCOURS,
   REQUIRED_FOR_SUBMISSION,
   SESSION,
@@ -19,17 +20,20 @@ export class CatalogueStub {
   session: Schemas["Session"] = SESSION;
 
   requirementSets: Schemas["RequirementSet"][] = initialRequirementSets();
+  sharing: Schemas["TypeSharing"][] = initialSharing();
 
   reset() {
     this.types = initialTypes();
     this.session = SESSION;
     this.requirementSets = initialRequirementSets();
+    this.sharing = initialSharing();
   }
 
   handlers() {
     return [
       http.get("/api/parcours", () => HttpResponse.json(PARCOURS)),
       ...this.requirementHandlers(),
+      ...this.sharingHandlers(),
       http.get("/api/types", ({ request }) => this.list(new URL(request.url).searchParams)),
       http.post("/api/types", async ({ request }) =>
         this.createType((await request.json()) as Schemas["NewType"]),
@@ -184,6 +188,35 @@ export class CatalogueStub {
     return HttpResponse.json(editorOf(type, draft), {
       headers: { ETag: etagOf(type, draft) },
     });
+  }
+
+  /** Partage 360 (ADR 0025) : administrateur du domaine, pour son seul parcours. */
+  private sharingHandlers() {
+    const allowed = (parcours: string) =>
+      this.session.roles.includes("catalogue-admin-domaine") &&
+      this.session.parcours.includes(parcours);
+    return [
+      http.get("/api/parcours/:parcours/sharing", ({ params }) =>
+        allowed(String(params["parcours"]))
+          ? HttpResponse.json({ items: this.sharing })
+          : problem(403, "Accès refusé"),
+      ),
+      http.put("/api/parcours/:parcours/sharing/:code", async ({ params, request }) => {
+        if (!allowed(String(params["parcours"]))) return problem(403, "Accès refusé");
+        const index = this.sharing.findIndex((s) => s.typeCode === params["code"]);
+        if (index < 0) return problem(404, "Type non éligible");
+        const decision = (await request.json()) as Schemas["TypeSharingRequest"];
+        const updated: Schemas["TypeSharing"] = {
+          typeCode: String(params["code"]),
+          shared: decision.shared,
+          decidedBy: this.session.user,
+          decidedAt: new Date().toISOString(),
+          reason: decision.reason ?? null,
+        };
+        this.sharing[index] = updated;
+        return HttpResponse.json(updated);
+      }),
+    ];
   }
 
   /** Jeux d'exigences (lot 7) : brouillon, révision par ETag, publication à quatre yeux. */

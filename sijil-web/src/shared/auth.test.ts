@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw";
-import { api, call, LOGIN_PATH, navigation } from "@/shared/api";
+import { api, call, LOGIN_PATH, navigation, RETURN_KEY, takeReturnPath } from "@/shared/api";
 import { logout } from "@/shared/logout";
 import { server } from "@/test/setup";
 
@@ -16,6 +16,23 @@ describe("Session du BFF", () => {
 
     expect(assign).toHaveBeenCalledWith(LOGIN_PATH);
     expect(LOGIN_PATH).toBe("/oauth2/authorization/sijil");
+  });
+
+  it("garde la page demandée pour la rouvrir une fois connecté, une seule fois", async () => {
+    vi.spyOn(navigation, "assign").mockImplementation(() => undefined);
+    window.history.replaceState(null, "", "/catalogue/exigences?parcours=eer");
+    server.use(http.get("/api/session", () => new HttpResponse(null, { status: 401 })));
+
+    await expect(call(api.GET("/api/session"))).rejects.toThrow();
+
+    expect(takeReturnPath()).toBe("/catalogue/exigences?parcours=eer");
+    expect(takeReturnPath()).toBeNull();
+    window.history.replaceState(null, "", "/");
+  });
+
+  it("ne rouvre jamais une adresse externe", () => {
+    sessionStorage.setItem(RETURN_KEY, "//evil.example/x");
+    expect(takeReturnPath()).toBeNull();
   });
 
   it("se déconnecte du BFF avec le jeton CSRF puis ouvre la déconnexion de l'IdP", async () => {

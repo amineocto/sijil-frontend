@@ -1,5 +1,6 @@
 import type { TagVariant } from "@/shared/ui";
 import { api, call, type Schemas } from "@/shared/api";
+import { PARTY_ROLE_LABELS } from "@/shared/labels";
 
 export type CompletenessRequest = Schemas["CompletenessRequest"];
 export type CompletenessResult = Schemas["CompletenessResult"];
@@ -22,14 +23,7 @@ export const STATE_COLORS: Record<CompletenessState, TagVariant> = {
   NON_APPLICABLE: "default",
 };
 
-export const ROLE_LABELS: Record<CompletenessParty["role"], string> = {
-  TITULAIRE: "Titulaire",
-  CO_TITULAIRE: "Co-titulaire",
-  GARANT: "Garant",
-  MANDATAIRE: "Mandataire",
-  REPRESENTANT_LEGAL: "Représentant légal",
-  AUTRE: "Autre",
-};
+export const ROLE_LABELS: Record<CompletenessParty["role"], string> = PARTY_ROLE_LABELS;
 
 /** Calcul de la façade, avec les droits de l'utilisateur (lot 7). */
 export function evaluate(request: CompletenessRequest): Promise<CompletenessResult> {

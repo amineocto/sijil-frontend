@@ -34,6 +34,27 @@ export const REVIEWER: Schemas["Session"] = {
   parcours: [],
 };
 
+/** Administrateur du domaine `eer` : partage des types dans le portefeuille client (ADR 0025). */
+export const DOMAIN_ADMIN: Schemas["Session"] = {
+  user: "admin-domaine.demo",
+  roles: ["catalogue-lecteur", "catalogue-admin-domaine"],
+  parcours: ["eer"],
+};
+
+/** Types éligibles au portefeuille client et leur partage par le parcours `eer`. */
+export function initialSharing(): Schemas["TypeSharing"][] {
+  return [
+    {
+      typeCode: "CIN",
+      shared: true,
+      decidedBy: "admin-domaine.demo",
+      decidedAt: "2026-11-20T09:00:00Z",
+      reason: "Pièce d'identité du portefeuille",
+    },
+    { typeCode: "RIB", shared: false, decidedBy: null, decidedAt: null, reason: null },
+  ];
+}
+
 export const PARCOURS: Schemas["Parcours"][] = [
   {
     code: "eer",

@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { READER } from "@/mocks/data";
 import { renderAt, seriousViolations } from "@/test/render";
+import { receptionFollow } from "./DepositPage";
 import { server, stub } from "@/test/setup";
 
 async function chooseCin(user: ReturnType<typeof userEvent.setup>) {
@@ -28,6 +29,9 @@ describe("Dépôt", () => {
     const user = userEvent.setup();
     await chooseCin(user);
     expect(await screen.findByRole("textbox", { name: /Numéro/ })).toBeRequired();
+    // Le navigateur compile « pattern » avec le drapeau v : un motif invalide y est ignoré.
+    const holder = screen.getByRole("textbox", { name: /Identifiant du titulaire/ });
+    expect(() => new RegExp(holder.getAttribute("pattern") ?? "", "v")).not.toThrow();
     expect(await seriousViolations(container)).toEqual([]);
 
     await fillAndSend(user, "EE123456");
@@ -98,6 +102,37 @@ describe("Dépôt", () => {
     await chooseCin(user);
     await fillAndSend(user, "EE1");
     expect(await screen.findByText(/n'a pas passé le contrôle/)).toBeInTheDocument();
+  });
+
+  it("propose de vérifier à nouveau quand le contrôle dure au-delà du suivi automatique", async () => {
+    const maxPolls = receptionFollow.maxPolls;
+    receptionFollow.maxPolls = 1;
+    let calls = 0;
+    server.use(
+      http.get("/api/documents/:id/reception", ({ params }) => {
+        calls += 1;
+        return HttpResponse.json({
+          id: params["id"],
+          status: calls > 1 ? "ACTIF" : "EN_QUARANTAINE",
+          lastVersion: 1,
+          pendingVersion: false,
+          revision: calls,
+        });
+      }),
+    );
+    try {
+      renderAt("/depot");
+      const user = userEvent.setup();
+      await chooseCin(user);
+      await fillAndSend(user, "EE123456");
+
+      expect(await screen.findByText("Contrôle plus long que prévu")).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: "Ouvrir la fiche" })).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "Vérifier à nouveau" }));
+      expect(await screen.findByRole("link", { name: "Ouvrir le document" })).toBeInTheDocument();
+    } finally {
+      receptionFollow.maxPolls = maxPolls;
+    }
   });
 
   it("refuse un fichier trop volumineux pour le type", async () => {

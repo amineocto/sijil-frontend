@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { EmptyState, LoadingState } from "@sijil/ui-kit";
 import { api, call, isApiError } from "@/shared/api";
 import { sendFile } from "@/shared/deposit";
@@ -24,8 +24,8 @@ import {
 
 /** Intervalle de suivi de la quarantaine. */
 export const RECEPTION_POLL_MS = 2000;
-/** Quatre minutes de suivi à l'intervalle courant ; au-delà, l'état se relit sur la fiche. */
-const RECEPTION_MAX_POLLS = 120;
+/** Suivi automatique : quatre minutes à l'intervalle courant ; au-delà, vérification à la demande. */
+export const receptionFollow = { maxPolls: 120 };
 
 /**
  * Écran « Dépôt » : type publié, métadonnées générées depuis son schéma, titulaire, fichier envoyé
@@ -145,7 +145,7 @@ function Form({ type }: { type: TypeVersion }) {
           <TextField
             label="Identifiant du titulaire"
             required
-            pattern="[A-Za-z0-9_-]{1,64}"
+            pattern="[A-Za-z0-9_\-]{1,64}"
             value={partyId}
             onChange={(e) => {
               setPartyId(e.currentTarget.value);
@@ -183,35 +183,63 @@ const RECEPTION_TONES: Record<string, Tone> = {
 
 /** Suivi de la quarantaine : interroge le BFF jusqu'à l'admission ou au rejet. */
 function Follow({ id }: { id: string }) {
+  const client = useQueryClient();
   const reception = useQuery({
     queryKey: ["reception", id],
     queryFn: () =>
       call(
         api.GET("/api/documents/{id}/reception", { params: { path: { id } } }),
       ) as unknown as Promise<Reception>,
-    // Suivi borné : arrêt sur erreur et après RECEPTION_MAX_POLLS relances (AUD-20261120-335).
+    // Suivi borné : arrêt sur erreur et après receptionFollow.maxPolls relances (AUD-20261120-335).
     refetchInterval: (query) =>
       query.state.status !== "error" &&
-      query.state.dataUpdateCount < RECEPTION_MAX_POLLS &&
+      query.state.dataUpdateCount < receptionFollow.maxPolls &&
       (query.state.data?.status === "EN_QUARANTAINE" || !query.state.data)
         ? RECEPTION_POLL_MS
         : false,
     retry: false,
   });
+  const polls = client.getQueryState(["reception", id])?.dataUpdateCount ?? 0;
   return (
     <QueryState query={reception}>
-      {(r) => (
-        <Notice
-          tone={RECEPTION_TONES[r.status] ?? "danger"}
-          title={statusLabel(r.status)}
-          role="status"
-        >
-          {r.status === "EN_QUARANTAINE" && "Document reçu : contrôle en cours…"}
-          {r.status === "ACTIF" && <TextLink to={`/documents/${id}`}>Ouvrir le document</TextLink>}
-          {r.status === "REJETE_TECHNIQUE" &&
-            "Le fichier n'a pas passé le contrôle (format, antivirus ou empreinte)."}
-        </Notice>
-      )}
+      {(r) =>
+        r.status === "EN_QUARANTAINE" && polls >= receptionFollow.maxPolls ? (
+          <Notice tone="warning" title="Contrôle plus long que prévu" role="status">
+            <div className="flex flex-col gap-3">
+              <span>
+                Le document est bien reçu ; son contrôle n'est pas encore terminé. Il sera
+                consultable dès son admission.
+              </span>
+              <div className="flex flex-wrap items-center gap-4">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  loading={reception.isFetching}
+                  onClick={() => {
+                    void reception.refetch();
+                  }}
+                >
+                  Vérifier à nouveau
+                </Button>
+                <TextLink to={`/documents/${id}`}>Ouvrir la fiche</TextLink>
+              </div>
+            </div>
+          </Notice>
+        ) : (
+          <Notice
+            tone={RECEPTION_TONES[r.status] ?? "danger"}
+            title={statusLabel(r.status)}
+            role="status"
+          >
+            {r.status === "EN_QUARANTAINE" && "Document reçu : contrôle en cours…"}
+            {r.status === "ACTIF" && (
+              <TextLink to={`/documents/${id}`}>Ouvrir le document</TextLink>
+            )}
+            {r.status === "REJETE_TECHNIQUE" &&
+              "Le fichier n'a pas passé le contrôle (format, antivirus ou empreinte)."}
+          </Notice>
+        )
+      }
     </QueryState>
   );
 }

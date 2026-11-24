@@ -38,6 +38,8 @@ export default defineConfig(({ command }) => ({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
+    // La visite guidée ne s'ouvre pas d'elle-même pendant les tests (src/features/tour).
+    env: { VITE_TOUR_AUTOSTART: "false" },
     testTimeout: 15000,
     coverage: {
       provider: "v8",

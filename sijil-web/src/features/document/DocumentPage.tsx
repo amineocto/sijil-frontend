@@ -5,8 +5,15 @@ import { LoadingState } from "@sijil/ui-kit";
 import { AccessFields } from "@/shared/AccessFields";
 import { accessHeaders, type Access } from "@/shared/access";
 import { api, callWithETag, isApiError } from "@/shared/api";
-import { formatValue } from "@/shared/metadata";
-import { formatDate, formatSize, SENSITIVITY_LABELS, statusLabel } from "@/shared/labels";
+import { displayValue, humanize } from "@/shared/metadata";
+import {
+  formatDate,
+  formatSize,
+  PARTY_ROLE_LABELS,
+  PARTY_TYPE_LABELS,
+  SENSITIVITY_LABELS,
+  statusLabel,
+} from "@/shared/labels";
 import { QueryState } from "@/shared/QueryState";
 import { canContribute, useSession } from "@/shared/session";
 import type { DocumentView } from "@/shared/types";
@@ -39,8 +46,8 @@ export function DocumentPage() {
       <div className="flex max-w-3xl flex-col gap-4">
         <Heading>Document</Heading>
         <Notice tone="warning" title="Accès à justifier">
-          {document.error.message} Ce document est peut-être celui d&apos;un autre parcours, ou
-          restreint : indiquez pourquoi vous le consultez.
+          Ce document appartient à un autre parcours, ou il est restreint : indiquez pourquoi vous
+          le consultez. Votre réponse est enregistrée.
         </Notice>
         <Panel>
           <form
@@ -110,9 +117,9 @@ function Sheet({
               {Object.entries(document.metadata).map(([name, value]) => (
                 <tr key={name}>
                   <Th scope="row" className="w-1/3">
-                    {name}
+                    {humanize(name)}
                   </Th>
-                  <Td>{formatValue(value)}</Td>
+                  <Td>{displayValue(value)}</Td>
                 </tr>
               ))}
             </tbody>
@@ -123,7 +130,7 @@ function Sheet({
           <ul className="list-disc ps-5 text-sm text-gray-900">
             {document.parties.map((p) => (
               <li key={`${p.type}-${p.id}-${p.role}`}>
-                {p.type} {p.id} ({p.role})
+                {PARTY_TYPE_LABELS[p.type] ?? p.type} {p.id} ({PARTY_ROLE_LABELS[p.role] ?? p.role})
               </li>
             ))}
           </ul>

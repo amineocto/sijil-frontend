@@ -57,6 +57,7 @@ describe("Fiche document", () => {
     const user = userEvent.setup();
 
     expect(await screen.findByText("Accès à justifier")).toBeInTheDocument();
+    expect(screen.queryByText(/X-Access/)).not.toBeInTheDocument();
     await user.type(screen.getByRole("textbox", { name: /Finalité/ }), "Contrôle interne");
     await user.click(screen.getByRole("button", { name: "Consulter avec ce motif" }));
 

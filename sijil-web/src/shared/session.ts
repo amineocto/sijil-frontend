@@ -38,6 +38,11 @@ export function canContributeToCatalogue(session: Session | undefined, parcours?
   return parcours === undefined || session.parcours.includes(parcours);
 }
 
+/** Administration du partage des types de son parcours (ADR 0025). */
+export function canAdministerSharing(session: Session | undefined): boolean {
+  return session?.roles.includes("catalogue-admin-domaine") ?? false;
+}
+
 export function canReview(session: Session | undefined): boolean {
   return session?.roles.includes("catalogue-reviseur") ?? false;
 }

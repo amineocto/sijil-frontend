@@ -178,7 +178,7 @@ export function CodeBlock({ children, ...props }: HTMLAttributes<HTMLPreElement>
   return (
     <pre
       {...props}
-      className="overflow-x-auto rounded-lg border border-gray-200 bg-gray-50 p-3 font-mono text-xs text-gray-900"
+      className="overflow-x-auto rounded-lg border border-gray-200 bg-gray-50 p-3 font-mono text-xs break-words whitespace-pre-wrap text-gray-900"
     >
       {children}
     </pre>

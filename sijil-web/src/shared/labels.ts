@@ -18,6 +18,15 @@ export const PARTY_TYPE_LABELS: Record<string, string> = {
   COMPTE: "Compte",
 };
 
+export const PARTY_ROLE_LABELS: Record<string, string> = {
+  TITULAIRE: "Titulaire",
+  CO_TITULAIRE: "Co-titulaire",
+  GARANT: "Garant",
+  MANDATAIRE: "Mandataire",
+  REPRESENTANT_LEGAL: "Représentant légal",
+  AUTRE: "Autre",
+};
+
 /** Choix du type de partie, dans l'ordre des libellés. */
 export const PARTY_OPTIONS = Object.entries(PARTY_TYPE_LABELS).map(([value, label]) => ({
   value,

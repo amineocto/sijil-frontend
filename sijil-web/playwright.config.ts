@@ -23,6 +23,8 @@ export default defineConfig({
     command: `npx vite --port ${String(PORT)} --strictPort`,
     url: `http://localhost:${String(PORT)}`,
     reuseExistingServer: false,
+    // Visite guidée fermée au départ : les scénarios ne la parcourent pas.
+    env: { VITE_TOUR_AUTOSTART: "false" },
     timeout: 60_000,
   },
 });

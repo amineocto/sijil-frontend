@@ -3,7 +3,14 @@ import { http, HttpResponse } from "msw";
 import { accessHeaders } from "@/shared/access";
 import { api, call, callWithETag, isApiError } from "@/shared/api";
 import { formatSize, statusLabel } from "@/shared/labels";
-import { fieldsOf, formatValue, toMetadata, toValues } from "@/shared/metadata";
+import {
+  displayValue,
+  fieldsOf,
+  formatValue,
+  humanize,
+  toMetadata,
+  toValues,
+} from "@/shared/metadata";
 import { QueryState } from "@/shared/QueryState";
 import { canContribute } from "@/shared/session";
 import { CIN } from "@/mocks/data";
@@ -62,6 +69,14 @@ describe("code partagé", () => {
     expect(fieldsOf(undefined)).toEqual([]);
     expect(toValues({ a: 1, b: null, c: { x: 1 } })).toEqual({ a: "1", b: "", c: '{"x":1}' });
     expect(formatValue(undefined)).toBe("");
+  });
+
+  it("rend lisibles les noms de champ sans libellé et les dates ISO", () => {
+    expect(humanize("dateExpiration")).toBe("Date expiration");
+    expect(humanize("numero_titre")).toBe("Numero titre");
+    expect(displayValue("2030-06-30")).toBe("30/06/2030");
+    expect(displayValue("AB123456")).toBe("AB123456");
+    expect(displayValue(1200.5)).toBe("1200.5");
   });
 
   it("formate tailles et états", () => {

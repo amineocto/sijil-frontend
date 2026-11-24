@@ -1,12 +1,12 @@
 import { setupWorker } from "msw/browser";
-import { REVIEWER, SESSION } from "@/mocks/catalogue-data";
+import { DOMAIN_ADMIN, REVIEWER, SESSION } from "@/mocks/catalogue-data";
 import { READER } from "@/mocks/data";
 import { SijilStub } from "@/mocks/handlers";
 
 /**
  * Bouchon du BFF dans le navigateur, en développement seulement (`npm run dev`). L'état survit à un
  * rechargement (stockage de session de l'onglet) ; `?demo=lecteur`, `?demo=reviseur` ou
- * `?demo=contributeur` change d'utilisateur de démonstration (scénarios Playwright).
+ * `?demo=contributeur` ou `?demo=admin-domaine` change d'utilisateur de démonstration.
  */
 const STORAGE_KEY = "sijil-web-demo";
 const stub = new SijilStub();
@@ -16,6 +16,7 @@ const demo = new URLSearchParams(globalThis.location.search).get("demo");
 if (demo === "lecteur") stub.session = READER;
 if (demo === "reviseur") stub.session = REVIEWER;
 if (demo === "contributeur") stub.session = SESSION;
+if (demo === "admin-domaine") stub.session = DOMAIN_ADMIN;
 save();
 
 export const worker = setupWorker(...stub.handlers());
