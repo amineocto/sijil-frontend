@@ -24,6 +24,8 @@ export interface DocumentView {
   content: { mediaType: string; size: number; sha256: string };
   /** Écart entre le type déclaré et le type détecté par les traitements (lot 5). */
   verification?: { status: "A_VERIFIER"; detectedType: string };
+  /** Restitué dans le portefeuille client 360 (ADR 0025) ; fiche seulement. */
+  sharedInPortfolio?: boolean;
 }
 
 /** Document trouvé en plein texte (forme `Document` de la façade, source Sijil). */

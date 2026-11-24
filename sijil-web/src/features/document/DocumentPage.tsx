@@ -85,6 +85,9 @@ function Sheet({
         <div className="flex gap-2">
           <Tag variant="info">{statusLabel(document.status)}</Tag>
           <Tag>{SENSITIVITY_LABELS[document.sensitivity]}</Tag>
+          {document.sharedInPortfolio && (
+            <Tag variant="success">Partagé dans le portefeuille client</Tag>
+          )}
         </div>
       </div>
       {document.verification && (

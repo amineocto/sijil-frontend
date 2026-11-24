@@ -42,10 +42,14 @@ export function initialDocuments(): DocumentView[] {
     {
       ...document("2f1c2a54-7c1e-4a3b-9d55-0b2f5e9b1a11", "eer", "SENSIBLE", { numero: "AB12345" }),
       verification: { status: "A_VERIFIER", detectedType: "PASSEPORT" },
+      sharedInPortfolio: false,
     },
-    document("7b0e9f3a-1c2d-4e5f-8a9b-0c1d2e3f4a5b", "credit-immo", "STANDARD", {
-      numero: "CD67890",
-    }),
+    {
+      ...document("7b0e9f3a-1c2d-4e5f-8a9b-0c1d2e3f4a5b", "credit-immo", "STANDARD", {
+        numero: "CD67890",
+      }),
+      sharedInPortfolio: true,
+    },
   ];
 }
 

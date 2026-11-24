@@ -39,6 +39,19 @@ describe("Fiche document", () => {
     expect(await screen.findByText("Aucun usage")).toBeInTheDocument();
   });
 
+  it("signale un document partagé dans le portefeuille client 360 (ADR 0025)", async () => {
+    const first = renderAt(OWN);
+    expect(await screen.findByRole("table", { name: "Métadonnées" })).toBeInTheDocument();
+    expect(screen.queryByText("Partagé dans le portefeuille client")).not.toBeInTheDocument();
+    first.unmount();
+
+    const own = stub.documents[0];
+    if (!own) throw new Error("document de démonstration absent");
+    stub.documents[0] = { ...own, sharedInPortfolio: true };
+    renderAt(OWN);
+    expect(await screen.findByText("Partagé dans le portefeuille client")).toBeInTheDocument();
+  });
+
   it("demande une finalité pour le document d'un autre parcours, sans actions", async () => {
     renderAt(OTHER);
     const user = userEvent.setup();
