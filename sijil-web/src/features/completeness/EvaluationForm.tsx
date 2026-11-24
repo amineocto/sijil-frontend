@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { Button, Group, Select, Stack, Textarea, TextInput } from "@mantine/core";
 import {
   parseContext,
   ROLE_LABELS,
   type CompletenessParty,
   type CompletenessRequest,
 } from "@/features/completeness/completeness";
+import { Button, SelectField, TextAreaField, TextField } from "@/shared/ui";
 
 const KINDS = [
   { value: "CLIENT", label: "Client" },
@@ -47,19 +47,18 @@ export function EvaluationForm({ submitLabel, pending, onSubmit }: EvaluationFor
         });
       }}
     >
-      <Stack gap="sm">
+      <div className="flex flex-col gap-4">
         {parties.map((party, index) => (
-          <Group key={index} grow align="end">
-            <Select
+          <div key={index} className="grid gap-4 md:grid-cols-3">
+            <SelectField
               label={`Partie ${String(index + 1)}`}
-              data={KINDS}
+              options={KINDS}
               value={party.kind}
-              allowDeselect={false}
-              onChange={(value) => {
-                update(index, { kind: (value ?? "PERSONNE") as CompletenessParty["kind"] });
+              onChange={(event) => {
+                update(index, { kind: event.currentTarget.value as CompletenessParty["kind"] });
               }}
             />
-            <TextInput
+            <TextField
               label={`Identifiant de la partie ${String(index + 1)}`}
               value={party.externalId}
               maxLength={32}
@@ -67,20 +66,19 @@ export function EvaluationForm({ submitLabel, pending, onSubmit }: EvaluationFor
                 update(index, { externalId: event.currentTarget.value });
               }}
             />
-            <Select
+            <SelectField
               label={`Rôle de la partie ${String(index + 1)}`}
-              data={ROLES}
+              options={ROLES}
               value={party.role}
-              allowDeselect={false}
-              onChange={(value) => {
-                update(index, { role: (value ?? "TITULAIRE") as CompletenessParty["role"] });
+              onChange={(event) => {
+                update(index, { role: event.currentTarget.value as CompletenessParty["role"] });
               }}
             />
-          </Group>
+          </div>
         ))}
-        <Group>
+        <div>
           <Button
-            variant="subtle"
+            variant="ghost"
             disabled={parties.length >= 10}
             onClick={() => {
               setParties([...parties, { kind: "PERSONNE", externalId: "", role: "CO_TITULAIRE" }]);
@@ -88,18 +86,17 @@ export function EvaluationForm({ submitLabel, pending, onSubmit }: EvaluationFor
           >
             Ajouter une partie
           </Button>
-        </Group>
-        <Textarea
+        </div>
+        <TextAreaField
           label="Contexte du dossier"
           description="Une condition par ligne, par exemple segment=SALARIE"
-          autosize
-          minRows={2}
+          rows={2}
           value={context}
           onChange={(event) => {
             setContext(event.currentTarget.value);
           }}
         />
-        <TextInput
+        <TextField
           label="Date d'évaluation"
           description="Aujourd'hui par défaut"
           type="date"
@@ -108,12 +105,12 @@ export function EvaluationForm({ submitLabel, pending, onSubmit }: EvaluationFor
             setDate(event.currentTarget.value);
           }}
         />
-        <Group>
+        <div>
           <Button type="submit" loading={pending} disabled={complete.length === 0}>
             {submitLabel}
           </Button>
-        </Group>
-      </Stack>
+        </div>
+      </div>
     </form>
   );
 }

@@ -1,3 +1,95 @@
+/*
+ * Charte AWB (ADR 0037) : utilitaires Tailwind de Sijil sur les jetons de la charte (palettes de `design-tokens.json` d'`@awb/ui` 1.3.0), police Inter servie en
+ * fichiers (la CSP n'admet pas de police en `data:`). La feuille d'`@awb/ui` est importée à part
+ * (main.tsx) pour passer par le greffon qui en retire les polices embarquées (theme.ts).
+ */
+@import "tailwindcss";
+@import "@fontsource-variable/inter";
+
+@theme {
+  --font-sans: "Inter Variable", system-ui, "Segoe UI", "Noto Sans Arabic", sans-serif;
+  --color-gray-25: #fdfdfd;
+  --color-gray-50: #fafafa;
+  --color-gray-100: #f5f5f5;
+  --color-gray-200: #e5e8eb;
+  --color-gray-300: #d5d7da;
+  --color-gray-400: #a6a7ae;
+  --color-gray-500: #717680;
+  --color-gray-600: #535862;
+  --color-gray-700: #414651;
+  --color-gray-800: #252b37;
+  --color-gray-900: #181d27;
+  --color-gray-950: #0a0d12;
+  --color-orange-25: #fefaf5;
+  --color-orange-50: #fef6ee;
+  --color-orange-100: #fdeadd;
+  --color-orange-200: #f9dbaf;
+  --color-orange-300: #f7b27a;
+  --color-orange-400: #f5b744;
+  --color-orange-500: #f04f16;
+  --color-orange-600: #e04f16;
+  --color-orange-700: #bb3815;
+  --color-orange-800: #932f19;
+  --color-orange-900: #772917;
+  --color-orange-950: #511c10;
+  --color-yellow-25: #fefdf0;
+  --color-yellow-50: #fefbe8;
+  --color-yellow-100: #fef7c3;
+  --color-yellow-200: #feee95;
+  --color-yellow-300: #fde272;
+  --color-yellow-400: #fac515;
+  --color-yellow-500: #eaaa08;
+  --color-yellow-600: #ca8504;
+  --color-yellow-700: #a15c07;
+  --color-yellow-800: #854a0e;
+  --color-yellow-900: #713b12;
+  --color-yellow-950: #542c0d;
+  --color-red-25: #fff8fa;
+  --color-red-50: #fef3f2;
+  --color-red-100: #fee4e2;
+  --color-red-200: #fecdca;
+  --color-red-300: #fda29b;
+  --color-red-400: #f97066;
+  --color-red-500: #f04438;
+  --color-red-600: #d92d20;
+  --color-red-700: #b42318;
+  --color-red-800: #912018;
+  --color-red-900: #7a271a;
+  --color-red-950: #55160c;
+  --color-green-25: #f6fef9;
+  --color-green-50: #ecfdf3;
+  --color-green-100: #d1fadf;
+  --color-green-200: #a6efbd;
+  --color-green-300: #6ce9a6;
+  --color-green-400: #47cd89;
+  --color-green-500: #17b26a;
+  --color-green-600: #079455;
+  --color-green-700: #067647;
+  --color-green-800: #085d3a;
+  --color-green-900: #074d31;
+  --color-green-950: #053321;
+  --color-blue-25: #f5f9ff;
+  --color-blue-50: #f0f7ff;
+  --color-blue-100: #cbe3ff;
+  --color-blue-200: #8bc1ff;
+  --color-blue-300: #4e9fff;
+  --color-blue-400: #317bd2;
+  --color-blue-500: #2563eb;
+  --color-blue-600: #1d4ed8;
+  --color-blue-700: #1e40af;
+  --color-blue-800: #1e3a8a;
+  --color-blue-900: #1e3a70;
+  --color-blue-950: #0f1f47;
+}
+
+@layer base {
+  button:not(:disabled),
+  [role="tab"],
+  a[href] {
+    cursor: pointer;
+  }
+}
+
 .sijil-skip-link {
   position: absolute;
   inset-inline-start: -10000px;
@@ -9,13 +101,4 @@
   z-index: 1000;
   background: var(--sijil-color-background);
   padding: var(--sijil-space-2);
-}
-
-/*
- * Texte atténué de Mantine (descriptions de champs, textes « dimmed ») : jeton --sijil-color-text-muted,
- * dont le contraste est vérifié (theme.test.ts) ; le gris par défaut (#868e96) n'atteint que 3,3:1.
- * Double :root pour passer avant les variables injectées par Mantine.
- */
-:root:root {
-  --mantine-color-dimmed: var(--sijil-color-text-muted);
 }

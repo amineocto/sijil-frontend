@@ -1,11 +1,11 @@
 import { useMemo, useState } from "react";
-import { Alert, Button, FileInput, Group, Progress, Stack, Textarea, Title } from "@mantine/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, call, isApiError } from "@/shared/api";
 import { sendFile } from "@/shared/deposit";
 import { fieldsOf, toMetadata, toValues } from "@/shared/metadata";
 import { MetadataFields } from "@/shared/MetadataFields";
 import type { DocumentView, TypeVersion } from "@/shared/types";
+import { Button, FileField, Heading, Notice, ProgressBar, TextAreaField } from "@/shared/ui";
 
 type Mode = "none" | "metadata" | "version" | "delete";
 
@@ -33,11 +33,11 @@ export function DocumentActions({ document, etag }: { document: DocumentView; et
     );
   }
   return (
-    <Stack gap="sm">
-      <Title order={3}>Actions</Title>
-      <Group>
+    <div className="flex flex-col gap-4">
+      <Heading level={3}>Actions</Heading>
+      <div className="flex flex-wrap gap-3">
         <Button
-          variant="light"
+          variant="secondary"
           onClick={() => {
             setMode("metadata");
           }}
@@ -45,7 +45,7 @@ export function DocumentActions({ document, etag }: { document: DocumentView; et
           Modifier les métadonnées
         </Button>
         <Button
-          variant="light"
+          variant="secondary"
           onClick={() => {
             setMode("version");
           }}
@@ -53,15 +53,15 @@ export function DocumentActions({ document, etag }: { document: DocumentView; et
           Nouvelle version
         </Button>
         <Button
-          variant="light"
-          color="red"
+          variant="ghost"
+          classes={{ button: "text-red-700 border-red-300 hover:bg-red-50" }}
           onClick={() => {
             setMode("delete");
           }}
         >
           Supprimer
         </Button>
-      </Group>
+      </div>
       {mode === "metadata" && (
         <EditMetadata
           document={document}
@@ -92,7 +92,7 @@ export function DocumentActions({ document, etag }: { document: DocumentView; et
           }}
         />
       )}
-    </Stack>
+    </div>
   );
 }
 
@@ -114,9 +114,9 @@ function Failure({ error }: { error: unknown }) {
       : error.message
     : "L'opération a échoué.";
   return (
-    <Alert color="red" role="alert" title="Échec">
+    <Notice tone="danger" role="alert" title="Échec">
       {message}
-    </Alert>
+    </Notice>
   );
 }
 
@@ -152,9 +152,9 @@ function EditMetadata({
         save.mutate();
       }}
     >
-      <Stack gap="sm" maw={560}>
+      <div className="flex max-w-xl flex-col gap-4">
         <MetadataFields fields={fields} values={values} errors={errors} onChange={setValues} />
-        <Textarea
+        <TextAreaField
           label="Motif de la modification"
           required
           minLength={3}
@@ -165,12 +165,12 @@ function EditMetadata({
           }}
         />
         <Failure error={save.error} />
-        <Group>
+        <div>
           <Button type="submit" loading={save.isPending}>
             Enregistrer
           </Button>
-        </Group>
-      </Stack>
+        </div>
+      </div>
     </form>
   );
 }
@@ -213,22 +213,21 @@ function NewVersion({
         send.mutate();
       }}
     >
-      <Stack gap="sm" maw={560}>
-        <FileInput
+      <div className="flex max-w-xl flex-col gap-4">
+        <FileField
           label="Fichier de la nouvelle version"
           required
           accept={(type.data?.definition.formats ?? []).join(",")}
-          value={file}
-          onChange={setFile}
+          onFile={setFile}
         />
-        {send.isPending && <Progress value={progress} aria-label="Envoi du fichier" />}
+        {send.isPending && <ProgressBar value={progress} label="Envoi du fichier" />}
         <Failure error={send.error} />
-        <Group>
+        <div>
           <Button type="submit" loading={send.isPending} disabled={!type.data}>
             Envoyer
           </Button>
-        </Group>
-      </Stack>
+        </div>
+      </div>
     </form>
   );
 }
@@ -263,8 +262,8 @@ function Delete({
         remove.mutate();
       }}
     >
-      <Stack gap="sm" maw={560}>
-        <Textarea
+      <div className="flex max-w-xl flex-col gap-4">
+        <TextAreaField
           label="Motif de la suppression"
           description="Suppression logique : le document reste conservé et peut être restauré."
           required
@@ -276,12 +275,12 @@ function Delete({
           }}
         />
         <Failure error={remove.error} />
-        <Group>
-          <Button type="submit" color="red" loading={remove.isPending}>
+        <div>
+          <Button type="submit" variant="danger" loading={remove.isPending}>
             Confirmer la suppression
           </Button>
-        </Group>
-      </Stack>
+        </div>
+      </div>
     </form>
   );
 }
@@ -314,11 +313,11 @@ function Restore({
         restore.mutate();
       }}
     >
-      <Stack gap="sm" maw={560}>
-        <Alert color="orange" title="Document supprimé">
+      <div className="flex max-w-xl flex-col gap-4">
+        <Notice tone="warning" title="Document supprimé">
           Le document n&apos;est plus visible des lecteurs. Vous pouvez le restaurer.
-        </Alert>
-        <Textarea
+        </Notice>
+        <TextAreaField
           label="Motif de la restauration"
           required
           minLength={3}
@@ -329,12 +328,12 @@ function Restore({
           }}
         />
         <Failure error={restore.error} />
-        <Group>
+        <div>
           <Button type="submit" loading={restore.isPending}>
             Restaurer
           </Button>
-        </Group>
-      </Stack>
+        </div>
+      </div>
     </form>
   );
 }

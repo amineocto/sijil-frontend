@@ -1,11 +1,7 @@
-import { Badge } from "@mantine/core";
 import type { TypeStatus } from "@/shared/api";
 import { STATUS_COLORS, STATUS_LABELS } from "@/features/catalogue/shared/labels";
+import { Tag } from "@/shared/ui";
 
 export function StatusBadge({ status }: { status: TypeStatus }) {
-  return (
-    <Badge color={STATUS_COLORS[status]} variant="light">
-      {STATUS_LABELS[status]}
-    </Badge>
-  );
+  return <Tag variant={STATUS_COLORS[status]}>{STATUS_LABELS[status]}</Tag>;
 }

@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { Alert, Button, List, Stack, Text, Textarea, Title } from "@mantine/core";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ErrorState } from "@sijil/ui-kit";
 import { api, call, isApiError, type Schemas } from "@/shared/api";
 import { canContributeToCatalogue, useSession } from "@/shared/session";
+import { Button, Heading, Notice, Panel, TextAreaField } from "@/shared/ui";
 
 /**
  * Parcours qui réutilisent le type, et déclaration de réutilisation par le parcours de
@@ -18,22 +18,25 @@ export function ReuseSection({ sheet }: { sheet: Schemas["TypeSheet"] }) {
     mine !== sheet.ownerParcours &&
     !sheet.reuses.some((r) => r.parcours === mine);
   return (
-    <Stack>
-      <Title order={3}>Réutilisation</Title>
+    <Panel className="flex flex-col gap-4">
+      <Heading level={3}>Réutilisation</Heading>
       {sheet.reuses.length === 0 ? (
-        <Text>Aucun autre parcours ne réutilise ce type.</Text>
+        <p className="text-sm text-gray-900">Aucun autre parcours ne réutilise ce type.</p>
       ) : (
-        <List aria-label="Parcours qui réutilisent le type">
+        <ul
+          aria-label="Parcours qui réutilisent le type"
+          className="list-disc ps-5 text-sm text-gray-900"
+        >
           {sheet.reuses.map((r) => (
-            <List.Item key={r.parcours}>
+            <li key={r.parcours}>
               <strong>{r.parcours}</strong> : {r.purpose} (déclaré par {r.declaredBy}, le{" "}
               {r.declaredAt.slice(0, 10)})
-            </List.Item>
+            </li>
           ))}
-        </List>
+        </ul>
       )}
       {canDeclare && <ReuseForm code={sheet.code} parcours={mine} />}
-    </Stack>
+    </Panel>
   );
 }
 
@@ -54,14 +57,15 @@ function ReuseForm({ code, parcours }: { code: string; parcours: string }) {
   });
   if (declare.isSuccess) {
     return (
-      <Alert color="green" role="status" title="Réutilisation déclarée">
+      <Notice tone="success" role="status" title="Réutilisation déclarée">
         Le parcours {parcours} réutilise désormais ce type ; la déclaration est journalisée.
-      </Alert>
+      </Notice>
     );
   }
   return (
     <form
       noValidate
+      className="flex max-w-xl flex-col gap-4"
       onSubmit={(e) => {
         e.preventDefault();
         const text = purpose.trim();
@@ -73,22 +77,22 @@ function ReuseForm({ code, parcours }: { code: string; parcours: string }) {
         declare.mutate({ purpose: text });
       }}
     >
-      <Stack maw={560}>
-        <Textarea
-          label={`Finalité de la réutilisation par le parcours ${parcours}`}
-          description="Sans approbation : la responsabilité revient à votre parcours."
-          required
-          value={purpose}
-          error={error}
-          onChange={(e) => {
-            setPurpose(e.currentTarget.value);
-          }}
-        />
-        <Button type="submit" loading={declare.isPending} w="fit-content">
+      <TextAreaField
+        label={`Finalité de la réutilisation par le parcours ${parcours}`}
+        description="Sans approbation : la responsabilité revient à votre parcours."
+        required
+        value={purpose}
+        error={error}
+        onChange={(e) => {
+          setPurpose(e.currentTarget.value);
+        }}
+      />
+      <div>
+        <Button type="submit" loading={declare.isPending}>
           Déclarer la réutilisation
         </Button>
-        {isApiError(declare.error) && <ErrorState error={declare.error} headingLevel={4} />}
-      </Stack>
+      </div>
+      {isApiError(declare.error) && <ErrorState error={declare.error} headingLevel={4} />}
     </form>
   );
 }

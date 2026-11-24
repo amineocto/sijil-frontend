@@ -13,7 +13,7 @@ configure({ asyncUtilTimeout: 5000 });
 export const stub = new SijilStub();
 export const server = setupServer(...stub.handlers());
 
-// Mantine s'appuie sur ces API, absentes de jsdom.
+// API du navigateur absentes de jsdom, utilisées par les composants.
 Object.defineProperty(window, "matchMedia", {
   writable: true,
   value: (query: string) => ({

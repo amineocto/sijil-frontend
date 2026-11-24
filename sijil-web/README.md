@@ -1,6 +1,6 @@
 # sijil-web
 
-Sijil web (sous-lot **4E**, L4E-03 à L4E-05) : recherche, fiche document, dépôt, nouvelle version et actions sur les documents Sijil, en remplacement des usages ciblés de Content Navigator. Socle : `docs/spec/09-fronts.md` ; composants **Mantine** (OQ-15 / DEC-18).
+Sijil web (sous-lot **4E**, L4E-03 à L4E-05) : recherche, fiche document, dépôt, nouvelle version et actions sur les documents Sijil, en remplacement des usages ciblés de Content Navigator. Socle : `docs/spec/09-fronts.md` ; composants et charte **`@awb/ui`** de la banque, mise en page Tailwind, coquille du poste CRC (ADR 0037). `@awb/ui` est construit en local tant que le Nexus interne est injoignable : `make awb-ui AWB_UI_SRC=<dépôt awb-ui>` avant `npm ci`.
 
 ## BFF et session
 

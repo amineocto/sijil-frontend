@@ -1,23 +1,24 @@
 /*
- * Thème Sijil : jetons de design en propriétés CSS.
+ * Thème Sijil : jetons de design en propriétés CSS, pris dans la charte AWB (`@awb/ui`, ADR 0037) ;
+ * primaire et focus en orange-700, la teinte de la charte qui atteint 4,5:1 sur blanc.
  * Contrastes WCAG 2.1 AA vérifiés par theme.test.ts (texte ≥ 4,5:1, focus ≥ 3:1). Propriétés logiques
  * (inline/block) pour que la mise en page s'inverse en arabe (dir="rtl").
  */
 :root {
-  --sijil-color-text: #1b1f24;
-  --sijil-color-text-muted: #4a5360;
+  --sijil-color-text: #181d27;
+  --sijil-color-text-muted: #535862;
   --sijil-color-background: #ffffff;
-  --sijil-color-surface: #f4f6f8;
-  --sijil-color-border: #c9d1d9;
-  --sijil-color-primary: #0b5cad;
+  --sijil-color-surface: #fafafa;
+  --sijil-color-border: #d5d7da;
+  --sijil-color-primary: #bb3815;
   --sijil-color-primary-text: #ffffff;
   --sijil-color-danger: #b42318;
-  --sijil-color-danger-surface: #fdecea;
-  --sijil-color-focus: #1d4ed8;
+  --sijil-color-danger-surface: #fef3f2;
+  --sijil-color-focus: #bb3815;
 
-  --sijil-font-family: system-ui, "Segoe UI", "Noto Sans", "Noto Sans Arabic", sans-serif;
+  --sijil-font-family: "Inter Variable", system-ui, "Segoe UI", "Noto Sans Arabic", sans-serif;
   --sijil-font-size: 1rem;
-  --sijil-radius: 0.375rem;
+  --sijil-radius: 0.5rem;
   --sijil-space-1: 0.25rem;
   --sijil-space-2: 0.5rem;
   --sijil-space-3: 1rem;

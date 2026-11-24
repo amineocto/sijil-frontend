@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { Anchor, Button, Image, Stack, Text } from "@mantine/core";
 import { ErrorState, LoadingState, networkError } from "@sijil/ui-kit";
 import { accessHeaders, type Access } from "@/shared/access";
 import type { DocumentView } from "@/shared/types";
+import { Button, Muted } from "@/shared/ui";
 
 type State =
   | { kind: "idle" }
@@ -52,34 +52,42 @@ export function Preview({ document, access }: { document: DocumentView; access: 
   if (state.kind === "ready") {
     if (state.type.startsWith("image/")) {
       return (
-        <Image src={state.url} alt={`Aperçu du document ${document.documentType}`} maw={720} />
+        <img
+          src={state.url}
+          alt={`Aperçu du document ${document.documentType}`}
+          className="max-w-3xl rounded-lg border border-gray-200"
+        />
       );
     }
     return state.type === "application/pdf" ? (
       <iframe
         src={state.url}
         title={`Aperçu du document ${document.documentType}`}
-        style={{ width: "100%", height: "70vh", border: 0 }}
+        className="h-[70vh] w-full rounded-lg border border-gray-200"
       />
     ) : (
-      <Anchor href={state.url} download={document.id}>
+      <a
+        href={state.url}
+        download={document.id}
+        className="font-medium text-orange-700 underline-offset-2 hover:underline"
+      >
         Enregistrer le fichier
-      </Anchor>
+      </a>
     );
   }
   const viewable = ["application/pdf", "image/png", "image/jpeg"].includes(
     document.content.mediaType,
   );
   return (
-    <Stack align="start">
-      <Text size="sm">
+    <div className="flex flex-col items-start gap-3">
+      <Muted>
         {viewable
           ? "Le contenu s'affiche dans la page."
           : "Ce format ne s'affiche pas : il sera téléchargé."}
-      </Text>
-      <Button variant="light" onClick={() => void load()}>
+      </Muted>
+      <Button variant="secondary" onClick={() => void load()}>
         {viewable ? "Afficher l'aperçu" : "Télécharger"}
       </Button>
-    </Stack>
+    </div>
   );
 }

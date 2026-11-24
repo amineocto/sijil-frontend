@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { Alert, Select, Stack } from "@mantine/core";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { EvaluationForm } from "@/features/completeness/EvaluationForm";
 import { CompletenessResultView } from "@/features/completeness/CompletenessResultView";
 import { evaluate } from "@/features/completeness/completeness";
 import { api, call, isApiError } from "@/shared/api";
+import { Notice, Panel, SelectField } from "@/shared/ui";
 
 /** Panneau « Complétude » (L7-05) : un jeu d'exigences publié évalué pour les parties d'un dossier. */
 export function CompletenessPanel() {
@@ -17,28 +17,35 @@ export function CompletenessPanel() {
   const published = (sets.data ?? []).filter((s) => s.status !== "BROUILLON" || s.version > 1);
 
   return (
-    <Stack maw={960}>
-      <Select
-        label="Jeu d'exigences"
-        placeholder={sets.isPending ? "Chargement…" : "Choisir un jeu publié"}
-        data={published.map((s) => ({ value: s.code, label: `${s.definition.label} (${s.code})` }))}
-        value={code}
-        onChange={setCode}
-      />
-      <EvaluationForm
-        submitLabel="Évaluer la complétude"
-        pending={run.isPending}
-        onSubmit={(evaluation) => {
-          if (code) run.mutate({ requirementSet: code, ...evaluation });
-        }}
-      />
-      {!code && <Alert color="gray">Choisissez d'abord un jeu d'exigences.</Alert>}
+    <div className="flex max-w-5xl flex-col gap-6">
+      <Panel className="flex flex-col gap-4">
+        <SelectField
+          label="Jeu d'exigences"
+          placeholder={sets.isPending ? "Chargement…" : "Choisir un jeu publié"}
+          options={published.map((s) => ({
+            value: s.code,
+            label: `${s.definition.label} (${s.code})`,
+          }))}
+          value={code ?? ""}
+          onChange={(e) => {
+            setCode(e.currentTarget.value || null);
+          }}
+        />
+        <EvaluationForm
+          submitLabel="Évaluer la complétude"
+          pending={run.isPending}
+          onSubmit={(evaluation) => {
+            if (code) run.mutate({ requirementSet: code, ...evaluation });
+          }}
+        />
+      </Panel>
+      {!code && <Notice role="status">Choisissez d&apos;abord un jeu d&apos;exigences.</Notice>}
       {run.error && (
-        <Alert color="red" title="Évaluation impossible">
+        <Notice tone="danger" title="Évaluation impossible">
           {isApiError(run.error) ? run.error.message : "Une erreur inattendue est survenue."}
-        </Alert>
+        </Notice>
       )}
       {run.data && <CompletenessResultView result={run.data} />}
-    </Stack>
+    </div>
   );
 }

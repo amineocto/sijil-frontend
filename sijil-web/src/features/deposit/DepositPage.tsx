@@ -1,28 +1,26 @@
 import { useMemo, useState } from "react";
-import {
-  Alert,
-  Anchor,
-  Button,
-  FileInput,
-  Group,
-  Progress,
-  Select,
-  Stack,
-  Text,
-  TextInput,
-  Title,
-} from "@mantine/core";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { EmptyState, LoadingState } from "@sijil/ui-kit";
-import { Link } from "react-router";
 import { api, call, isApiError } from "@/shared/api";
 import { sendFile } from "@/shared/deposit";
-import { PARTY_TYPE_LABELS, statusLabel } from "@/shared/labels";
+import { PARTY_OPTIONS, statusLabel } from "@/shared/labels";
 import { fieldsOf, toMetadata } from "@/shared/metadata";
 import { MetadataFields } from "@/shared/MetadataFields";
 import { QueryState } from "@/shared/QueryState";
 import { canContribute, useSession } from "@/shared/session";
 import type { Items, PartyType, Reception, TypeSummary, TypeVersion } from "@/shared/types";
+import {
+  Button,
+  FileField,
+  Heading,
+  Notice,
+  Panel,
+  ProgressBar,
+  SelectField,
+  TextField,
+  TextLink,
+  type Tone,
+} from "@/shared/ui";
 
 /** Intervalle de suivi de la quarantaine. */
 export const RECEPTION_POLL_MS = 2000;
@@ -52,8 +50,8 @@ export function DepositPage() {
     );
   }
   return (
-    <Stack maw={640}>
-      <Title order={2}>Déposer un document</Title>
+    <div className="flex max-w-2xl flex-col gap-6">
+      <Heading>Déposer un document</Heading>
       <QueryState query={types}>
         {({ items }) =>
           items.length === 0 ? (
@@ -62,19 +60,21 @@ export function DepositPage() {
               description="Le catalogue ne propose aucun type."
             />
           ) : (
-            <Select
+            <SelectField
               label="Type de document"
               required
-              searchable
-              data={items.map((t) => ({ value: t.code, label: t.label ?? t.code }))}
-              value={code}
-              onChange={setCode}
+              placeholder="Choisir un type publié"
+              options={items.map((t) => ({ value: t.code, label: t.label ?? t.code }))}
+              value={code ?? ""}
+              onChange={(e) => {
+                setCode(e.currentTarget.value || null);
+              }}
             />
           )
         }
       </QueryState>
       {code && <DepositForm key={code} code={code} />}
-    </Stack>
+    </div>
   );
 }
 
@@ -121,28 +121,28 @@ function Form({ type }: { type: TypeVersion }) {
   if (deposit.data) return <Follow id={deposit.data.id} />;
   const errors = isApiError(deposit.error) ? deposit.error.errorsByField() : {};
   return (
-    <form
-      aria-label="Dépôt"
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (!tooLarge) deposit.mutate();
-      }}
-    >
-      <Stack gap="sm">
-        <Title order={3}>Métadonnées</Title>
+    <Panel>
+      <form
+        aria-label="Dépôt"
+        className="flex flex-col gap-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!tooLarge) deposit.mutate();
+        }}
+      >
+        <Heading level={3}>Métadonnées</Heading>
         <MetadataFields fields={fields} values={values} errors={errors} onChange={setValues} />
-        <Title order={3}>Titulaire</Title>
-        <Group grow>
-          <Select
+        <Heading level={3}>Titulaire</Heading>
+        <div className="grid gap-4 md:grid-cols-2">
+          <SelectField
             label="Partie"
-            allowDeselect={false}
-            data={Object.entries(PARTY_TYPE_LABELS).map(([value, label]) => ({ value, label }))}
+            options={PARTY_OPTIONS}
             value={partyType}
-            onChange={(v) => {
-              setPartyType((v ?? "CLIENT") as PartyType);
+            onChange={(e) => {
+              setPartyType(e.currentTarget.value as PartyType);
             }}
           />
-          <TextInput
+          <TextField
             label="Identifiant du titulaire"
             required
             pattern="[A-Za-z0-9_-]{1,64}"
@@ -151,31 +151,35 @@ function Form({ type }: { type: TypeVersion }) {
               setPartyId(e.currentTarget.value);
             }}
           />
-        </Group>
-        <FileInput
+        </div>
+        <FileField
           label="Fichier"
           description={`Formats : ${(type.definition.formats ?? []).join(", ")} ; ${String(type.definition.maxSizeMb ?? 50)} Mo au plus.`}
           required
           accept={(type.definition.formats ?? []).join(",")}
-          value={file}
-          onChange={setFile}
+          onFile={setFile}
           error={tooLarge ? "Fichier trop volumineux pour ce type." : undefined}
         />
-        {deposit.isPending && <Progress value={progress} aria-label="Envoi du fichier" />}
+        {deposit.isPending && <ProgressBar value={progress} label="Envoi du fichier" />}
         {deposit.error && (
-          <Alert color="red" role="alert" title="Dépôt refusé">
+          <Notice tone="danger" role="alert" title="Dépôt refusé">
             {deposit.error.message}
-          </Alert>
+          </Notice>
         )}
-        <Group>
+        <div>
           <Button type="submit" loading={deposit.isPending}>
             Déposer
           </Button>
-        </Group>
-      </Stack>
-    </form>
+        </div>
+      </form>
+    </Panel>
   );
 }
+
+const RECEPTION_TONES: Record<string, Tone> = {
+  ACTIF: "success",
+  EN_QUARANTAINE: "info",
+};
 
 /** Suivi de la quarantaine : interroge le BFF jusqu'à l'admission ou au rejet. */
 function Follow({ id }: { id: string }) {
@@ -197,21 +201,16 @@ function Follow({ id }: { id: string }) {
   return (
     <QueryState query={reception}>
       {(r) => (
-        <Alert
-          color={r.status === "ACTIF" ? "green" : r.status === "EN_QUARANTAINE" ? "blue" : "red"}
+        <Notice
+          tone={RECEPTION_TONES[r.status] ?? "danger"}
           title={statusLabel(r.status)}
           role="status"
         >
-          {r.status === "EN_QUARANTAINE" && <Text>Document reçu : contrôle en cours…</Text>}
-          {r.status === "ACTIF" && (
-            <Anchor component={Link} to={`/documents/${id}`}>
-              Ouvrir le document
-            </Anchor>
-          )}
-          {r.status === "REJETE_TECHNIQUE" && (
-            <Text>Le fichier n&apos;a pas passé le contrôle (format, antivirus ou empreinte).</Text>
-          )}
-        </Alert>
+          {r.status === "EN_QUARANTAINE" && "Document reçu : contrôle en cours…"}
+          {r.status === "ACTIF" && <TextLink to={`/documents/${id}`}>Ouvrir le document</TextLink>}
+          {r.status === "REJETE_TECHNIQUE" &&
+            "Le fichier n'a pas passé le contrôle (format, antivirus ou empreinte)."}
+        </Notice>
       )}
     </QueryState>
   );

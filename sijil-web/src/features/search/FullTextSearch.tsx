@@ -1,13 +1,23 @@
 import { useState } from "react";
-import { Alert, Anchor, Button, Group, Select, Stack, Table, Text, TextInput } from "@mantine/core";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { EmptyState } from "@sijil/ui-kit";
-import { Link } from "react-router";
 import { api, call } from "@/shared/api";
-import { formatDate, PARTY_TYPE_LABELS } from "@/shared/labels";
+import { formatDate, PARTY_OPTIONS } from "@/shared/labels";
 import { QueryState } from "@/shared/QueryState";
 import { Thumbnail } from "@/shared/Thumbnail";
 import type { FullTextItem, FullTextPage, PartyType } from "@/shared/types";
+import {
+  Button,
+  Muted,
+  Notice,
+  Panel,
+  SelectField,
+  Table,
+  Td,
+  TextField,
+  TextLink,
+  Th,
+} from "@/shared/ui";
 
 interface Criteria {
   q: string;
@@ -33,18 +43,19 @@ export function FullTextSearch() {
       last.page.hasMore && last.page.nextCursor ? last.page.nextCursor : undefined,
   });
   return (
-    <Stack>
-      <form
-        aria-label="Recherche plein texte"
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (draft.q.trim().length >= 2 && draft.partyId.trim()) {
-            setCriteria({ ...draft, q: draft.q.trim(), partyId: draft.partyId.trim() });
-          }
-        }}
-      >
-        <Stack gap="sm" maw={720}>
-          <TextInput
+    <div className="flex flex-col gap-6">
+      <Panel>
+        <form
+          aria-label="Recherche plein texte"
+          className="flex max-w-3xl flex-col gap-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (draft.q.trim().length >= 2 && draft.partyId.trim()) {
+              setCriteria({ ...draft, q: draft.q.trim(), partyId: draft.partyId.trim() });
+            }
+          }}
+        >
+          <TextField
             label="Texte cherché"
             description="Dans le texte des documents et leurs métadonnées (2 caractères au moins)."
             required
@@ -55,17 +66,16 @@ export function FullTextSearch() {
               setDraft({ ...draft, q: e.currentTarget.value });
             }}
           />
-          <Group grow align="end">
-            <Select
+          <div className="grid gap-4 md:grid-cols-2">
+            <SelectField
               label="Partie"
-              data={Object.entries(PARTY_TYPE_LABELS).map(([value, label]) => ({ value, label }))}
+              options={PARTY_OPTIONS}
               value={draft.partyType}
-              allowDeselect={false}
-              onChange={(value) => {
-                setDraft({ ...draft, partyType: (value ?? "CLIENT") as PartyType });
+              onChange={(e) => {
+                setDraft({ ...draft, partyType: e.currentTarget.value as PartyType });
               }}
             />
-            <TextInput
+            <TextField
               label="Identifiant de la partie"
               required
               value={draft.partyId}
@@ -73,14 +83,14 @@ export function FullTextSearch() {
                 setDraft({ ...draft, partyId: e.currentTarget.value });
               }}
             />
-          </Group>
-          <Group>
+          </div>
+          <div>
             <Button type="submit">Chercher</Button>
-          </Group>
-        </Stack>
-      </form>
+          </div>
+        </form>
+      </Panel>
       {criteria === null ? (
-        <Text c="dimmed">Saisissez un texte et une partie.</Text>
+        <Muted>Saisissez un texte et une partie.</Muted>
       ) : // Une page suivante en échec garde les résultats déjà affichés (AUD-20261120-399).
       results.data && results.isFetchNextPageError ? (
         <Results
@@ -103,7 +113,7 @@ export function FullTextSearch() {
           )}
         </QueryState>
       )}
-    </Stack>
+    </div>
   );
 }
 
@@ -120,48 +130,46 @@ function Results({ items, hasMore, loadingMore, moreFailed, onMore }: ResultsPro
     return <EmptyState title="Aucun document" description="Aucun document ne contient ce texte." />;
   }
   return (
-    <Stack>
-      <Table striped aria-label="Documents trouvés en plein texte">
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th scope="col">Aperçu</Table.Th>
-            <Table.Th scope="col">Type</Table.Th>
-            <Table.Th scope="col">Déposé le</Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
+    <div className="flex flex-col gap-4">
+      <Table aria-label="Documents trouvés en plein texte">
+        <thead>
+          <tr>
+            <Th scope="col">Aperçu</Th>
+            <Th scope="col">Type</Th>
+            <Th scope="col">Déposé le</Th>
+          </tr>
+        </thead>
+        <tbody>
           {items.map((d) => (
-            <Table.Tr key={d.id}>
-              <Table.Td>
+            <tr key={d.id} className="hover:bg-gray-50">
+              <Td>
                 {d.source.sijilId && <Thumbnail id={d.source.sijilId} label={d.type.label} />}
-              </Table.Td>
-              <Table.Td>
+              </Td>
+              <Td>
                 {d.source.sijilId ? (
-                  <Anchor component={Link} to={`/documents/${d.source.sijilId}`}>
-                    {d.type.label}
-                  </Anchor>
+                  <TextLink to={`/documents/${d.source.sijilId}`}>{d.type.label}</TextLink>
                 ) : (
                   d.type.label
                 )}
-              </Table.Td>
-              <Table.Td>{formatDate(d.createdAt)}</Table.Td>
-            </Table.Tr>
+              </Td>
+              <Td>{formatDate(d.createdAt)}</Td>
+            </tr>
           ))}
-        </Table.Tbody>
+        </tbody>
       </Table>
       {moreFailed && (
-        <Alert color="red" role="alert" title="Résultats suivants indisponibles">
+        <Notice tone="danger" role="alert" title="Résultats suivants indisponibles">
           Les résultats suivants n&apos;ont pas pu être chargés ; ceux affichés restent valables.
-        </Alert>
+        </Notice>
       )}
       {hasMore && (
-        <Group>
-          <Button variant="default" loading={loadingMore} onClick={onMore}>
+        <div>
+          <Button variant="secondary" loading={loadingMore} onClick={onMore}>
             {moreFailed ? "Réessayer" : "Résultats suivants"}
           </Button>
-        </Group>
+        </div>
       )}
-    </Stack>
+    </div>
   );
 }
 

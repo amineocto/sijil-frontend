@@ -1,3 +1,4 @@
+import type { TagVariant } from "@/shared/ui";
 import { api, call, type Schemas } from "@/shared/api";
 
 export type CompletenessRequest = Schemas["CompletenessRequest"];
@@ -13,12 +14,12 @@ export const STATE_LABELS: Record<CompletenessState, string> = {
   NON_APPLICABLE: "Sans objet",
 };
 
-export const STATE_COLORS: Record<CompletenessState, string> = {
-  SATISFAITE: "green",
-  MANQUANTE: "red",
-  EXPIREE: "orange",
-  INSUFFISANTE: "yellow",
-  NON_APPLICABLE: "gray",
+export const STATE_COLORS: Record<CompletenessState, TagVariant> = {
+  SATISFAITE: "success",
+  MANQUANTE: "danger",
+  EXPIREE: "warning",
+  INSUFFISANTE: "warning",
+  NON_APPLICABLE: "default",
 };
 
 export const ROLE_LABELS: Record<CompletenessParty["role"], string> = {

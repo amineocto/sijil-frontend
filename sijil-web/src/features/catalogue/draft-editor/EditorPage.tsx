@@ -1,21 +1,8 @@
 import { useState } from "react";
-import {
-  Alert,
-  Anchor,
-  Badge,
-  Button,
-  Group,
-  NativeSelect,
-  Stack,
-  Tabs,
-  TextInput,
-  Textarea,
-  Title,
-} from "@mantine/core";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm, useWatch, type FieldErrors, type UseFormReturn } from "react-hook-form";
-import { Link, useParams } from "react-router";
+import { useParams } from "react-router";
 import { ErrorState } from "@sijil/ui-kit";
 import { api, call, isApiError, type Schemas } from "@/shared/api";
 import { errorLabel, STATUS_LABELS } from "@/features/catalogue/shared/labels";
@@ -31,6 +18,19 @@ import {
   type EditorValues,
 } from "@/features/catalogue/draft-editor/form";
 import { MetadataPreview } from "@/features/catalogue/draft-editor/MetadataPreview";
+import {
+  Button,
+  ButtonLink,
+  Heading,
+  Notice,
+  Panel,
+  SelectField,
+  Tabs,
+  Tag,
+  TextAreaField,
+  TextField,
+  TextLink,
+} from "@/shared/ui";
 
 /** Écran « Éditeur de brouillon » : formulaire par rubriques, enregistrement avec `If-Match`. */
 export function EditorPage() {
@@ -40,12 +40,12 @@ export function EditorPage() {
     queryFn: () => call(api.GET("/api/types/{code}/editor", { params: { path: { code } } })),
   });
   return (
-    <Stack>
-      <Title order={2}>Brouillon du type {code}</Title>
+    <div className="flex flex-col gap-6">
+      <Heading>Brouillon du type {code}</Heading>
       <QueryState query={editor}>
         {(data) => <EditorForm key={String(data.version)} initial={data} />}
       </QueryState>
-    </Stack>
+    </div>
   );
 }
 
@@ -99,69 +99,67 @@ function EditorForm({ initial }: { initial: Schemas["Editor"] }) {
     <form
       noValidate
       aria-label="Définition du type"
+      className="flex flex-col gap-4"
       onSubmit={(event) =>
         void form.handleSubmit((values) => {
           save.mutate(values);
         })(event)
       }
     >
-      <Stack>
-        <Group>
-          <Badge variant="outline">Version {initial.version}</Badge>
-          <Badge variant="light">{STATUS_LABELS[initial.status]}</Badge>
-          <Anchor component={Link} to={`/catalogue/types/${initial.code}`}>
-            Voir la fiche
-          </Anchor>
-        </Group>
-        {initial.reviewReason && (
-          <Alert color="orange" title="Modifications demandées par la revue" role="note">
-            {initial.reviewReason}
-          </Alert>
-        )}
-        {!editable && (
-          <Alert color="blue" title="Version non modifiable" role="note">
-            Cette version est à l&apos;état « {STATUS_LABELS[initial.status]} ».
-          </Alert>
-        )}
-        <fieldset disabled={!editable} style={{ border: 0, padding: 0, margin: 0 }}>
+      <div className="flex flex-wrap items-center gap-3">
+        <Tag variant="outline">Version {initial.version}</Tag>
+        <Tag>{STATUS_LABELS[initial.status]}</Tag>
+        <TextLink to={`/catalogue/types/${initial.code}`}>Voir la fiche</TextLink>
+      </div>
+      {initial.reviewReason && (
+        <Notice tone="warning" title="Modifications demandées par la revue" role="note">
+          {initial.reviewReason}
+        </Notice>
+      )}
+      {!editable && (
+        <Notice tone="info" title="Version non modifiable" role="note">
+          Cette version est à l&apos;état « {STATUS_LABELS[initial.status]} ».
+        </Notice>
+      )}
+      <Panel>
+        <fieldset disabled={!editable}>
           <Rubriques form={form} />
         </fieldset>
-        {save.isSuccess && !form.formState.isDirty && (
-          <Alert color="green" role="status" title="Brouillon enregistré" />
-        )}
-        {unplaced.length > 0 && (
-          <Alert color="red" title="Erreurs signalées par le serveur">
-            <ul>
-              {unplaced.map((message) => (
-                <li key={message}>{message}</li>
-              ))}
-            </ul>
-          </Alert>
-        )}
-        {isApiError(save.error) && save.error.status === 412 && (
-          <Alert color="red" title="Le brouillon a été modifié entre-temps">
-            Rechargez la page pour repartir de la dernière version, puis refaites vos modifications.
-          </Alert>
-        )}
-        {isApiError(save.error) && ![412, 422].includes(save.error.status) && (
-          <ErrorState error={save.error} headingLevel={3} />
-        )}
-        {editable && (
-          <Group>
-            <Button type="submit" loading={save.isPending}>
-              Enregistrer
-            </Button>
-            <Button
-              component={Link}
-              to={`/catalogue/types/${initial.code}/soumission`}
-              variant="light"
-              disabled={form.formState.isDirty}
-            >
-              Soumettre
-            </Button>
-          </Group>
-        )}
-      </Stack>
+      </Panel>
+      {save.isSuccess && !form.formState.isDirty && (
+        <Notice tone="success" role="status" title="Brouillon enregistré" />
+      )}
+      {unplaced.length > 0 && (
+        <Notice tone="danger" title="Erreurs signalées par le serveur">
+          <ul className="list-disc ps-5">
+            {unplaced.map((message) => (
+              <li key={message}>{message}</li>
+            ))}
+          </ul>
+        </Notice>
+      )}
+      {isApiError(save.error) && save.error.status === 412 && (
+        <Notice tone="danger" title="Le brouillon a été modifié entre-temps">
+          Rechargez la page pour repartir de la dernière version, puis refaites vos modifications.
+        </Notice>
+      )}
+      {isApiError(save.error) && ![412, 422].includes(save.error.status) && (
+        <ErrorState error={save.error} headingLevel={3} />
+      )}
+      {editable && (
+        <div className="flex flex-wrap gap-3">
+          <Button type="submit" loading={save.isPending}>
+            Enregistrer
+          </Button>
+          <ButtonLink
+            to={`/catalogue/types/${initial.code}/soumission`}
+            variant="secondary"
+            disabled={form.formState.isDirty}
+          >
+            Soumettre
+          </ButtonLink>
+        </div>
+      )}
     </form>
   );
 }
@@ -169,50 +167,56 @@ function EditorForm({ initial }: { initial: Schemas["Editor"] }) {
 function Rubriques({ form }: { form: UseFormReturn<EditorValues> }) {
   const errors = form.formState.errors;
   return (
-    <Tabs defaultValue="identite" keepMounted>
-      <Tabs.List>
-        {RUBRIQUES.map((rubrique) => {
-          const count = errorCount(rubrique, errors);
-          return (
-            <Tabs.Tab key={rubrique.id} value={rubrique.id}>
+    <Tabs
+      label="Rubriques de la définition"
+      keepMounted
+      tabs={RUBRIQUES.map((rubrique) => {
+        const count = errorCount(rubrique, errors);
+        return {
+          id: rubrique.id,
+          label: (
+            <>
               {rubrique.label}
               {count > 0 && (
-                <Badge color="red" ml="xs" size="sm" aria-label={`${String(count)} erreur(s)`}>
+                <span
+                  className="rounded-full bg-red-100 px-2 text-xs text-red-700"
+                  aria-label={`${String(count)} erreur(s)`}
+                >
                   {count}
-                </Badge>
+                </span>
               )}
-            </Tabs.Tab>
-          );
-        })}
-      </Tabs.List>
-      {RUBRIQUES.map((rubrique) => (
-        <Tabs.Panel key={rubrique.id} value={rubrique.id} pt="md">
-          <Stack>
-            {rubrique.id === "identite" && <IdentityFields form={form} />}
-            {rubrique.id === "sensibilite" && (
-              <NativeSelect
-                label="Sensibilité"
-                data={[{ value: "", label: "Non renseignée" }, ...SENSITIVITIES]}
-                error={errors.sensitivity?.message}
-                {...form.register("sensitivity")}
-              />
-            )}
-            {rubrique.jsonKeys.map((key) => (
-              <Textarea
-                key={key}
-                label={`${key} (JSON)`}
-                autosize
-                minRows={3}
-                styles={{ input: { fontFamily: "monospace" } }}
-                error={errors.json?.[key]?.message}
-                {...form.register(`json.${key}`)}
-              />
-            ))}
-            {rubrique.id === "metadonnees" && <MetadataPreviewOf form={form} />}
-          </Stack>
-        </Tabs.Panel>
-      ))}
-    </Tabs>
+            </>
+          ),
+          content: (
+            <>
+              {rubrique.id === "identite" && <IdentityFields form={form} />}
+              {rubrique.id === "sensibilite" && (
+                <SelectField
+                  label="Sensibilité"
+                  options={[
+                    { value: "", label: "Non renseignée" },
+                    ...SENSITIVITIES.map((v) => ({ value: v, label: v })),
+                  ]}
+                  error={errors.sensitivity?.message}
+                  {...form.register("sensitivity")}
+                />
+              )}
+              {rubrique.jsonKeys.map((key) => (
+                <TextAreaField
+                  key={key}
+                  label={`${key} (JSON)`}
+                  rows={3}
+                  className="font-mono text-sm"
+                  error={errors.json?.[key]?.message}
+                  {...form.register(`json.${key}`)}
+                />
+              ))}
+              {rubrique.id === "metadonnees" && <MetadataPreviewOf form={form} />}
+            </>
+          ),
+        };
+      })}
+    />
   );
 }
 
@@ -220,24 +224,27 @@ function IdentityFields({ form }: { form: UseFormReturn<EditorValues> }) {
   const errors = form.formState.errors;
   return (
     <>
-      <TextInput
+      <TextField
         label="Libellé français"
         required
         error={errors.labelFr?.message}
         {...form.register("labelFr")}
       />
-      <TextInput
+      <TextField
         label="Libellé arabe"
         dir="rtl"
         lang="ar"
         error={errors.labelAr?.message}
         {...form.register("labelAr")}
       />
-      <TextInput label="Libellé anglais" lang="en" {...form.register("labelEn")} />
-      <TextInput label="Famille" error={errors.family?.message} {...form.register("family")} />
-      <NativeSelect
+      <TextField label="Libellé anglais" lang="en" {...form.register("labelEn")} />
+      <TextField label="Famille" error={errors.family?.message} {...form.register("family")} />
+      <SelectField
         label="Niveau de rattachement"
-        data={[{ value: "", label: "Non renseigné" }, ...LEVELS]}
+        options={[
+          { value: "", label: "Non renseigné" },
+          ...LEVELS.map((v) => ({ value: v, label: v })),
+        ]}
         error={errors.level?.message}
         {...form.register("level")}
       />

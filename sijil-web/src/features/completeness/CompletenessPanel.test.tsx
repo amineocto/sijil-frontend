@@ -6,9 +6,9 @@ async function openPanel() {
   const user = userEvent.setup();
   const view = renderAt("/");
   await user.click(await screen.findByRole("tab", { name: "Complétude" }));
-  await user.click(await screen.findByPlaceholderText("Choisir un jeu publié"));
-  await user.click(
-    await screen.findByRole("option", { name: /Crédit immobilier particulier/, hidden: true }),
+  await user.selectOptions(
+    screen.getByRole("combobox", { name: "Jeu d'exigences" }),
+    await screen.findByRole("option", { name: /Crédit immobilier particulier/ }),
   );
   await user.type(screen.getByLabelText("Identifiant de la partie 1"), "P0012345");
   return { user, ...view };

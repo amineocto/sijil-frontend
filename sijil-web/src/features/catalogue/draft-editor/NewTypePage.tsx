@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Button, NativeSelect, Stack, TextInput, Title } from "@mantine/core";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -9,6 +8,7 @@ import { ErrorState } from "@sijil/ui-kit";
 import { api, call, isApiError } from "@/shared/api";
 import { QueryState } from "@/shared/QueryState";
 import { useSession } from "@/shared/session";
+import { Button, Heading, Panel, SelectField, TextField } from "@/shared/ui";
 
 const newTypeSchema = z.object({
   code: z
@@ -24,10 +24,10 @@ type NewTypeValues = z.infer<typeof newTypeSchema>;
 export function NewTypePage() {
   const session = useSession();
   return (
-    <Stack>
-      <Title order={2}>Nouveau type de document</Title>
+    <div className="flex flex-col gap-6">
+      <Heading>Nouveau type de document</Heading>
       <QueryState query={session}>{(data) => <NewTypeForm parcours={data.parcours} />}</QueryState>
-    </Stack>
+    </div>
   );
 }
 
@@ -68,24 +68,25 @@ function NewTypeForm({ parcours }: { parcours: string[] }) {
   });
   const errors = form.formState.errors;
   return (
-    <form
-      noValidate
-      aria-label="Nouveau type"
-      onSubmit={(event) =>
-        void form.handleSubmit((values) => {
-          create.mutate(values);
-        })(event)
-      }
-    >
-      <Stack maw={480}>
-        <TextInput label="Code" required error={errors.code?.message} {...form.register("code")} />
-        <NativeSelect
+    <Panel className="max-w-lg">
+      <form
+        noValidate
+        aria-label="Nouveau type"
+        className="flex flex-col gap-4"
+        onSubmit={(event) =>
+          void form.handleSubmit((values) => {
+            create.mutate(values);
+          })(event)
+        }
+      >
+        <TextField label="Code" required error={errors.code?.message} {...form.register("code")} />
+        <SelectField
           label="Parcours référent"
-          data={parcours}
+          options={parcours.map((p) => ({ value: p, label: p }))}
           error={errors.referentParcours?.message}
           {...form.register("referentParcours")}
         />
-        <TextInput
+        <TextField
           label="Libellé français"
           required
           error={errors.labelFr?.message}
@@ -94,10 +95,12 @@ function NewTypeForm({ parcours }: { parcours: string[] }) {
         {isApiError(create.error) && create.error.status !== 409 && (
           <ErrorState error={create.error} headingLevel={3} />
         )}
-        <Button type="submit" loading={create.isPending}>
-          Créer le brouillon
-        </Button>
-      </Stack>
-    </form>
+        <div>
+          <Button type="submit" loading={create.isPending}>
+            Créer le brouillon
+          </Button>
+        </div>
+      </form>
+    </Panel>
   );
 }

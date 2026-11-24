@@ -1,6 +1,6 @@
-import { Stack, Textarea } from "@mantine/core";
 import type { Access } from "@/shared/access";
 import { canBreakGlass, useSession } from "@/shared/session";
+import { TextAreaField } from "@/shared/ui";
 
 /**
  * Accès hors de son parcours : finalité de l'usage (ADR 0018) et, pour un document restreint, motif
@@ -15,12 +15,11 @@ export function AccessFields({
 }) {
   const session = useSession();
   return (
-    <Stack gap="xs">
-      <Textarea
+    <div className="flex flex-col gap-3">
+      <TextAreaField
         label="Finalité (document d'un autre parcours)"
         description="Pourquoi consultez-vous ce document ? Elle est enregistrée."
-        autosize
-        minRows={1}
+        rows={1}
         maxLength={255}
         value={value.purpose ?? ""}
         onChange={(e) => {
@@ -28,11 +27,10 @@ export function AccessFields({
         }}
       />
       {canBreakGlass(session.data) && (
-        <Textarea
+        <TextAreaField
           label="Motif de bris de glace (document restreint)"
           description="Accès exceptionnel, tracé et contrôlé."
-          autosize
-          minRows={1}
+          rows={1}
           maxLength={255}
           value={value.breakGlassReason ?? ""}
           onChange={(e) => {
@@ -40,6 +38,6 @@ export function AccessFields({
           }}
         />
       )}
-    </Stack>
+    </div>
   );
 }

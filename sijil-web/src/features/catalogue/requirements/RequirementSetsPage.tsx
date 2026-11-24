@@ -1,10 +1,9 @@
-import { Anchor, Badge, Button, Group, Stack, Table, Title } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { EmptyState } from "@sijil/ui-kit";
-import { Link } from "react-router";
 import { api, call } from "@/shared/api";
 import { QueryState } from "@/shared/QueryState";
 import { canContributeToCatalogue, useSession } from "@/shared/session";
+import { ButtonLink, Heading, Table, Tag, Td, TextLink, Th } from "@/shared/ui";
 
 export const SET_STATUS_LABELS: Record<string, string> = {
   BROUILLON: "Brouillon",
@@ -20,55 +19,50 @@ export function RequirementSetsPage() {
     queryFn: () => call(api.GET("/api/requirement-sets", {})),
   });
   return (
-    <Stack>
-      <Group justify="space-between">
-        <Title order={2}>Exigences documentaires</Title>
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Heading>Exigences documentaires</Heading>
         {canContributeToCatalogue(session.data) && (
-          <Button component={Link} to="/catalogue/exigences/nouveau">
-            Nouveau jeu d'exigences
-          </Button>
+          <ButtonLink to="/catalogue/exigences/nouveau">Nouveau jeu d&apos;exigences</ButtonLink>
         )}
-      </Group>
+      </div>
       <QueryState query={sets}>
         {(items) =>
           items.length === 0 ? (
             <EmptyState title="Aucun jeu d'exigences" />
           ) : (
             <Table>
-              <Table.Caption>Dernière version de chaque jeu</Table.Caption>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th scope="col">Jeu</Table.Th>
-                  <Table.Th scope="col">Libellé</Table.Th>
-                  <Table.Th scope="col">Parcours</Table.Th>
-                  <Table.Th scope="col">Version</Table.Th>
-                  <Table.Th scope="col">Statut</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
+              <caption className="sr-only">Dernière version de chaque jeu</caption>
+              <thead>
+                <tr>
+                  <Th scope="col">Jeu</Th>
+                  <Th scope="col">Libellé</Th>
+                  <Th scope="col">Parcours</Th>
+                  <Th scope="col">Version</Th>
+                  <Th scope="col">Statut</Th>
+                </tr>
+              </thead>
+              <tbody>
                 {items.map((s) => (
-                  <Table.Tr key={s.code}>
-                    <Table.Td>
-                      <Anchor
-                        component={Link}
-                        to={`/catalogue/exigences/${s.code}/versions/${String(s.version)}`}
-                      >
+                  <tr key={s.code}>
+                    <Td>
+                      <TextLink to={`/catalogue/exigences/${s.code}/versions/${String(s.version)}`}>
                         {s.code}
-                      </Anchor>
-                    </Table.Td>
-                    <Table.Td>{s.definition.label}</Table.Td>
-                    <Table.Td>{s.parcours}</Table.Td>
-                    <Table.Td>{s.version}</Table.Td>
-                    <Table.Td>
-                      <Badge variant="light">{SET_STATUS_LABELS[s.status] ?? s.status}</Badge>
-                    </Table.Td>
-                  </Table.Tr>
+                      </TextLink>
+                    </Td>
+                    <Td>{s.definition.label}</Td>
+                    <Td>{s.parcours}</Td>
+                    <Td>{s.version}</Td>
+                    <Td>
+                      <Tag>{SET_STATUS_LABELS[s.status] ?? s.status}</Tag>
+                    </Td>
+                  </tr>
                 ))}
-              </Table.Tbody>
+              </tbody>
             </Table>
           )
         }
       </QueryState>
-    </Stack>
+    </div>
   );
 }

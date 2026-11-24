@@ -1,9 +1,8 @@
-import { Anchor, Stack, Table, Text, Title } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router";
 import { EmptyState } from "@sijil/ui-kit";
 import { api, call } from "@/shared/api";
 import { QueryState } from "@/shared/QueryState";
+import { Heading, Muted, Table, Td, TextLink, Th } from "@/shared/ui";
 
 /** Écran « File de revue » : versions soumises qui attendent un réviseur. */
 export function ReviewQueuePage() {
@@ -12,47 +11,46 @@ export function ReviewQueuePage() {
     queryFn: () => call(api.GET("/api/reviews")),
   });
   return (
-    <Stack>
-      <Title order={2}>File de revue</Title>
+    <div className="flex flex-col gap-6">
+      <Heading>File de revue</Heading>
       <QueryState query={queue}>
         {(page) =>
           page.items.length === 0 ? (
             <EmptyState title="Aucune version en attente de revue" />
           ) : (
             <Table>
-              <Table.Caption>Versions en revue, par code de type</Table.Caption>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th scope="col">Type</Table.Th>
-                  <Table.Th scope="col">Libellé</Table.Th>
-                  <Table.Th scope="col">Parcours propriétaire</Table.Th>
-                  <Table.Th scope="col">Soumise par</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
+              <caption className="sr-only">Versions en revue, par code de type</caption>
+              <thead>
+                <tr>
+                  <Th scope="col">Type</Th>
+                  <Th scope="col">Libellé</Th>
+                  <Th scope="col">Parcours propriétaire</Th>
+                  <Th scope="col">Soumise par</Th>
+                </tr>
+              </thead>
+              <tbody>
                 {page.items.map((t) => (
-                  <Table.Tr key={t.code}>
-                    <Table.Td>
-                      <Anchor
-                        component={Link}
+                  <tr key={t.code}>
+                    <Td>
+                      <TextLink
                         to={`/catalogue/types/${t.code}/versions/${String(t.latest.version)}/revue`}
                       >
                         {t.code} v{t.latest.version}
-                      </Anchor>
-                    </Table.Td>
-                    <Table.Td>{t.label ?? "—"}</Table.Td>
-                    <Table.Td>{t.ownerParcours}</Table.Td>
-                    <Table.Td>{t.latest.submittedBy ?? "—"}</Table.Td>
-                  </Table.Tr>
+                      </TextLink>
+                    </Td>
+                    <Td>{t.label ?? "—"}</Td>
+                    <Td>{t.ownerParcours}</Td>
+                    <Td>{t.latest.submittedBy ?? "—"}</Td>
+                  </tr>
                 ))}
-              </Table.Tbody>
+              </tbody>
             </Table>
           )
         }
       </QueryState>
       {queue.data?.hasMore && (
-        <Text size="sm">D&apos;autres versions attendent : affinez la liste des types.</Text>
+        <Muted>D&apos;autres versions attendent : affinez la liste des types.</Muted>
       )}
-    </Stack>
+    </div>
   );
 }

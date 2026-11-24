@@ -1,3 +1,4 @@
+import type { TagVariant } from "@/shared/ui";
 import type { TypeStatus } from "@/shared/api";
 
 export const STATUS_LABELS: Record<TypeStatus, string> = {
@@ -9,13 +10,14 @@ export const STATUS_LABELS: Record<TypeStatus, string> = {
   RETIRE: "Retiré",
 };
 
-export const STATUS_COLORS: Record<TypeStatus, string> = {
-  BROUILLON: "gray",
-  SOUMIS: "blue",
-  EN_REVUE: "violet",
-  PUBLIE: "green",
-  DEPRECIE: "orange",
-  RETIRE: "red",
+/** Variante de l'étiquette `@awb/ui` de chaque statut. */
+export const STATUS_COLORS: Record<TypeStatus, TagVariant> = {
+  BROUILLON: "default",
+  SOUMIS: "info",
+  EN_REVUE: "primary",
+  PUBLIE: "success",
+  DEPRECIE: "warning",
+  RETIRE: "danger",
 };
 
 const ERROR_LABELS: Record<string, string> = {

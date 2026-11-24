@@ -1,4 +1,4 @@
-import { Checkbox, Fieldset, Text, TextInput } from "@mantine/core";
+import { CheckboxField, TextField } from "@/shared/ui";
 
 interface Property {
   type?: string;
@@ -11,27 +11,27 @@ export function MetadataPreview({ schemaText }: { schemaText: string }) {
   const schema = parse(schemaText);
   const properties = Object.entries(schema?.properties ?? {});
   return (
-    <Fieldset legend="Aperçu du formulaire généré" disabled>
+    <fieldset
+      disabled
+      className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4"
+    >
+      <legend className="px-1 text-sm font-semibold text-gray-700">
+        Aperçu du formulaire généré
+      </legend>
       {properties.length === 0 ? (
-        <Text>Aucun champ de métadonnées à afficher.</Text>
+        <p className="text-sm text-gray-900">Aucun champ de métadonnées à afficher.</p>
       ) : (
         properties.map(([name, property]) => {
           const label = property.title ?? name;
           const required = schema?.required?.includes(name) ?? false;
           return property.type === "boolean" ? (
-            <Checkbox key={name} label={label} mt="xs" />
+            <CheckboxField key={name} label={label} />
           ) : (
-            <TextInput
-              key={name}
-              label={label}
-              required={required}
-              type={inputType(property)}
-              mt="xs"
-            />
+            <TextField key={name} label={label} required={required} type={inputType(property)} />
           );
         })
       )}
-    </Fieldset>
+    </fieldset>
   );
 }
 

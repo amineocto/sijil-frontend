@@ -33,9 +33,9 @@ test("un contributeur dépose un document, qui passe la quarantaine et se retrou
   page,
 }) => {
   await page.goto("/depot");
-  const select = page.getByRole("combobox", { name: "Type de document" });
-  await select.fill("Carte");
-  await page.getByRole("option", { name: "Carte d'identité nationale" }).click();
+  await page
+    .getByRole("combobox", { name: "Type de document" })
+    .selectOption({ label: "Carte d'identité nationale" });
   await page.getByRole("textbox", { name: /Numéro/ }).fill("EE778899");
   await page.getByRole("textbox", { name: /Identifiant du titulaire/ }).fill("CLI-77");
   await page.locator('input[type="file"]').setInputFiles({

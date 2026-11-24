@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Image } from "@mantine/core";
 
 /**
  * Vignette de la version courante (lot 5), lue par le BFF puis affichée depuis la mémoire du
@@ -27,5 +26,5 @@ export function Thumbnail({ id, label }: { id: string; label: string }) {
     };
   }, [id]);
   if (!url) return null;
-  return <Image src={url} alt={`Vignette ${label}`} w={64} h={64} fit="contain" />;
+  return <img src={url} alt={`Vignette ${label}`} className="size-16 object-contain" />;
 }

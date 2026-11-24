@@ -1,15 +1,4 @@
 import { useState } from "react";
-import {
-  Alert,
-  Badge,
-  Button,
-  Group,
-  List,
-  Stack,
-  Textarea,
-  TextInput,
-  Title,
-} from "@mantine/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router";
 import { CompletenessResultView } from "@/features/completeness/CompletenessResultView";
@@ -19,6 +8,7 @@ import { SET_STATUS_LABELS } from "@/features/catalogue/requirements/Requirement
 import { api, call, isApiError, type Schemas } from "@/shared/api";
 import { QueryState } from "@/shared/QueryState";
 import { canContributeToCatalogue, canReview, useSession } from "@/shared/session";
+import { Button, Heading, Notice, Panel, Tag, TextAreaField, TextField } from "@/shared/ui";
 
 type RequirementSet = Schemas["RequirementSet"];
 type Definition = Schemas["RequirementSetDefinition"];
@@ -113,68 +103,67 @@ function Editor({ set }: { set: RequirementSet | undefined }) {
   const simulate = useMutation({ mutationFn: evaluate });
 
   return (
-    <Stack maw={960}>
-      <Group>
-        <Title order={2}>
+    <div className="flex max-w-5xl flex-col gap-6">
+      <div className="flex flex-wrap items-center gap-3">
+        <Heading>
           {set ? `Jeu ${set.code}, version ${String(set.version)}` : "Nouveau jeu d'exigences"}
-        </Title>
-        {set && <Badge variant="light">{SET_STATUS_LABELS[set.status] ?? set.status}</Badge>}
-      </Group>
-      {set === undefined && (
-        <TextInput
-          label="Code du jeu"
-          description="Majuscules, chiffres et _ ; par exemple CREDIT_IMMO_PARTICULIER"
-          required
-          value={code}
+        </Heading>
+        {set && <Tag>{SET_STATUS_LABELS[set.status] ?? set.status}</Tag>}
+      </div>
+      <Panel className="flex flex-col gap-4">
+        {set === undefined && (
+          <TextField
+            label="Code du jeu"
+            description="Majuscules, chiffres et _ ; par exemple CREDIT_IMMO_PARTICULIER"
+            required
+            value={code}
+            onChange={(event) => {
+              setCode(event.currentTarget.value.toUpperCase());
+            }}
+          />
+        )}
+        <TextAreaField
+          label="Définition (JSON)"
+          description="Exigences : types acceptés, parties visées, fraîcheur, confiance, conditions"
+          rows={12}
+          readOnly={!editable}
+          error={definition === undefined ? "JSON invalide" : undefined}
+          className="font-mono text-sm"
+          value={text}
           onChange={(event) => {
-            setCode(event.currentTarget.value.toUpperCase());
+            setText(event.currentTarget.value);
           }}
         />
-      )}
-      <Textarea
-        label="Définition (JSON)"
-        description="Exigences : types acceptés, parties visées, fraîcheur, confiance, conditions"
-        autosize
-        minRows={12}
-        readOnly={!editable}
-        error={definition === undefined ? "JSON invalide" : undefined}
-        styles={{ input: { fontFamily: "monospace" } }}
-        value={text}
-        onChange={(event) => {
-          setText(event.currentTarget.value);
-        }}
-      />
-      {save.error && <Problem error={save.error} title="Enregistrement refusé" />}
-      {publish.error && <Problem error={publish.error} title="Publication refusée" />}
-      <Group>
-        {editable && (
-          <Button
-            disabled={definition === undefined || (set === undefined && !code)}
-            loading={save.isPending}
-            onClick={() => {
-              if (definition) save.mutate(definition);
-            }}
-          >
-            Enregistrer le brouillon
-          </Button>
-        )}
-        {set?.status === "BROUILLON" && canReview(session.data) && (
-          <Button
-            variant="light"
-            loading={publish.isPending}
-            onClick={() => {
-              publish.mutate(set);
-            }}
-          >
-            Publier
-          </Button>
-        )}
-      </Group>
+        {save.error && <Problem error={save.error} title="Enregistrement refusé" />}
+        {publish.error && <Problem error={publish.error} title="Publication refusée" />}
+        <div className="flex flex-wrap gap-3">
+          {editable && (
+            <Button
+              disabled={definition === undefined || (set === undefined && !code)}
+              loading={save.isPending}
+              onClick={() => {
+                if (definition) save.mutate(definition);
+              }}
+            >
+              Enregistrer le brouillon
+            </Button>
+          )}
+          {set?.status === "BROUILLON" && canReview(session.data) && (
+            <Button
+              variant="secondary"
+              loading={publish.isPending}
+              onClick={() => {
+                publish.mutate(set);
+              }}
+            >
+              Publier
+            </Button>
+          )}
+        </div>
+      </Panel>
       {canContributeToCatalogue(session.data) && (
-        <Stack gap="sm">
-          <Title order={3} size="h4">
-            Simulateur
-          </Title>
+        <Panel className="flex flex-col gap-4">
+          <Heading level={3}>Simulateur</Heading>
           <EvaluationForm
             submitLabel="Simuler"
             pending={simulate.isPending}
@@ -184,33 +173,33 @@ function Editor({ set }: { set: RequirementSet | undefined }) {
           />
           {simulate.error && <Problem error={simulate.error} title="Simulation impossible" />}
           {simulate.data && <CompletenessResultView result={simulate.data} />}
-        </Stack>
+        </Panel>
       )}
-    </Stack>
+    </div>
   );
 }
 
 function Problem({ error, title }: { error: unknown; title: string }) {
   if (!isApiError(error)) {
     return (
-      <Alert color="red" title={title}>
+      <Notice tone="danger" title={title}>
         Une erreur inattendue est survenue.
-      </Alert>
+      </Notice>
     );
   }
   return (
-    <Alert color="red" title={title}>
+    <Notice tone="danger" title={title}>
       {error.message}
       {error.fieldErrors.length > 0 && (
-        <List size="sm">
+        <ul className="mt-2 list-disc ps-5">
           {error.fieldErrors.map((f) => (
-            <List.Item key={`${f.field}-${f.code}`}>
+            <li key={`${f.field}-${f.code}`}>
               {f.field || "définition"} : {f.code}
-            </List.Item>
+            </li>
           ))}
-        </List>
+        </ul>
       )}
-    </Alert>
+    </Notice>
   );
 }
 

@@ -1,5 +1,5 @@
-import { Checkbox, NumberInput, Select, Stack, TextInput } from "@mantine/core";
 import type { MetadataField } from "@/shared/metadata";
+import { CheckboxField, SelectField, TextField } from "@/shared/ui";
 
 /** Formulaire généré depuis le schéma de métadonnées du type ; erreurs par champ de `sijil-api`. */
 export function MetadataFields({
@@ -17,7 +17,7 @@ export function MetadataFields({
     onChange({ ...values, [name]: value });
   };
   return (
-    <Stack gap="sm">
+    <div className="flex flex-col gap-3">
       {fields.map((field) => {
         const common = {
           label: field.label,
@@ -28,19 +28,20 @@ export function MetadataFields({
         switch (field.kind) {
           case "choice":
             return (
-              <Select
+              <SelectField
                 key={field.name}
                 {...common}
-                data={field.options}
-                value={value || null}
-                onChange={(v) => {
-                  set(field.name, v ?? "");
+                placeholder=""
+                options={field.options.map((o) => ({ value: o, label: o }))}
+                value={value}
+                onChange={(e) => {
+                  set(field.name, e.currentTarget.value);
                 }}
               />
             );
           case "boolean":
             return (
-              <Checkbox
+              <CheckboxField
                 key={field.name}
                 label={field.label}
                 checked={value === "true"}
@@ -49,23 +50,13 @@ export function MetadataFields({
                 }}
               />
             );
-          case "number":
-            return (
-              <NumberInput
-                key={field.name}
-                {...common}
-                value={value}
-                onChange={(v) => {
-                  set(field.name, String(v));
-                }}
-              />
-            );
           default:
             return (
-              <TextInput
+              <TextField
                 key={field.name}
                 {...common}
-                type={field.kind === "date" ? "date" : "text"}
+                type={field.kind === "date" ? "date" : field.kind === "number" ? "number" : "text"}
+                {...(field.kind === "number" ? { inputMode: "decimal" as const, step: "any" } : {})}
                 maxLength={field.maxLength}
                 value={value}
                 onChange={(e) => {
@@ -75,6 +66,6 @@ export function MetadataFields({
             );
         }
       })}
-    </Stack>
+    </div>
   );
 }

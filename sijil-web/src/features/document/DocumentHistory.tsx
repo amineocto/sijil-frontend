@@ -1,4 +1,3 @@
-import { Badge, Stack, Table, Title } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { EmptyState } from "@sijil/ui-kit";
 import { accessHeaders, type Access } from "@/shared/access";
@@ -6,6 +5,7 @@ import { api, call } from "@/shared/api";
 import { formatDate, formatSize, statusLabel } from "@/shared/labels";
 import { QueryState } from "@/shared/QueryState";
 import type { Items, MetadataRevision, Usage, Version } from "@/shared/types";
+import { Heading, Table, Tag, Td, Th } from "@/shared/ui";
 
 type Part = "versions" | "metadata-revisions" | "usages";
 
@@ -27,62 +27,62 @@ export function DocumentHistory({ id, access }: { id: string; access: Access }) 
   const revisions = usePart<MetadataRevision>(id, "metadata-revisions", access);
   const usages = usePart<Usage>(id, "usages", access);
   return (
-    <Stack>
-      <Title order={3}>Versions</Title>
+    <div className="flex flex-col gap-4">
+      <Heading level={3}>Versions</Heading>
       <QueryState query={versions}>
         {({ items }) => (
           <Table aria-label="Versions">
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th scope="col">Version</Table.Th>
-                <Table.Th scope="col">Reçue le</Table.Th>
-                <Table.Th scope="col">État</Table.Th>
-                <Table.Th scope="col">Contenu</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
+            <thead>
+              <tr>
+                <Th scope="col">Version</Th>
+                <Th scope="col">Reçue le</Th>
+                <Th scope="col">État</Th>
+                <Th scope="col">Contenu</Th>
+              </tr>
+            </thead>
+            <tbody>
               {items.map((v) => (
-                <Table.Tr key={v.number}>
-                  <Table.Td>
-                    {v.number} {v.current && <Badge variant="light">courante</Badge>}
-                  </Table.Td>
-                  <Table.Td>{formatDate(v.receivedAt)}</Table.Td>
-                  <Table.Td>{statusLabel(v.status)}</Table.Td>
-                  <Table.Td>
+                <tr key={v.number}>
+                  <Td>
+                    {v.number} {v.current && <Tag variant="primary">courante</Tag>}
+                  </Td>
+                  <Td>{formatDate(v.receivedAt)}</Td>
+                  <Td>{statusLabel(v.status)}</Td>
+                  <Td>
                     {v.mediaType}, {formatSize(v.size)}
-                  </Table.Td>
-                </Table.Tr>
+                  </Td>
+                </tr>
               ))}
-            </Table.Tbody>
+            </tbody>
           </Table>
         )}
       </QueryState>
-      <Title order={3}>Historique des métadonnées</Title>
+      <Heading level={3}>Historique des métadonnées</Heading>
       <QueryState query={revisions}>
         {({ items }) => (
           <Table aria-label="Historique des métadonnées">
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th scope="col">Révision</Table.Th>
-                <Table.Th scope="col">Le</Table.Th>
-                <Table.Th scope="col">Par</Table.Th>
-                <Table.Th scope="col">Motif</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
+            <thead>
+              <tr>
+                <Th scope="col">Révision</Th>
+                <Th scope="col">Le</Th>
+                <Th scope="col">Par</Th>
+                <Th scope="col">Motif</Th>
+              </tr>
+            </thead>
+            <tbody>
               {items.map((r) => (
-                <Table.Tr key={r.number}>
-                  <Table.Td>{r.number}</Table.Td>
-                  <Table.Td>{formatDate(r.revisedAt)}</Table.Td>
-                  <Table.Td>{r.author}</Table.Td>
-                  <Table.Td>{r.reason ?? "Dépôt"}</Table.Td>
-                </Table.Tr>
+                <tr key={r.number}>
+                  <Td>{r.number}</Td>
+                  <Td>{formatDate(r.revisedAt)}</Td>
+                  <Td>{r.author}</Td>
+                  <Td>{r.reason ?? "Dépôt"}</Td>
+                </tr>
               ))}
-            </Table.Tbody>
+            </tbody>
           </Table>
         )}
       </QueryState>
-      <Title order={3}>Usages par d&apos;autres parcours</Title>
+      <Heading level={3}>Usages par d&apos;autres parcours</Heading>
       <QueryState query={usages}>
         {({ items }) =>
           items.length === 0 ? (
@@ -93,26 +93,26 @@ export function DocumentHistory({ id, access }: { id: string; access: Access }) 
             />
           ) : (
             <Table aria-label="Usages">
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th scope="col">Parcours</Table.Th>
-                  <Table.Th scope="col">Jour</Table.Th>
-                  <Table.Th scope="col">Finalité</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
+              <thead>
+                <tr>
+                  <Th scope="col">Parcours</Th>
+                  <Th scope="col">Jour</Th>
+                  <Th scope="col">Finalité</Th>
+                </tr>
+              </thead>
+              <tbody>
                 {items.map((u) => (
-                  <Table.Tr key={`${u.parcours}-${u.day}-${u.clientId}`}>
-                    <Table.Td>{u.parcours}</Table.Td>
-                    <Table.Td>{formatDate(u.day)}</Table.Td>
-                    <Table.Td>{u.purpose}</Table.Td>
-                  </Table.Tr>
+                  <tr key={`${u.parcours}-${u.day}-${u.clientId}`}>
+                    <Td>{u.parcours}</Td>
+                    <Td>{formatDate(u.day)}</Td>
+                    <Td>{u.purpose}</Td>
+                  </tr>
                 ))}
-              </Table.Tbody>
+              </tbody>
             </Table>
           )
         }
       </QueryState>
-    </Stack>
+    </div>
   );
 }

@@ -1,13 +1,24 @@
 import { type SyntheticEvent } from "react";
-import { Anchor, Button, Group, NativeSelect, Stack, Table, TextInput, Title } from "@mantine/core";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { Link, useSearchParams } from "react-router";
+import { useSearchParams } from "react-router";
 import { EmptyState } from "@sijil/ui-kit";
 import { api, call, type TypeStatus } from "@/shared/api";
 import { STATUS_LABELS } from "@/features/catalogue/shared/labels";
 import { QueryState } from "@/shared/QueryState";
 import { canContributeToCatalogue, useSession } from "@/shared/session";
 import { StatusBadge } from "@/features/catalogue/shared/StatusBadge";
+import {
+  Button,
+  ButtonLink,
+  Heading,
+  Panel,
+  SelectField,
+  Table,
+  Td,
+  TextField,
+  TextLink,
+  Th,
+} from "@/shared/ui";
 
 const STATUSES = Object.keys(STATUS_LABELS) as TypeStatus[];
 
@@ -57,28 +68,31 @@ export function TypesListPage() {
   }
 
   return (
-    <Stack>
-      <Group justify="space-between">
-        <Title order={2}>Types de documents</Title>
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Heading>Types de documents</Heading>
         {canContributeToCatalogue(session.data) && (
-          <Button component={Link} to="/catalogue/types/nouveau">
-            Nouveau type
-          </Button>
+          <ButtonLink to="/catalogue/types/nouveau">Nouveau type</ButtonLink>
         )}
-      </Group>
-      <form onSubmit={applyFilters} aria-label="Filtres" key={params.toString()}>
-        <Group align="end">
-          <TextInput
+      </div>
+      <Panel>
+        <form
+          onSubmit={applyFilters}
+          aria-label="Filtres"
+          key={params.toString()}
+          className="grid items-start gap-4 md:grid-cols-[2fr_1fr_1fr_auto]"
+        >
+          <TextField
             name="q"
             label="Recherche (code ou libellé)"
             description="Deux caractères au moins"
             defaultValue={filters.q}
           />
-          <NativeSelect
+          <SelectField
             name="parcours"
             label="Parcours"
             defaultValue={filters.parcours}
-            data={[
+            options={[
               { value: "", label: "Tous" },
               ...(parcours.data ?? []).map((p) => ({
                 value: p.code,
@@ -86,20 +100,22 @@ export function TypesListPage() {
               })),
             ]}
           />
-          <NativeSelect
+          <SelectField
             name="status"
             label="Statut"
             defaultValue={filters.status}
-            data={[
+            options={[
               { value: "", label: "Tous" },
               ...STATUSES.map((s) => ({ value: s, label: STATUS_LABELS[s] })),
             ]}
           />
-          <Button type="submit" variant="light">
-            Filtrer
-          </Button>
-        </Group>
-      </form>
+          <div className="md:mt-7">
+            <Button type="submit" variant="secondary">
+              Filtrer
+            </Button>
+          </div>
+        </form>
+      </Panel>
       <QueryState query={types}>
         {(data) => {
           const items = data.pages.flatMap((page) => page.items);
@@ -113,43 +129,41 @@ export function TypesListPage() {
           }
           return (
             <>
-              <Table striped>
-                <Table.Caption>
+              <Table>
+                <caption className="sr-only">
                   {items.length} type{items.length > 1 ? "s" : ""} affiché
                   {items.length > 1 ? "s" : ""}
-                </Table.Caption>
-                <Table.Thead>
-                  <Table.Tr>
-                    <Table.Th scope="col">Code</Table.Th>
-                    <Table.Th scope="col">Libellé</Table.Th>
-                    <Table.Th scope="col">Famille</Table.Th>
-                    <Table.Th scope="col">Parcours</Table.Th>
-                    <Table.Th scope="col">Dernière version</Table.Th>
-                    <Table.Th scope="col">Statut</Table.Th>
-                  </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
+                </caption>
+                <thead>
+                  <tr>
+                    <Th scope="col">Code</Th>
+                    <Th scope="col">Libellé</Th>
+                    <Th scope="col">Famille</Th>
+                    <Th scope="col">Parcours</Th>
+                    <Th scope="col">Dernière version</Th>
+                    <Th scope="col">Statut</Th>
+                  </tr>
+                </thead>
+                <tbody>
                   {items.map((type) => (
-                    <Table.Tr key={type.code}>
-                      <Table.Td>
-                        <Anchor component={Link} to={`/catalogue/types/${type.code}`}>
-                          {type.code}
-                        </Anchor>
-                      </Table.Td>
-                      <Table.Td>{type.label ?? "—"}</Table.Td>
-                      <Table.Td>{type.family ?? "—"}</Table.Td>
-                      <Table.Td>{type.ownerParcours}</Table.Td>
-                      <Table.Td>v{type.latest.version}</Table.Td>
-                      <Table.Td>
+                    <tr key={type.code}>
+                      <Td>
+                        <TextLink to={`/catalogue/types/${type.code}`}>{type.code}</TextLink>
+                      </Td>
+                      <Td>{type.label ?? "—"}</Td>
+                      <Td>{type.family ?? "—"}</Td>
+                      <Td>{type.ownerParcours}</Td>
+                      <Td>v{type.latest.version}</Td>
+                      <Td>
                         <StatusBadge status={type.latest.status} />
-                      </Table.Td>
-                    </Table.Tr>
+                      </Td>
+                    </tr>
                   ))}
-                </Table.Tbody>
+                </tbody>
               </Table>
               {types.hasNextPage && (
                 <Button
-                  variant="default"
+                  variant="secondary"
                   onClick={() => void types.fetchNextPage()}
                   loading={types.isFetchingNextPage}
                 >
@@ -160,6 +174,6 @@ export function TypesListPage() {
           );
         }}
       </QueryState>
-    </Stack>
+    </div>
   );
 }

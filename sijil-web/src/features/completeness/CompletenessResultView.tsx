@@ -1,4 +1,3 @@
-import { Alert, Badge, List, Stack, Table, Text, Title } from "@mantine/core";
 import {
   partyLabel,
   STATE_COLORS,
@@ -6,49 +5,48 @@ import {
   type CompletenessResult,
 } from "@/features/completeness/completeness";
 import { formatDate } from "@/shared/labels";
+import { Heading, Notice, Panel, Table, Tag, Td, Th } from "@/shared/ui";
 
 /** Résultat du calcul : état par exigence et partie, puis pièces à demander. */
 export function CompletenessResultView({ result }: { result: CompletenessResult }) {
   return (
-    <Stack gap="sm" aria-live="polite">
-      <Text fw={600}>
+    <Panel className="flex flex-col gap-4" aria-live="polite">
+      <p className="font-semibold text-gray-900">
         {result.complete ? "Dossier complet" : "Dossier incomplet"} — jeu {result.requirementSet}
         {result.version > 0 ? ` (version ${String(result.version)})` : " (simulation)"}, au{" "}
         {formatDate(result.evaluationDate)}
-      </Text>
+      </p>
       {result.partial && (
-        <Alert color="orange" title="Résultat partiel">
+        <Notice tone="warning" title="Résultat partiel">
           Une source n'a pas répondu : le résultat n'est pas complet.
-        </Alert>
+        </Notice>
       )}
       {result.hiddenByAccessPolicy > 0 && (
-        <Alert color="gray" title="Types non consultables">
+        <Notice title="Types non consultables">
           {String(result.hiddenByAccessPolicy)} type(s) exigé(s) ne sont pas consultables avec vos
           droits : ils ne comptent pas.
-        </Alert>
+        </Notice>
       )}
       <Table>
-        <Table.Caption>État des exigences</Table.Caption>
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th scope="col">Exigence</Table.Th>
-            <Table.Th scope="col">Partie</Table.Th>
-            <Table.Th scope="col">État</Table.Th>
-            <Table.Th scope="col">Documents retenus</Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
+        <caption className="sr-only">État des exigences</caption>
+        <thead>
+          <tr>
+            <Th scope="col">Exigence</Th>
+            <Th scope="col">Partie</Th>
+            <Th scope="col">État</Th>
+            <Th scope="col">Documents retenus</Th>
+          </tr>
+        </thead>
+        <tbody>
           {result.requirements.flatMap((r) =>
             r.parties.map((p, i) => (
-              <Table.Tr key={`${r.id}-${String(i)}`}>
-                <Table.Td>{r.label ?? r.id}</Table.Td>
-                <Table.Td>{partyLabel(p.party)}</Table.Td>
-                <Table.Td>
-                  <Badge color={STATE_COLORS[p.state]} variant="light">
-                    {STATE_LABELS[p.state]}
-                  </Badge>
-                </Table.Td>
-                <Table.Td>
+              <tr key={`${r.id}-${String(i)}`}>
+                <Td>{r.label ?? r.id}</Td>
+                <Td>{partyLabel(p.party)}</Td>
+                <Td>
+                  <Tag variant={STATE_COLORS[p.state]}>{STATE_LABELS[p.state]}</Tag>
+                </Td>
+                <Td>
                   {p.candidates.length === 0
                     ? "—"
                     : p.candidates
@@ -57,26 +55,24 @@ export function CompletenessResultView({ result }: { result: CompletenessResult 
                             `${c.type} (${c.expiresAt ? formatDate(c.expiresAt) : "sans échéance"})`,
                         )
                         .join(", ")}
-                </Table.Td>
-              </Table.Tr>
+                </Td>
+              </tr>
             )),
           )}
-        </Table.Tbody>
+        </tbody>
       </Table>
-      <Title order={3} size="h4">
-        Pièces à demander
-      </Title>
+      <Heading level={3}>Pièces à demander</Heading>
       {result.toRequest.length === 0 ? (
-        <Text>Aucune pièce à demander.</Text>
+        <p className="text-sm text-gray-900">Aucune pièce à demander.</p>
       ) : (
-        <List aria-label="Pièces à demander">
+        <ul aria-label="Pièces à demander" className="list-disc ps-5 text-sm text-gray-900">
           {result.toRequest.map((t, i) => (
-            <List.Item key={`${t.requirementId}-${String(i)}`}>
+            <li key={`${t.requirementId}-${String(i)}`}>
               {t.anyOf.join(" ou ")} — {partyLabel(t.party)} ({STATE_LABELS[t.state]})
-            </List.Item>
+            </li>
           ))}
-        </List>
+        </ul>
       )}
-    </Stack>
+    </Panel>
   );
 }

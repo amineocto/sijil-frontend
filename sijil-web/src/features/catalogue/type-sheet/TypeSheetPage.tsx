@@ -1,24 +1,24 @@
 import { useState } from "react";
-import {
-  Alert,
-  Button,
-  Code,
-  Group,
-  NativeSelect,
-  SimpleGrid,
-  Stack,
-  Table,
-  Text,
-  Title,
-} from "@mantine/core";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Link, useNavigate, useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import { ErrorState } from "@sijil/ui-kit";
 import { api, call, isApiError, type Schemas } from "@/shared/api";
 import { QueryState } from "@/shared/QueryState";
 import { StatusBadge } from "@/features/catalogue/shared/StatusBadge";
 import { diffDefinitions } from "@/features/catalogue/type-sheet/diff";
 import { ReuseSection } from "@/features/catalogue/type-sheet/ReuseSection";
+import {
+  Button,
+  ButtonLink,
+  CodeBlock,
+  Heading,
+  Notice,
+  Panel,
+  SelectField,
+  Table,
+  Td,
+  Th,
+} from "@/shared/ui";
 
 type Version = Schemas["TypeVersion"];
 
@@ -30,10 +30,10 @@ export function TypeSheetPage() {
     queryFn: () => call(api.GET("/api/types/{code}", { params: { path: { code } } })),
   });
   return (
-    <Stack>
-      <Title order={2}>Type {code}</Title>
+    <div className="flex flex-col gap-6">
+      <Heading>Type {code}</Heading>
       <QueryState query={sheet}>{(data) => <Sheet sheet={data} />}</QueryState>
-    </Stack>
+    </div>
   );
 }
 
@@ -52,22 +52,22 @@ function Sheet({ sheet }: { sheet: Schemas["TypeSheet"] }) {
   });
   const draftInProgress = latest?.status === "BROUILLON";
   return (
-    <Stack>
-      <Text>
+    <div className="flex flex-col gap-6">
+      <p className="text-sm text-gray-900">
         Parcours propriétaire : <strong>{sheet.ownerParcours}</strong> — référent :{" "}
         <strong>{sheet.referentParcours}</strong> — famille : {sheet.family ?? "non renseignée"}
-      </Text>
+      </p>
       {latest?.reviewReason && (
-        <Alert color="orange" title="Modifications demandées par la revue" role="note">
+        <Notice tone="warning" title="Modifications demandées par la revue" role="note">
           {latest.reviewReason}
-        </Alert>
+        </Notice>
       )}
       {sheet.canEdit && (
-        <Group>
+        <div>
           {draftInProgress ? (
-            <Button component={Link} to={`/catalogue/types/${sheet.code}/brouillon`}>
+            <ButtonLink to={`/catalogue/types/${sheet.code}/brouillon`}>
               Modifier le brouillon
-            </Button>
+            </ButtonLink>
           ) : (
             <Button
               onClick={() => {
@@ -78,37 +78,39 @@ function Sheet({ sheet }: { sheet: Schemas["TypeSheet"] }) {
               Nouvelle version
             </Button>
           )}
-        </Group>
+        </div>
       )}
       {isApiError(newVersion.error) && <ErrorState error={newVersion.error} headingLevel={3} />}
-      <Title order={3}>Versions</Title>
-      <Table>
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th scope="col">Version</Table.Th>
-            <Table.Th scope="col">Statut</Table.Th>
-            <Table.Th scope="col">Date d&apos;effet</Table.Th>
-            <Table.Th scope="col">Soumise par</Table.Th>
-            <Table.Th scope="col">Revue par</Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {sheet.versions.map((v) => (
-            <Table.Tr key={v.version}>
-              <Table.Td>v{v.version}</Table.Td>
-              <Table.Td>
-                <StatusBadge status={v.status} />
-              </Table.Td>
-              <Table.Td>{v.effectiveFrom ?? "—"}</Table.Td>
-              <Table.Td>{v.submittedBy ?? "—"}</Table.Td>
-              <Table.Td>{v.reviewedBy ?? "—"}</Table.Td>
-            </Table.Tr>
-          ))}
-        </Table.Tbody>
-      </Table>
+      <Panel className="flex flex-col gap-4">
+        <Heading level={3}>Versions</Heading>
+        <Table>
+          <thead>
+            <tr>
+              <Th scope="col">Version</Th>
+              <Th scope="col">Statut</Th>
+              <Th scope="col">Date d&apos;effet</Th>
+              <Th scope="col">Soumise par</Th>
+              <Th scope="col">Revue par</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {sheet.versions.map((v) => (
+              <tr key={v.version}>
+                <Td>v{v.version}</Td>
+                <Td>
+                  <StatusBadge status={v.status} />
+                </Td>
+                <Td>{v.effectiveFrom ?? "—"}</Td>
+                <Td>{v.submittedBy ?? "—"}</Td>
+                <Td>{v.reviewedBy ?? "—"}</Td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      </Panel>
       {sheet.versions.length > 1 && <VersionDiff versions={sheet.versions} />}
       <ReuseSection sheet={sheet} />
-    </Stack>
+    </div>
   );
 }
 
@@ -123,46 +125,42 @@ function VersionDiff({ versions }: { versions: Version[] }) {
   const after = versions.find((v) => String(v.version) === right);
   const changes = before && after ? diffDefinitions(before.definition, after.definition) : [];
   return (
-    <Stack>
-      <Title order={3}>Différences entre deux versions</Title>
-      <Group>
-        <NativeSelect
+    <Panel className="flex flex-col gap-4">
+      <Heading level={3}>Différences entre deux versions</Heading>
+      <div className="grid max-w-xl gap-4 md:grid-cols-2">
+        <SelectField
           label="Version de départ"
-          data={options}
+          options={options}
           value={left}
           onChange={(e) => {
             setLeft(e.currentTarget.value);
           }}
         />
-        <NativeSelect
+        <SelectField
           label="Version comparée"
-          data={options}
+          options={options}
           value={right}
           onChange={(e) => {
             setRight(e.currentTarget.value);
           }}
         />
-      </Group>
+      </div>
       {changes.length === 0 ? (
-        <Text>Aucune différence entre ces deux versions.</Text>
+        <p className="text-sm text-gray-900">Aucune différence entre ces deux versions.</p>
       ) : (
-        <Stack aria-label="Rubriques modifiées">
+        <div className="flex flex-col gap-4" role="group" aria-label="Rubriques modifiées">
           {changes.map((change) => (
             <section key={change.key} aria-label={`Rubrique ${change.key}`}>
-              <Title order={4}>{change.key}</Title>
-              <SimpleGrid cols={2}>
-                <Code block aria-label={`${change.key} avant`}>
-                  {shown(change.before)}
-                </Code>
-                <Code block aria-label={`${change.key} après`}>
-                  {shown(change.after)}
-                </Code>
-              </SimpleGrid>
+              <Heading level={4}>{change.key}</Heading>
+              <div className="grid gap-3 md:grid-cols-2">
+                <CodeBlock aria-label={`${change.key} avant`}>{shown(change.before)}</CodeBlock>
+                <CodeBlock aria-label={`${change.key} après`}>{shown(change.after)}</CodeBlock>
+              </div>
             </section>
           ))}
-        </Stack>
+        </div>
       )}
-    </Stack>
+    </Panel>
   );
 }
 

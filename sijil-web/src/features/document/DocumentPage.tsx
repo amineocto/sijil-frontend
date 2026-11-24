@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Alert, Badge, Button, Group, Stack, Table, Tabs, Text, Title } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import { LoadingState } from "@sijil/ui-kit";
@@ -14,6 +13,7 @@ import type { DocumentView } from "@/shared/types";
 import { DocumentActions } from "@/features/document/DocumentActions";
 import { DocumentHistory } from "@/features/document/DocumentHistory";
 import { Preview } from "@/features/document/Preview";
+import { Button, Heading, Muted, Notice, Panel, Table, Tabs, Tag, Td, Th } from "@/shared/ui";
 
 /**
  * Écran « Fiche document » : métadonnées, parties, aperçu, versions, historique et usages. Un
@@ -36,27 +36,28 @@ export function DocumentPage() {
 
   if (document.error && isApiError(document.error) && [403, 404].includes(document.error.status)) {
     return (
-      <Stack maw={720}>
-        <Title order={2}>Document</Title>
-        <Alert color="orange" title="Accès à justifier">
+      <div className="flex max-w-3xl flex-col gap-4">
+        <Heading>Document</Heading>
+        <Notice tone="warning" title="Accès à justifier">
           {document.error.message} Ce document est peut-être celui d&apos;un autre parcours, ou
           restreint : indiquez pourquoi vous le consultez.
-        </Alert>
-        <form
-          aria-label="Motif d'accès"
-          onSubmit={(event) => {
-            event.preventDefault();
-            setAccess(draft);
-          }}
-        >
-          <Stack gap="sm">
+        </Notice>
+        <Panel>
+          <form
+            aria-label="Motif d'accès"
+            className="flex flex-col gap-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              setAccess(draft);
+            }}
+          >
             <AccessFields value={draft} onChange={setDraft} />
-            <Group>
+            <div>
               <Button type="submit">Consulter avec ce motif</Button>
-            </Group>
-          </Stack>
-        </form>
-      </Stack>
+            </div>
+          </form>
+        </Panel>
+      </div>
     );
   }
   return (
@@ -78,60 +79,75 @@ function Sheet({
   const session = useSession();
   if (session.isPending) return <LoadingState />;
   return (
-    <Stack>
-      <Group justify="space-between">
-        <Title order={2}>{document.documentType}</Title>
-        <Group gap="xs">
-          <Badge variant="light">{statusLabel(document.status)}</Badge>
-          <Badge variant="light">{SENSITIVITY_LABELS[document.sensitivity]}</Badge>
-        </Group>
-      </Group>
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Heading>{document.documentType}</Heading>
+        <div className="flex gap-2">
+          <Tag variant="info">{statusLabel(document.status)}</Tag>
+          <Tag>{SENSITIVITY_LABELS[document.sensitivity]}</Tag>
+        </div>
+      </div>
       {document.verification && (
-        <Alert color="orange" title="Type à vérifier" role="status">
+        <Notice tone="warning" title="Type à vérifier" role="status">
           Les traitements ont détecté un document de type {document.verification.detectedType}, et
           non {document.documentType}. Le parcours doit vérifier le type, et le corriger s&apos;il
           le faut.
-        </Alert>
+        </Notice>
       )}
-      <Text size="sm" c="dimmed">
+      <Muted>
         Parcours {document.parcours} · déposé le {formatDate(document.createdAt)} · version{" "}
         {document.currentVersion} · {document.content.mediaType},{" "}
         {formatSize(document.content.size)}
-      </Text>
-      <Title order={3}>Métadonnées</Title>
-      <Table aria-label="Métadonnées" maw={720}>
-        <Table.Tbody>
-          {Object.entries(document.metadata).map(([name, value]) => (
-            <Table.Tr key={name}>
-              <Table.Th scope="row">{name}</Table.Th>
-              <Table.Td>{formatValue(value)}</Table.Td>
-            </Table.Tr>
-          ))}
-        </Table.Tbody>
-      </Table>
-      <Title order={3}>Parties</Title>
-      <ul>
-        {document.parties.map((p) => (
-          <li key={`${p.type}-${p.id}-${p.role}`}>
-            {p.type} {p.id} ({p.role})
-          </li>
-        ))}
-      </ul>
+      </Muted>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Panel className="flex flex-col gap-3">
+          <Heading level={3}>Métadonnées</Heading>
+          <Table aria-label="Métadonnées">
+            <tbody>
+              {Object.entries(document.metadata).map(([name, value]) => (
+                <tr key={name}>
+                  <Th scope="row" className="w-1/3">
+                    {name}
+                  </Th>
+                  <Td>{formatValue(value)}</Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </Panel>
+        <Panel className="flex flex-col gap-3">
+          <Heading level={3}>Parties</Heading>
+          <ul className="list-disc ps-5 text-sm text-gray-900">
+            {document.parties.map((p) => (
+              <li key={`${p.type}-${p.id}-${p.role}`}>
+                {p.type} {p.id} ({p.role})
+              </li>
+            ))}
+          </ul>
+        </Panel>
+      </div>
       {canContribute(session.data, document.parcours) && (
-        <DocumentActions document={document} etag={etag} />
+        <Panel>
+          <DocumentActions document={document} etag={etag} />
+        </Panel>
       )}
-      <Tabs defaultValue="apercu" keepMounted={false}>
-        <Tabs.List>
-          <Tabs.Tab value="apercu">Aperçu</Tabs.Tab>
-          <Tabs.Tab value="historique">Versions et historique</Tabs.Tab>
-        </Tabs.List>
-        <Tabs.Panel value="apercu" pt="md">
-          <Preview document={document} access={access} />
-        </Tabs.Panel>
-        <Tabs.Panel value="historique" pt="md">
-          <DocumentHistory id={document.id} access={access} />
-        </Tabs.Panel>
-      </Tabs>
-    </Stack>
+      <Panel>
+        <Tabs
+          label="Contenu du document"
+          tabs={[
+            {
+              id: "apercu",
+              label: "Aperçu",
+              content: <Preview document={document} access={access} />,
+            },
+            {
+              id: "historique",
+              label: "Versions et historique",
+              content: <DocumentHistory id={document.id} access={access} />,
+            },
+          ]}
+        />
+      </Panel>
+    </div>
   );
 }

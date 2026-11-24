@@ -6,10 +6,10 @@ import { renderAt, seriousViolations } from "@/test/render";
 import { server, stub } from "@/test/setup";
 
 async function chooseCin(user: ReturnType<typeof userEvent.setup>) {
-  const select = (await screen.findAllByLabelText(/Type de document/))[0] as HTMLElement;
-  await user.type(select, "Carte");
-  await user.click(
-    await screen.findByRole("option", { name: "Carte d'identité nationale", hidden: true }),
+  const select = await screen.findByRole("combobox", { name: /Type de document/ });
+  await user.selectOptions(
+    select,
+    await screen.findByRole("option", { name: "Carte d'identité nationale" }),
   );
 }
 

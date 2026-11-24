@@ -18,6 +18,12 @@ export const PARTY_TYPE_LABELS: Record<string, string> = {
   COMPTE: "Compte",
 };
 
+/** Choix du type de partie, dans l'ordre des libellés. */
+export const PARTY_OPTIONS = Object.entries(PARTY_TYPE_LABELS).map(([value, label]) => ({
+  value,
+  label,
+}));
+
 export function statusLabel(status: string): string {
   return STATUS_LABELS[status] ?? status;
 }

@@ -1,38 +1,29 @@
-import {
-  createTheme,
-  defaultVariantColorsResolver,
-  type VariantColorsResolver,
-} from "@mantine/core";
+import type { Plugin } from "vite";
+
+/** Feuille de style compilée d'`@awb/ui`, qui embarque ses polices en `data:`. */
+export const AWB_STYLESHEET = "@awb/ui/dist/style.css";
+
+const EMBEDDED_FONT = /@font-face\{[^}]*url\(data:font\/[^}]*\}/g;
 
 /**
- * Variante « light » (badges de statut, alertes) : texte dans la couleur du texte, la teinte restant
- * portée par le fond. Les teintes de Mantine sur leur fond clair (vert 3,8:1, orange 3,6:1)
- * n'atteignent pas 4,5:1 (SC 1.4.3, mesuré par axe dans le scénario Playwright).
+ * Retire les polices embarquées de la feuille d'`@awb/ui` : la CSP du BFF (`font-src 'self'`) les
+ * refuserait, et elles pèsent 300 Ko compressés dans le bundle initial. Inter est servie en fichiers
+ * par `@fontsource-variable/inter`, avec ses plages Unicode.
  */
-export const readableLightVariant: VariantColorsResolver = (input) => {
-  const colors = defaultVariantColorsResolver(input);
-  return input.variant === "light" ? { ...colors, color: "var(--mantine-color-text)" } : colors;
-};
+export function withoutEmbeddedFonts(css: string): string {
+  const stripped = css.replace(EMBEDDED_FONT, "");
+  if (stripped.includes("url(data:font")) {
+    throw new Error("police embarquée restante dans la feuille d'@awb/ui");
+  }
+  return stripped;
+}
 
-/** Thème Mantine aligné sur les jetons de `@sijil/ui-kit` (couleur primaire, police, rayon). */
-export const theme = createTheme({
-  primaryColor: "sijil",
-  colors: {
-    sijil: [
-      "#e7f0fa",
-      "#c5daf2",
-      "#9fc1e9",
-      "#76a6df",
-      "#4f8bd4",
-      "#2a71c3",
-      "#0b5cad",
-      "#094d91",
-      "#073e75",
-      "#052f59",
-    ],
-  },
-  primaryShade: 6,
-  fontFamily: 'system-ui, "Segoe UI", "Noto Sans", "Noto Sans Arabic", sans-serif',
-  defaultRadius: "sm",
-  variantColorResolver: readableLightVariant,
-});
+export function awbStylesheetFonts(): Plugin {
+  return {
+    name: "sijil-awb-polices",
+    enforce: "pre",
+    transform(code, id) {
+      return id.split("?")[0]?.endsWith(AWB_STYLESHEET) ? withoutEmbeddedFonts(code) : null;
+    },
+  };
+}

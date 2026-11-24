@@ -1,7 +1,5 @@
 import type { ReactNode } from "react";
-import { MantineProvider } from "@mantine/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { theme } from "@/app/theme";
 
 export function createQueryClient(): QueryClient {
   return new QueryClient({
@@ -13,9 +11,5 @@ export function createQueryClient(): QueryClient {
 }
 
 export function Providers({ client, children }: { client: QueryClient; children: ReactNode }) {
-  return (
-    <MantineProvider theme={theme}>
-      <QueryClientProvider client={client}>{children}</QueryClientProvider>
-    </MantineProvider>
-  );
+  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }

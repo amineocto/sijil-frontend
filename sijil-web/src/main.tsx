@@ -1,6 +1,6 @@
-import "@mantine/core/styles.css";
-import "@sijil/ui-kit/theme.css";
 import "@/app/app.css";
+import "@awb/ui/styles.css";
+import "@sijil/ui-kit/theme.css";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router";

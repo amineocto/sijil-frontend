@@ -1,25 +1,23 @@
 import { useState } from "react";
-import {
-  Alert,
-  Anchor,
-  Button,
-  Code,
-  Radio,
-  SimpleGrid,
-  Stack,
-  Text,
-  Textarea,
-  TextInput,
-  Title,
-} from "@mantine/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useParams } from "react-router";
+import { useParams } from "react-router";
 import { ErrorState } from "@sijil/ui-kit";
 import { api, call, isApiError, type Schemas } from "@/shared/api";
 import { STATUS_LABELS } from "@/features/catalogue/shared/labels";
 import { QueryState } from "@/shared/QueryState";
 import { diffDefinitions } from "@/features/catalogue/type-sheet/diff";
 import { reviewSchema, today, type ReviewForm } from "@/features/catalogue/review/form";
+import {
+  Button,
+  CodeBlock,
+  Heading,
+  Notice,
+  Panel,
+  RadioGroup,
+  TextAreaField,
+  TextField,
+  TextLink,
+} from "@/shared/ui";
 
 /** Écran « Revue » : différences avec la version publiée, puis approbation ou demande de modifications. */
 export function ReviewPage() {
@@ -40,16 +38,16 @@ export function ReviewPage() {
     queryFn: () => call(api.GET("/api/types/{code}", { params: { path: { code } } })),
   });
   return (
-    <Stack>
-      <Title order={2}>
+    <div className="flex flex-col gap-6">
+      <Heading>
         Revue du type {code}, version {version}
-      </Title>
+      </Heading>
       <QueryState query={reviewed}>
         {(data) => (
           <QueryState query={sheet}>{(type) => <Review reviewed={data} sheet={type} />}</QueryState>
         )}
       </QueryState>
-    </Stack>
+    </div>
   );
 }
 
@@ -59,31 +57,29 @@ function Review({ reviewed, sheet }: { reviewed: Schemas["Editor"]; sheet: Schem
     (v) => v.version < reviewed.version && ["PUBLIE", "DEPRECIE"].includes(v.status),
   );
   return (
-    <Stack>
-      <Text>
+    <div className="flex flex-col gap-6">
+      <p className="text-sm text-gray-900">
         Parcours propriétaire : <strong>{sheet.ownerParcours}</strong> — soumise par{" "}
         {sheet.versions.find((v) => v.version === reviewed.version)?.submittedBy ?? "—"}
-      </Text>
+      </p>
       <Changes
         before={previous?.definition ?? {}}
         after={reviewed.definition}
         since={previous?.version}
       />
       {done ? (
-        <Alert color="green" role="status" title="Revue enregistrée">
+        <Notice tone="success" role="status" title="Revue enregistrée">
           La version {done.version} est à l&apos;état « {STATUS_LABELS[done.status]} ».{" "}
-          <Anchor component={Link} to="/catalogue/revues">
-            Retour à la file de revue
-          </Anchor>
-        </Alert>
+          <TextLink to="/catalogue/revues">Retour à la file de revue</TextLink>
+        </Notice>
       ) : reviewed.status === "EN_REVUE" ? (
         <Decision reviewed={reviewed} onDone={setDone} />
       ) : (
-        <Alert color="blue" title="Rien à revoir" role="note">
+        <Notice tone="info" title="Rien à revoir" role="note">
           La version {reviewed.version} est à l&apos;état « {STATUS_LABELS[reviewed.status]} ».
-        </Alert>
+        </Notice>
       )}
-    </Stack>
+    </div>
   );
 }
 
@@ -98,30 +94,26 @@ function Changes({
 }) {
   const changes = diffDefinitions(before, after);
   return (
-    <Stack>
-      <Title order={3}>
+    <Panel className="flex flex-col gap-4">
+      <Heading level={3}>
         {since === undefined
           ? "Définition proposée (première version)"
           : `Différences avec la version publiée v${String(since)}`}
-      </Title>
+      </Heading>
       {changes.length === 0 ? (
-        <Text>Aucune rubrique modifiée.</Text>
+        <p className="text-sm text-gray-900">Aucune rubrique modifiée.</p>
       ) : (
         changes.map((change) => (
           <section key={change.key} aria-label={`Rubrique ${change.key}`}>
-            <Title order={4}>{change.key}</Title>
-            <SimpleGrid cols={2}>
-              <Code block aria-label={`${change.key} avant`}>
-                {shown(change.before)}
-              </Code>
-              <Code block aria-label={`${change.key} après`}>
-                {shown(change.after)}
-              </Code>
-            </SimpleGrid>
+            <Heading level={4}>{change.key}</Heading>
+            <div className="grid gap-3 md:grid-cols-2">
+              <CodeBlock aria-label={`${change.key} avant`}>{shown(change.before)}</CodeBlock>
+              <CodeBlock aria-label={`${change.key} après`}>{shown(change.after)}</CodeBlock>
+            </div>
           </section>
         ))
       )}
-    </Stack>
+    </Panel>
   );
 }
 
@@ -168,29 +160,30 @@ function Decision({
     review.mutate(parsed.data);
   };
   return (
-    <form
-      noValidate
-      onSubmit={(e) => {
-        e.preventDefault();
-        submit();
-      }}
-    >
-      <Stack maw={560}>
-        <Title order={3}>Décision</Title>
-        <Radio.Group
-          label="Décision"
+    <Panel className="max-w-xl">
+      <form
+        noValidate
+        className="flex flex-col gap-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          submit();
+        }}
+      >
+        <Heading level={3}>Décision</Heading>
+        <RadioGroup
+          legend="Décision"
+          name="decision"
           value={form.decision}
+          options={[
+            { value: "APPROVE", label: "Approuver et publier" },
+            { value: "REQUEST_CHANGES", label: "Demander des modifications" },
+          ]}
           onChange={(value) => {
-            setForm({ ...form, decision: value });
+            setForm({ ...form, decision: value as ReviewForm["decision"] });
           }}
-        >
-          <Stack gap="xs" mt="xs">
-            <Radio value="APPROVE" label="Approuver et publier" />
-            <Radio value="REQUEST_CHANGES" label="Demander des modifications" />
-          </Stack>
-        </Radio.Group>
+        />
         {form.decision === "APPROVE" ? (
-          <TextInput
+          <TextField
             type="date"
             label="Date d'effet"
             description="Aujourd'hui ou plus tard"
@@ -202,7 +195,7 @@ function Decision({
             }}
           />
         ) : (
-          <Textarea
+          <TextAreaField
             label="Motif"
             description="Visible du contributeur sur la fiche du type"
             required
@@ -213,7 +206,7 @@ function Decision({
             }}
           />
         )}
-        <Textarea
+        <TextAreaField
           label="Commentaire (facultatif)"
           value={form.comment}
           error={errors["comment"]}
@@ -221,19 +214,21 @@ function Decision({
             setForm({ ...form, comment: e.currentTarget.value });
           }}
         />
-        <Button type="submit" loading={review.isPending} w="fit-content">
-          Enregistrer la revue
-        </Button>
+        <div>
+          <Button type="submit" loading={review.isPending}>
+            Enregistrer la revue
+          </Button>
+        </div>
         {isApiError(review.error) && review.error.status === 412 && (
-          <Alert color="red" title="La version a changé depuis votre lecture">
+          <Notice tone="danger" title="La version a changé depuis votre lecture">
             Rechargez la page avant de revoir.
-          </Alert>
+          </Notice>
         )}
         {isApiError(review.error) && review.error.status !== 412 && (
           <ErrorState error={review.error} headingLevel={4} />
         )}
-      </Stack>
-    </form>
+      </form>
+    </Panel>
   );
 }
 

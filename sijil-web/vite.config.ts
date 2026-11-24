@@ -1,14 +1,25 @@
 import { fileURLToPath, URL } from "node:url";
+import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
+import { awbStylesheetFonts } from "./src/app/theme";
 
 export default defineConfig(({ command }) => ({
-  plugins: [react()],
+  plugins: [awbStylesheetFonts(), tailwindcss(), react()],
   // `public/` ne contient que le service worker des bouchons MSW : jamais livré en production.
   publicDir: command === "serve" ? "public" : false,
   resolve: {
-    alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
+    alias: {
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
+      // Logo de la charte, livré par @awb/ui hors de ses exports.
+      "@awb-logo": fileURLToPath(
+        new URL("../../node_modules/@awb/ui/dist/awb-logo.svg", import.meta.url),
+      ),
+    },
   },
+  // Écrans chargés à la demande analysés dès le démarrage : sans cela, Vite découvre leurs
+  // dépendances (formulaires du catalogue) en cours de navigation et recharge la page.
+  optimizeDeps: { entries: ["index.html", "src/**/!(*.test).tsx"] },
   server: {
     // Bouchons MSW par défaut ; avec VITE_MOCKS=false, tout passe par le BFF local (même origine
     // vue du navigateur : cookie de session, CSRF, redirections OIDC).
