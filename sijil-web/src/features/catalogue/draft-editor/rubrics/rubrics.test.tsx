@@ -1,4 +1,4 @@
-import { screen, within } from "@testing-library/react";
+import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderAt } from "@/test/render";
 import { stub } from "@/test/setup";
@@ -69,6 +69,21 @@ describe("Rubriques de l'éditeur : conversions", () => {
 });
 
 describe("Rubriques de l'éditeur : saisie", () => {
+  it("décrit le type, et la fiche affiche la description", async () => {
+    const { user, panel } = await openRubric("Identité");
+    await user.type(
+      within(panel).getByLabelText(/^Description/),
+      "  Coordonnées bancaires signées par la banque  ",
+    );
+    await save(user);
+    expect(definition()["description"]).toBe("Coordonnées bancaires signées par la banque");
+
+    cleanup();
+    renderAt("/catalogue/types/RIB");
+    expect(await screen.findByRole("heading", { name: "Description" })).toBeVisible();
+    expect(screen.getByText("Coordonnées bancaires signées par la banque")).toBeVisible();
+  });
+
   it("règle le stockage : emplacement, formats, taille et versions", async () => {
     const { user, panel } = await openRubric("Stockage");
     await user.type(within(panel).getByLabelText(/Emplacement de stockage/), "Identite");

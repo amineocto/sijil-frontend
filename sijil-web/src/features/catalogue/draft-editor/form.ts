@@ -23,6 +23,7 @@ export const editorSchema = z.object({
   labelFr: z.string().trim().min(1, "Le libellé français est obligatoire").max(200),
   labelAr: z.string().max(200),
   labelEn: z.string().max(200),
+  description: z.string().max(2000, "2000 caractères au plus"),
   family: z
     .string()
     .regex(/^([A-Z][A-Z0-9_]{1,31})?$/, "Majuscules, chiffres et _ (2 à 32 caractères)"),
@@ -41,6 +42,7 @@ export function toValues(definition: Definition): EditorValues {
     labelFr: text(labels["fr"]),
     labelAr: text(labels["ar"]),
     labelEn: text(labels["en"]),
+    description: text(definition["description"]),
     family: text(definition["family"]),
     level: oneOf(LEVELS, definition["level"]),
     sensitivity: oneOf(SENSITIVITIES, definition["sensitivity"]),
@@ -59,6 +61,7 @@ export function toDefinition(values: EditorValues): Definition {
   if (values.labelAr.trim()) labels["ar"] = values.labelAr.trim();
   if (values.labelEn.trim()) labels["en"] = values.labelEn.trim();
   const definition: Definition = { labels };
+  if (values.description.trim()) definition["description"] = values.description.trim();
   if (values.family) definition["family"] = values.family;
   if (values.level) definition["level"] = values.level;
   if (values.sensitivity) definition["sensitivity"] = values.sensitivity;
@@ -73,6 +76,7 @@ const FIELD_OF_POINTER: Record<string, keyof EditorValues> = {
   "/labels/ar": "labelAr",
   "/labels/en": "labelEn",
   "/labels": "labelFr",
+  "/description": "description",
   "/family": "family",
   "/level": "level",
   "/sensitivity": "sensitivity",

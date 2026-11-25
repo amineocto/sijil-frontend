@@ -53,7 +53,9 @@ function Sheet({ sheet }: { sheet: Schemas["TypeSheet"] }) {
     onSuccess: () => void navigate(`/catalogue/types/${sheet.code}/brouillon`),
   });
   const draftInProgress = latest?.status === "BROUILLON";
-  const label = (latest?.definition as { labels?: { fr?: string } } | undefined)?.labels?.fr;
+  const definition = latest?.definition as
+    { labels?: { fr?: string }; description?: string } | undefined;
+  const label = definition?.labels?.fr;
   return (
     <Page
       title={
@@ -97,6 +99,11 @@ function Sheet({ sheet }: { sheet: Schemas["TypeSheet"] }) {
         </Notice>
       )}
       {isApiError(newVersion.error) && <ErrorState error={newVersion.error} headingLevel={3} />}
+      {definition?.description && (
+        <Section title="Description">
+          <p className="text-sm whitespace-pre-line text-gray-700">{definition.description}</p>
+        </Section>
+      )}
       <Section title="Versions" flush>
         <Table bare aria-label="Versions" className="[&_tr:last-child>td]:border-b-0">
           <thead>

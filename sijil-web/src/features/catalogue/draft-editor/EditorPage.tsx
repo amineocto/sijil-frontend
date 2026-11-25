@@ -312,6 +312,13 @@ function IdentityFields({ form }: { form: UseFormReturn<EditorValues> }) {
         error={errors.labelFr?.message}
         {...form.register("labelFr")}
       />
+      <TextAreaField
+        label="Description"
+        description="Ce que contient la pièce et à quoi elle sert, pour les contributeurs et les agents qui la déposent."
+        rows={3}
+        error={errors.description?.message}
+        {...form.register("description")}
+      />
       <div className="grid gap-4 md:grid-cols-2">
         <TextField
           label="Libellé arabe"
@@ -349,7 +356,7 @@ function MetadataPreviewOf({ form }: { form: UseFormReturn<EditorValues> }) {
 
 function errorCount(rubrique: Rubrique, errors: FieldErrors<EditorValues>): number {
   const identity: Record<string, (keyof EditorValues)[]> = {
-    identite: ["labelFr", "labelAr", "labelEn", "family", "level"],
+    identite: ["labelFr", "labelAr", "labelEn", "description", "family", "level"],
     sensibilite: ["sensitivity"],
   };
   const fields = (identity[rubrique.id] ?? []).filter((f) => errors[f]).length;
