@@ -118,7 +118,7 @@ export function MetadataEditor({ form }: { form: UseFormReturn<EditorValues> }) 
                         part.set(moved(schema, name, -1));
                       }}
                     >
-                      <ChevronIcon className="size-4 -rotate-90" />
+                      <ChevronIcon className="size-4 rotate-90" />
                     </IconButton>
                     <IconButton
                       label={`Descendre ${title}`}
@@ -127,7 +127,7 @@ export function MetadataEditor({ form }: { form: UseFormReturn<EditorValues> }) 
                         part.set(moved(schema, name, 1));
                       }}
                     >
-                      <ChevronIcon className="size-4 rotate-90" />
+                      <ChevronIcon className="size-4 -rotate-90" />
                     </IconButton>
                     <IconButton
                       label={`Retirer ${title}`}
