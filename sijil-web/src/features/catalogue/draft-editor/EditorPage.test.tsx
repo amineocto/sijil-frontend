@@ -19,14 +19,14 @@ describe("Éditeur de brouillon", () => {
 
     await user.clear(label);
     await user.type(label, "RIB du client");
-    await user.type(screen.getByLabelText("Famille"), "BANCAIRE");
+    await user.selectOptions(screen.getByLabelText("Famille"), "COMPTE");
     await user.selectOptions(screen.getByLabelText("Niveau de rattachement"), "COMPTE");
     await user.click(screen.getByRole("button", { name: "Enregistrer" }));
 
     expect(await screen.findByRole("status")).toHaveTextContent("Brouillon enregistré");
     expect(draftOf("RIB")?.definition).toEqual({
       labels: { fr: "RIB du client" },
-      family: "BANCAIRE",
+      family: "COMPTE",
       level: "COMPTE",
     });
 
@@ -44,14 +44,99 @@ describe("Éditeur de brouillon", () => {
     const label = await screen.findByLabelText(/Libellé français/);
     await user.clear(label);
     await user.click(screen.getByRole("tab", { name: "Rétention" }));
+    await user.click(screen.getByRole("button", { name: "Modifier en JSON (avancé)" }));
     const retention = screen.getByLabelText("retention (JSON)");
     await user.type(retention, "{{ pas du json");
     await user.click(screen.getByRole("button", { name: "Enregistrer" }));
 
-    expect(await screen.findByText("JSON invalide")).toBeVisible();
+    expect((await screen.findAllByText("JSON invalide"))[0]).toBeVisible();
     expect(screen.getByRole("tab", { name: /Rétention/ })).toHaveTextContent("1");
     expect(screen.getByRole("tab", { name: /Identité/ })).toHaveTextContent("1");
     expect(draftOf("RIB")?.revision).toBe(0);
+  });
+
+  it("renseigne la rétention par des champs, durée comprise, sans violation axe", async () => {
+    const user = userEvent.setup();
+    const { container } = renderAt("/catalogue/types/RIB/brouillon");
+    await screen.findByLabelText(/Libellé français/);
+    await user.click(screen.getByRole("tab", { name: "Rétention" }));
+    const panel = screen.getByRole("tabpanel", { name: "Rétention" });
+
+    await user.type(within(panel).getByLabelText(/Politique de rétention/), "kyc_10a");
+    await user.selectOptions(within(panel).getByLabelText(/Point de départ/), "FIN_RELATION");
+    await user.type(within(panel).getByLabelText("Durée de conservation : nombre"), "10");
+    await user.selectOptions(within(panel).getByLabelText(/À l'échéance/), "NONE");
+    await user.type(within(panel).getByLabelText(/Base légale/), "Loi 43-05");
+    expect(await seriousViolations(container)).toEqual([]);
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent("Brouillon enregistré");
+    expect(draftOf("RIB")?.definition["retention"]).toEqual({
+      policy: "KYC_10A",
+      startEvent: "FIN_RELATION",
+      duration: "P10Y",
+      onExpiry: "NONE",
+      legalBasis: "Loi 43-05",
+    });
+  });
+
+  it("ajoute une métadonnée champ par champ et la propose pour la validité", async () => {
+    const user = userEvent.setup();
+    renderAt("/catalogue/types/RIB/brouillon");
+    await screen.findByLabelText(/Libellé français/);
+    await user.click(screen.getByRole("tab", { name: "Métadonnées" }));
+    const panel = screen.getByRole("tabpanel", { name: "Métadonnées" });
+
+    await user.click(within(panel).getByRole("button", { name: "Ajouter une métadonnée" }));
+    const field = within(panel).getByRole("listitem", { name: /Métadonnée 1/ });
+    await user.type(within(field).getByLabelText("Libellé"), "Date d'expiration");
+    expect(within(field).getByLabelText("Nom technique")).toHaveValue("dateExpiration");
+    await user.selectOptions(within(field).getByLabelText("Format"), "date");
+    await user.click(within(field).getByRole("switch", { name: "Obligatoire au dépôt" }));
+    const preview = within(panel).getByRole("group", { name: "Aperçu du formulaire généré" });
+    expect(within(preview).getByLabelText(/Date d'expiration/)).toHaveAttribute("type", "date");
+
+    await user.click(screen.getByRole("tab", { name: "Validité" }));
+    const validity = screen.getByRole("tabpanel", { name: "Validité" });
+    await user.selectOptions(
+      within(validity).getByLabelText("Expiration de la pièce"),
+      "FROM_METADATA",
+    );
+    await user.selectOptions(
+      within(validity).getByLabelText("Métadonnée qui porte la date d'expiration"),
+      "dateExpiration",
+    );
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent("Brouillon enregistré");
+    const definition = draftOf("RIB")?.definition;
+    expect(definition?.["metadataSchema"]).toEqual({
+      type: "object",
+      required: ["dateExpiration"],
+      properties: {
+        dateExpiration: { type: "string", format: "date", title: "Date d'expiration" },
+      },
+    });
+    expect(definition?.["validity"]).toEqual({
+      expiresAt: "FROM_METADATA",
+      field: "dateExpiration",
+    });
+  });
+
+  it("garde le mode avancé tant que le JSON d'une rubrique est invalide", async () => {
+    const user = userEvent.setup();
+    renderAt("/catalogue/types/RIB/brouillon");
+    await screen.findByLabelText(/Libellé français/);
+    await user.click(screen.getByRole("tab", { name: "FileNet" }));
+    const panel = screen.getByRole("tabpanel", { name: "FileNet" });
+    await user.click(within(panel).getByRole("button", { name: "Modifier en JSON (avancé)" }));
+    await user.type(within(panel).getByLabelText("filenet (JSON)"), "{{ cassé");
+
+    expect(within(panel).getByRole("status")).toHaveTextContent("JSON invalide");
+    expect(
+      within(panel).queryByRole("button", { name: "Revenir aux champs" }),
+    ).not.toBeInTheDocument();
+    expect(within(panel).queryByLabelText("Classe documentaire FileNet")).not.toBeInTheDocument();
   });
 
   it("affiche les erreurs du serveur sur le champ ou, à défaut, en liste", async () => {

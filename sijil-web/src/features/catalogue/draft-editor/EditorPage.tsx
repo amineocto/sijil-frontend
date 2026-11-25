@@ -20,6 +20,19 @@ import {
 } from "@/features/catalogue/draft-editor/form";
 import { MetadataPreview } from "@/features/catalogue/draft-editor/MetadataPreview";
 import {
+  FilenetEditor,
+  PartiesEditor,
+  ProcessingEditor,
+  RetentionEditor,
+  StorageEditor,
+  ValidityEditor,
+  VisibilityEditor,
+} from "@/features/catalogue/draft-editor/rubrics/editors";
+import { MetadataEditor } from "@/features/catalogue/draft-editor/rubrics/metadata";
+import { parse } from "@/features/catalogue/draft-editor/rubrics/part";
+import { FAMILY_LABELS } from "@/features/dossier/dossier";
+import { PARTY_TYPE_LABELS, SENSITIVITY_LABELS } from "@/shared/labels";
+import {
   Button,
   ButtonLink,
   Notice,
@@ -169,12 +182,20 @@ function EditorForm({ initial }: { initial: Schemas["Editor"] }) {
 
 function Rubriques({ form }: { form: UseFormReturn<EditorValues> }) {
   const errors = form.formState.errors;
+  const [advanced, setAdvanced] = useState<Record<string, boolean>>({});
+  const texts = useWatch({ control: form.control, name: "json" });
   return (
     <Tabs
       label="Rubriques de la définition"
       keepMounted
       tabs={RUBRIQUES.map((rubrique) => {
         const count = errorCount(rubrique, errors);
+        // Un texte qui n'est pas du JSON ne s'édite qu'en mode avancé : les champs l'écraseraient.
+        const broken = rubrique.jsonKeys.some((key) => !parse(texts[key] ?? "").valid);
+        const showJson = broken || advanced[rubrique.id] === true;
+        const jsonErrors = rubrique.jsonKeys
+          .map((key) => errors.json?.[key]?.message)
+          .filter((m): m is string => Boolean(m));
         return {
           id: rubrique.id,
           label: (
@@ -191,31 +212,62 @@ function Rubriques({ form }: { form: UseFormReturn<EditorValues> }) {
             </>
           ),
           content: (
-            <>
+            <div className="flex flex-col gap-5">
               {rubrique.id === "identite" && <IdentityFields form={form} />}
               {rubrique.id === "sensibilite" && (
                 <SelectField
                   label="Sensibilité"
+                  description="Un document sensible ou restreint n'est visible que des profils habilités."
                   options={[
                     { value: "", label: "Non renseignée" },
-                    ...SENSITIVITIES.map((v) => ({ value: v, label: v })),
+                    ...SENSITIVITIES.map((v) => ({ value: v, label: SENSITIVITY_LABELS[v] ?? v })),
                   ]}
                   error={errors.sensitivity?.message}
                   {...form.register("sensitivity")}
                 />
               )}
-              {rubrique.jsonKeys.map((key) => (
-                <TextAreaField
-                  key={key}
-                  label={`${key} (JSON)`}
-                  rows={3}
-                  className="font-mono text-sm"
-                  error={errors.json?.[key]?.message}
-                  {...form.register(`json.${key}`)}
-                />
-              ))}
+              {!showJson && jsonErrors.length > 0 && (
+                <Notice tone="danger" title="À corriger dans cette rubrique">
+                  <ul className="list-disc ps-5">
+                    {jsonErrors.map((m) => (
+                      <li key={m}>{m}</li>
+                    ))}
+                  </ul>
+                </Notice>
+              )}
+              {!showJson && <StructuredRubric id={rubrique.id} form={form} />}
+              {broken && (
+                <Notice tone="warning" title="JSON invalide" role="status">
+                  Corrigez le texte de cette rubrique pour retrouver ses champs.
+                </Notice>
+              )}
+              {showJson &&
+                rubrique.jsonKeys.map((key) => (
+                  <TextAreaField
+                    key={key}
+                    label={`${key} (JSON)`}
+                    rows={4}
+                    className="font-mono text-sm"
+                    error={errors.json?.[key]?.message}
+                    {...form.register(`json.${key}`)}
+                  />
+                ))}
+              {rubrique.jsonKeys.length > 0 && !broken && (
+                <div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    aria-pressed={showJson}
+                    onClick={() => {
+                      setAdvanced({ ...advanced, [rubrique.id]: !showJson });
+                    }}
+                  >
+                    {showJson ? "Revenir aux champs" : "Modifier en JSON (avancé)"}
+                  </Button>
+                </div>
+              )}
               {rubrique.id === "metadonnees" && <MetadataPreviewOf form={form} />}
-            </>
+            </div>
           ),
         };
       })}
@@ -223,8 +275,35 @@ function Rubriques({ form }: { form: UseFormReturn<EditorValues> }) {
   );
 }
 
+/** Champs d'une rubrique ; les clés JSON qu'elle porte sont réécrites à chaque saisie. */
+function StructuredRubric({ id, form }: { id: string; form: UseFormReturn<EditorValues> }) {
+  switch (id) {
+    case "identite":
+      return <PartiesEditor form={form} />;
+    case "metadonnees":
+      return <MetadataEditor form={form} />;
+    case "validite":
+      return <ValidityEditor form={form} />;
+    case "retention":
+      return <RetentionEditor form={form} />;
+    case "stockage":
+      return <StorageEditor form={form} />;
+    case "traitements":
+      return <ProcessingEditor form={form} />;
+    case "sensibilite":
+      return <VisibilityEditor form={form} />;
+    case "filenet":
+      return <FilenetEditor form={form} />;
+    default:
+      return null;
+  }
+}
+
 function IdentityFields({ form }: { form: UseFormReturn<EditorValues> }) {
   const errors = form.formState.errors;
+  const family = useWatch({ control: form.control, name: "family" });
+  const families = Object.entries(FAMILY_LABELS).map(([value, label]) => ({ value, label }));
+  if (family && !FAMILY_LABELS[family]) families.push({ value: family, label: family });
   return (
     <>
       <TextField
@@ -233,24 +312,32 @@ function IdentityFields({ form }: { form: UseFormReturn<EditorValues> }) {
         error={errors.labelFr?.message}
         {...form.register("labelFr")}
       />
-      <TextField
-        label="Libellé arabe"
-        dir="rtl"
-        lang="ar"
-        error={errors.labelAr?.message}
-        {...form.register("labelAr")}
-      />
-      <TextField label="Libellé anglais" lang="en" {...form.register("labelEn")} />
-      <TextField label="Famille" error={errors.family?.message} {...form.register("family")} />
-      <SelectField
-        label="Niveau de rattachement"
-        options={[
-          { value: "", label: "Non renseigné" },
-          ...LEVELS.map((v) => ({ value: v, label: v })),
-        ]}
-        error={errors.level?.message}
-        {...form.register("level")}
-      />
+      <div className="grid gap-4 md:grid-cols-2">
+        <TextField
+          label="Libellé arabe"
+          dir="rtl"
+          lang="ar"
+          error={errors.labelAr?.message}
+          {...form.register("labelAr")}
+        />
+        <TextField label="Libellé anglais" lang="en" {...form.register("labelEn")} />
+        <SelectField
+          label="Famille"
+          options={[{ value: "", label: "Non renseignée" }, ...families]}
+          error={errors.family?.message}
+          {...form.register("family")}
+        />
+        <SelectField
+          label="Niveau de rattachement"
+          description="La partie à laquelle chaque document est rattaché."
+          options={[
+            { value: "", label: "Non renseigné" },
+            ...LEVELS.map((v) => ({ value: v, label: PARTY_TYPE_LABELS[v] ?? v })),
+          ]}
+          error={errors.level?.message}
+          {...form.register("level")}
+        />
+      </div>
     </>
   );
 }
