@@ -16,7 +16,8 @@
   --sijil-color-danger-surface: #fef3f2;
   --sijil-color-focus: #bb3815;
 
-  --sijil-font-family: "Inter Variable", system-ui, "Segoe UI", "Noto Sans Arabic", sans-serif;
+  --sijil-font-family:
+    "Open Sans Variable", "Open Sans", system-ui, "Segoe UI", "Noto Sans Arabic", sans-serif;
   --sijil-font-size: 1rem;
   --sijil-radius: 0.5rem;
   --sijil-space-1: 0.25rem;

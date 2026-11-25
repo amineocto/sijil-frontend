@@ -7,8 +7,8 @@ const EMBEDDED_FONT = /@font-face\{[^}]*url\(data:font\/[^}]*\}/g;
 
 /**
  * Retire les polices embarquées de la feuille d'`@awb/ui` : la CSP du BFF (`font-src 'self'`) les
- * refuserait, et elles pèsent 300 Ko compressés dans le bundle initial. Inter est servie en fichiers
- * par `@fontsource-variable/inter`, avec ses plages Unicode.
+ * refuserait, et elles pèsent 300 Ko compressés dans le bundle initial. Open Sans, police de la
+ * charte, est servie en fichiers par `@fontsource-variable/open-sans`, avec ses plages Unicode.
  */
 export function withoutEmbeddedFonts(css: string): string {
   const stripped = css.replace(EMBEDDED_FONT, "");
