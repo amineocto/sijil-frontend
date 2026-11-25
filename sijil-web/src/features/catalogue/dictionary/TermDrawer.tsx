@@ -113,18 +113,25 @@ export function TermDrawer({
   });
   const title = code ? `Modifier le terme ${code}` : "Nouveau terme";
   return (
-    <Drawer label={title} title={title} width="max-w-2xl" onClose={onClose}>
-      {code && !current.data ? (
-        current.error ? (
-          <Notice tone="danger" role="alert" title="Terme introuvable">
-            {isApiError(current.error) ? current.error.message : "Une erreur est survenue."}
-          </Notice>
+    <Drawer
+      label={title}
+      title={<h2 className="text-lg font-semibold text-gray-900">{title}</h2>}
+      width="max-w-2xl"
+      onClose={onClose}
+    >
+      <div className="p-5 sm:p-6">
+        {code && !current.data ? (
+          current.error ? (
+            <Notice tone="danger" role="alert" title="Terme introuvable">
+              {isApiError(current.error) ? current.error.message : "Une erreur est survenue."}
+            </Notice>
+          ) : (
+            <LoadingState />
+          )
         ) : (
-          <LoadingState />
-        )
-      ) : (
-        <TermForm current={current.data} onCancel={onClose} onSaved={onSaved} />
-      )}
+          <TermForm current={current.data} onCancel={onClose} onSaved={onSaved} />
+        )}
+      </div>
     </Drawer>
   );
 }
