@@ -43,6 +43,11 @@ export function canAdministerSharing(session: Session | undefined): boolean {
   return session?.roles.includes("catalogue-admin-domaine") ?? false;
 }
 
+/** Tenue du dictionnaire de métadonnées (ADR 0038). */
+export function canGovernDictionary(session: Session | undefined): boolean {
+  return session?.roles.includes("catalogue-data-office") ?? false;
+}
+
 export function canReview(session: Session | undefined): boolean {
   return session?.roles.includes("catalogue-reviseur") ?? false;
 }

@@ -53,6 +53,13 @@ export const CatalogueIcon = (p: IconProps) => (
   </Icon>
 );
 
+export const DictionaryIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M5 4h10a4 4 0 0 1 4 4v12H9a4 4 0 0 1-4-4z" />
+    <path d="M5 16a4 4 0 0 1 4-4h10M9 8h6" />
+  </Icon>
+);
+
 export const ChecklistIcon = (p: IconProps) => (
   <Icon {...p}>
     <path d="m4 7 2 2 3-3M4 15l2 2 3-3M13 8h7M13 16h7" />

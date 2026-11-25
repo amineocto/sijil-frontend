@@ -41,6 +41,56 @@ export const DOMAIN_ADMIN: Schemas["Session"] = {
   parcours: ["eer"],
 };
 
+/** Data Office : tient le dictionnaire de métadonnées (ADR 0038). */
+export const DATA_OFFICE: Schemas["Session"] = {
+  user: "data-office.demo",
+  roles: ["catalogue-lecteur", "catalogue-data-office"],
+  parcours: [],
+};
+
+type Term = Schemas["MetadataTerm"];
+
+function term(code: string, labelFr: string, terms: Partial<Term> = {}): Term {
+  return {
+    code,
+    labelFr,
+    labelAr: null,
+    labelEn: null,
+    definition: null,
+    format: "TEXT",
+    maxLength: null,
+    pattern: null,
+    values: [],
+    minimum: null,
+    maximum: null,
+    personalData: "AUCUNE",
+    filenetProperty: null,
+    status: "ACTIF",
+    revision: 0,
+    updatedBy: "reprise-adr-0038",
+    updatedAt: "2026-11-25T10:00:00Z",
+    ...terms,
+  };
+}
+
+/** Dictionnaire de démonstration : une partie de la reprise des types (ADR 0038). */
+export function initialTerms(): Term[] {
+  return [
+    term("dateExpiration", "Date d'expiration", {
+      format: "DATE",
+      definition: "Date au-delà de laquelle la pièce n'est plus valable.",
+    }),
+    term("dateFin", "Date de fin", { format: "DATE", status: "DEPRECIE" }),
+    term("montant", "Montant", { format: "NUMBER", minimum: 0 }),
+    term("numero", "Numéro de la pièce", { maxLength: 200, personalData: "PERSONNELLE" }),
+    term("numeroCin", "Numéro de CIN", {
+      pattern: "^[A-Z]{1,2}[0-9]{1,6}$",
+      personalData: "PERSONNELLE",
+    }),
+    term("paysEmission", "Pays d'émission", { format: "ENUM", values: ["MAR", "FRA", "ESP"] }),
+  ];
+}
+
 /** Types éligibles au portefeuille client et leur partage par le parcours `eer`. */
 export function initialSharing(): Schemas["TypeSharing"][] {
   return [

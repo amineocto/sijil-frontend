@@ -19,6 +19,7 @@ import { Drawer } from "@/shared/ui/Drawer";
 import {
   CatalogueIcon,
   ChecklistIcon,
+  DictionaryIcon,
   CompassIcon,
   ChevronIcon,
   LogoutIcon,
@@ -70,6 +71,13 @@ const NAV: NavItem[] = [
     label: "Exigences",
     icon: ChecklistIcon,
     tour: "nav-exigences",
+    visible: (s) => canSeeCatalogue(s),
+  },
+  {
+    to: "/catalogue/dictionnaire",
+    label: "Dictionnaire",
+    icon: DictionaryIcon,
+    tour: "nav-dictionnaire",
     visible: (s) => canSeeCatalogue(s),
   },
   {

@@ -551,10 +551,103 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/metadata-terms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Dictionnaire de métadonnées, par code (ADR 0038) */
+        get: operations["listMetadataTerms"];
+        put?: never;
+        /** Nouveau terme, actif dès sa création (Data Office) */
+        post: operations["createMetadataTerm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/metadata-terms/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Un terme, avec son ETag */
+        get: operations["getMetadataTerm"];
+        /** Modification d'un terme, à la révision lue (Data Office) */
+        put: operations["saveMetadataTerm"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        MetadataTerm: {
+            code: string;
+            labelFr: string;
+            labelAr?: string | null;
+            labelEn?: string | null;
+            definition?: string | null;
+            format: components["schemas"]["MetadataFormat"];
+            maxLength?: number | null;
+            pattern?: string | null;
+            values: string[];
+            minimum?: number | null;
+            maximum?: number | null;
+            personalData: components["schemas"]["PersonalData"];
+            filenetProperty?: string | null;
+            status: components["schemas"]["MetadataTermStatus"];
+            revision: number;
+            updatedBy: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** @description À renvoyer dans If-Match (lecture d'un terme) */
+            etag?: string | null;
+        };
+        /** @enum {unknown} */
+        MetadataFormat: "TEXT" | "DATE" | "INTEGER" | "NUMBER" | "BOOLEAN" | "ENUM";
+        /** @enum {unknown} */
+        MetadataTermStatus: "ACTIF" | "DEPRECIE" | "RETIRE";
+        /** @enum {unknown} */
+        PersonalData: "AUCUNE" | "PERSONNELLE" | "SENSIBLE";
+        NewMetadataTerm: {
+            code: string;
+            labelFr: string;
+            labelAr?: string;
+            labelEn?: string;
+            definition?: string;
+            format: components["schemas"]["MetadataFormat"];
+            maxLength?: number;
+            pattern?: string;
+            values?: string[];
+            minimum?: number;
+            maximum?: number;
+            personalData: components["schemas"]["PersonalData"];
+            filenetProperty?: string;
+        };
+        MetadataTermUpdate: {
+            labelFr: string;
+            labelAr?: string;
+            labelEn?: string;
+            definition?: string;
+            maxLength?: number;
+            pattern?: string;
+            values?: string[];
+            minimum?: number;
+            maximum?: number;
+            personalData: components["schemas"]["PersonalData"];
+            filenetProperty?: string;
+            status: components["schemas"]["MetadataTermStatus"];
+        };
         TypeSharing: {
             typeCode: string;
             shared: boolean;
@@ -580,7 +673,7 @@ export interface components {
             /** @description Parcours pour lesquels l'utilisateur contribue. */
             parcours: string[];
             /** @description Rôles des écrans, documents et catalogue (ADR 0032). */
-            roles: ("sijil-lecteur" | "sijil-contributeur" | "sijil-admin" | "sijil-bris-de-glace" | "catalogue-lecteur" | "catalogue-contributeur" | "catalogue-reviseur" | "catalogue-admin-domaine")[];
+            roles: ("sijil-lecteur" | "sijil-contributeur" | "sijil-admin" | "sijil-bris-de-glace" | "catalogue-lecteur" | "catalogue-contributeur" | "catalogue-reviseur" | "catalogue-admin-domaine" | "catalogue-data-office")[];
         };
         /** @enum {string} */
         TypeStatus: "BROUILLON" | "SOUMIS" | "EN_REVUE" | "PUBLIE" | "DEPRECIE" | "RETIRE";
@@ -791,6 +884,7 @@ export interface components {
     };
     parameters: {
         DocumentId: string;
+        TermCode: string;
         Code: string;
         /** @description Clé de rejeu d'un même envoi ; le BFF en crée une à défaut. */
         IdempotencyKey: string;
@@ -2044,6 +2138,124 @@ export interface operations {
             403: components["responses"]["Problem"];
             409: components["responses"]["Problem"];
             412: components["responses"]["Problem"];
+            502: components["responses"]["Problem"];
+        };
+    };
+    listMetadataTerms: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Termes, actifs, dépréciés et retirés */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetadataTerm"][];
+                };
+            };
+            401: components["responses"]["Problem"];
+            502: components["responses"]["Problem"];
+        };
+    };
+    createMetadataTerm: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Clé de rejeu d'une même intention, tirée par l'écran ; obligatoire, le BFF n'en invente jamais (04-conventions-api, AUD-20261120-240, AUD-20261120-345). */
+                "Idempotency-Key": components["parameters"]["RequiredIdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewMetadataTerm"];
+            };
+        };
+        responses: {
+            /** @description Terme créé */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetadataTerm"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+            502: components["responses"]["Problem"];
+        };
+    };
+    getMetadataTerm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: components["parameters"]["TermCode"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Terme */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetadataTerm"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            502: components["responses"]["Problem"];
+        };
+    };
+    saveMetadataTerm: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": components["parameters"]["IfMatch"];
+            };
+            path: {
+                code: components["parameters"]["TermCode"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MetadataTermUpdate"];
+            };
+        };
+        responses: {
+            /** @description Terme modifié */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetadataTerm"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            412: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+            428: components["responses"]["Problem"];
             502: components["responses"]["Problem"];
         };
     };

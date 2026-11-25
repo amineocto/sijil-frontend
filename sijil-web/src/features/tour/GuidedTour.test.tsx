@@ -1,6 +1,6 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { DOMAIN_ADMIN, REVIEWER } from "@/mocks/catalogue-data";
+import { DATA_OFFICE, DOMAIN_ADMIN, REVIEWER } from "@/mocks/catalogue-data";
 import { CONTRIBUTOR, READER } from "@/mocks/data";
 import { renderAt, seriousViolations } from "@/test/render";
 import { stub } from "@/test/setup";
@@ -32,6 +32,9 @@ describe("Visite guidée", () => {
     expect(targets(REVIEWER)).toContain("nav-revues");
     expect(targets(REVIEWER)).not.toContain("nav-depot");
     expect(targets(DOMAIN_ADMIN)).toContain("nav-partage");
+    expect(targets(DATA_OFFICE)).toContain("nav-dictionnaire");
+    expect(targets(REVIEWER)).not.toContain("nav-dictionnaire");
+    expect(profileLabel(DATA_OFFICE)).toBe("Data Office");
     expect(profileLabel(CONTRIBUTOR)).toBe("contributeur du parcours eer (documents et catalogue)");
     expect(profileLabel({ ...CONTRIBUTOR, roles: ["catalogue-contributeur"] })).toBe(
       "rédacteur du catalogue pour le parcours eer",

@@ -3,6 +3,7 @@ import {
   canBreakGlass,
   canContribute,
   canContributeToCatalogue,
+  canGovernDictionary,
   canReview,
   canSeeCatalogue,
   type Session,
@@ -36,6 +37,7 @@ export function profileLabel(session: Session): string {
   else if (catalogue) roles.push(`rédacteur du catalogue pour le parcours ${parcours}`);
   if (canReview(session)) roles.push("réviseur du catalogue");
   if (canAdministerSharing(session)) roles.push(`administrateur du domaine ${parcours}`);
+  if (canGovernDictionary(session)) roles.push("Data Office");
   if (roles.length === 0) roles.push("lecteur");
   if (canBreakGlass(session)) roles.push("habilité au bris de glace");
   return roles.join(", ");
@@ -96,6 +98,13 @@ export function tourSteps(session: Session): TourStep[] {
       target: "nav-revues",
       title: "File de revue",
       body: "Les versions soumises attendent votre décision : approuver avec une date d'effet, ou demander des modifications avec un motif. Vous publiez aussi les jeux d'exigences rédigés par les parcours.",
+    });
+  }
+  if (canGovernDictionary(session)) {
+    steps.push({
+      target: "nav-dictionnaire",
+      title: "Dictionnaire de métadonnées",
+      body: "Vous tenez les termes que les types de document demandent au dépôt : nom technique, format, contraintes et classification des données personnelles. Les parcours ne choisissent que des termes actifs ; un changement de sens crée un nouveau terme et déprécie l'ancien.",
     });
   }
   if (canAdministerSharing(session)) {

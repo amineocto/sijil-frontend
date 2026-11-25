@@ -80,18 +80,19 @@ describe("Éditeur de brouillon", () => {
     });
   });
 
-  it("ajoute une métadonnée champ par champ et la propose pour la validité", async () => {
+  it("ajoute une métadonnée du dictionnaire et la propose pour la validité", async () => {
     const user = userEvent.setup();
     renderAt("/catalogue/types/RIB/brouillon");
     await screen.findByLabelText(/Libellé français/);
     await user.click(screen.getByRole("tab", { name: "Métadonnées" }));
     const panel = screen.getByRole("tabpanel", { name: "Métadonnées" });
 
-    await user.click(within(panel).getByRole("button", { name: "Ajouter une métadonnée" }));
-    const field = within(panel).getByRole("listitem", { name: /Métadonnée 1/ });
-    await user.type(within(field).getByLabelText("Libellé"), "Date d'expiration");
-    expect(within(field).getByLabelText("Nom technique")).toHaveValue("dateExpiration");
-    await user.selectOptions(within(field).getByLabelText("Format"), "date");
+    await user.selectOptions(
+      await within(panel).findByLabelText("Métadonnée du dictionnaire"),
+      "dateExpiration",
+    );
+    await user.click(within(panel).getByRole("button", { name: "Ajouter" }));
+    const field = within(panel).getByRole("listitem", { name: /Métadonnée 1 : Date d'expiration/ });
     await user.click(within(field).getByRole("switch", { name: "Obligatoire au dépôt" }));
     const preview = within(panel).getByRole("group", { name: "Aperçu du formulaire généré" });
     expect(within(preview).getByLabelText(/Date d'expiration/)).toHaveAttribute("type", "date");

@@ -3,7 +3,9 @@ import userEvent from "@testing-library/user-event";
 import { renderAt } from "@/test/render";
 import { stub } from "@/test/setup";
 import { splitPeriod } from "./controls";
-import { fieldsOf, formatOf, schemaOf, technicalName } from "./metadata";
+import { constraintsOf, schemaOf, type Term } from "@/features/catalogue/dictionary/terms";
+import { initialTerms } from "@/mocks/catalogue-data";
+import { moved, namesOf, required, withTerm, without } from "./metadata";
 import { compact, objectOf, omit, parse, stringsOf, text } from "./part";
 
 function definition(): Record<string, unknown> {
@@ -24,30 +26,62 @@ async function save(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe("Rubriques de l'éditeur : conversions", () => {
-  it("lit et écrit le schéma des métadonnées sans perdre ses attributs avancés", () => {
-    const schema = {
+  it("traduit un terme du dictionnaire en propriété du schéma, comme le catalogue", () => {
+    const terms = new Map(initialTerms().map((t) => [t.code, t]));
+    const term = (code: string): Term => {
+      const found = terms.get(code);
+      if (!found) throw new Error(code);
+      return found;
+    };
+    expect(schemaOf(term("dateExpiration"))).toEqual({
+      type: "string",
+      format: "date",
+      title: "Date d'expiration",
+    });
+    expect(schemaOf(term("paysEmission"))).toEqual({
+      type: "string",
+      enum: ["MAR", "FRA", "ESP"],
+      title: "Pays d'émission",
+    });
+    expect(schemaOf(term("montant"))).toEqual({ type: "number", minimum: 0, title: "Montant" });
+    expect(schemaOf({ ...term("montant"), format: "INTEGER", maximum: 9 })).toMatchObject({
+      type: "integer",
+      maximum: 9,
+    });
+    expect(schemaOf({ ...term("montant"), format: "BOOLEAN", minimum: null })).toEqual({
+      type: "boolean",
+      title: "Montant",
+    });
+    expect(constraintsOf(term("numeroCin"))).toBe("motif ^[A-Z]{1,2}[0-9]{1,6}$");
+    expect(constraintsOf(term("numero"))).toBe("200 caractères au plus");
+    expect(constraintsOf(term("montant"))).toBe("au moins 0");
+    expect(constraintsOf({ ...term("montant"), minimum: null, maximum: 5 })).toBe("au plus 5");
+    expect(constraintsOf({ ...term("montant"), maximum: 5 })).toBe("entre 0 et 5");
+    expect(constraintsOf(term("paysEmission"))).toBe("valeurs : MAR, FRA, ESP");
+    expect(constraintsOf(term("dateExpiration"))).toBe("—");
+  });
+
+  it("ajoute, ordonne, exige et retire des métadonnées sans perdre la racine du schéma", () => {
+    const [date, , montant] = initialTerms();
+    if (!date || !montant) throw new Error("termes absents");
+    let schema = withTerm({ $comment: "garder" }, date);
+    schema = withTerm(schema, montant);
+    expect(namesOf(schema)).toEqual(["dateExpiration", "montant"]);
+    schema = moved(schema, "montant", -1);
+    expect(namesOf(schema)).toEqual(["montant", "dateExpiration"]);
+    expect(moved(schema, "montant", -1)).toBe(schema);
+    schema = required(required(schema, "montant", true), "dateExpiration", true);
+    expect(schema["required"]).toEqual(["montant", "dateExpiration"]);
+    schema = without(schema, "montant");
+    expect(schema).toEqual({
       type: "object",
       $comment: "garder",
-      required: ["code"],
+      required: ["dateExpiration"],
       properties: {
-        code: { type: "string", title: "Code", maxLength: 8, pattern: "^[A-Z]+$" },
-        pays: { type: "string", enum: ["MA", "FR"] },
-        montant: { type: "number" },
-        pages: { type: "integer" },
-        recto: { type: "boolean" },
+        dateExpiration: { type: "string", format: "date", title: "Date d'expiration" },
       },
-    };
-    const fields = fieldsOf(schema);
-    expect(fields.map((f) => f.format)).toEqual(["text", "enum", "number", "integer", "boolean"]);
-    expect(fields[0]).toMatchObject({
-      required: true,
-      maxLength: "8",
-      rest: { pattern: "^[A-Z]+$" },
     });
-    expect(schemaOf(fields, schema)).toEqual(schema);
-    expect(formatOf({ type: "string", format: "date" })).toBe("date");
-    expect(technicalName("Numéro de la pièce")).toBe("numeroDeLaPiece");
-    expect(technicalName("2024")).toBe("");
+    expect(required(schema, "dateExpiration", false)).not.toHaveProperty("required");
   });
 
   it("découpe une période d'une seule unité, et laisse au mode avancé une période composée", () => {
@@ -162,29 +196,50 @@ describe("Rubriques de l'éditeur : saisie", () => {
     expect(definition()["validity"]).toEqual({ expiresAt: "COMPUTED", duration: "P3M" });
   });
 
-  it("décrit une liste de valeurs, une longueur, et retire une métadonnée", async () => {
+  it("choisit des termes du dictionnaire, les ordonne et signale ceux qui ne sont plus admis", async () => {
+    const rib = stub.types.find((t) => t.code === "RIB")?.versions[0];
+    if (!rib) throw new Error("RIB absent");
+    rib.definition = {
+      ...rib.definition,
+      metadataSchema: {
+        type: "object",
+        properties: { inconnu: { type: "string" }, dateFin: { type: "string", format: "date" } },
+      },
+    };
     const { user, panel } = await openRubric("Métadonnées");
-    await user.click(within(panel).getByRole("button", { name: "Ajouter une métadonnée" }));
-    await user.click(within(panel).getByRole("button", { name: "Ajouter une métadonnée" }));
-    const [first, second] = within(panel).getAllByRole("listitem", { name: /Métadonnée/ });
-    if (!first || !second) throw new Error("métadonnées absentes");
-    await user.type(within(first).getByLabelText("Libellé"), "Pays");
-    await user.selectOptions(within(first).getByLabelText("Format"), "enum");
-    await user.type(within(first).getByLabelText("Valeurs permises"), "MA{Enter}");
-    await user.type(within(second).getByLabelText("Libellé"), "Référence");
-    await user.type(within(second).getByLabelText("Longueur maximale"), "12");
-    await user.clear(within(second).getByLabelText("Nom technique"));
-    await user.type(within(second).getByLabelText("Nom technique"), "pays");
-    expect(within(second).getByText("Ce nom technique est déjà pris")).toBeVisible();
-    await user.clear(within(second).getByLabelText("Nom technique"));
-    await user.type(within(second).getByLabelText("Nom technique"), "Ref");
-    expect(within(second).getByText(/Une minuscule/)).toBeVisible();
-    await user.click(within(second).getByRole("button", { name: /Supprimer la métadonnée/ }));
+    expect(await within(panel).findByText("Hors dictionnaire")).toBeVisible();
+    expect(within(panel).getByText("Déprécié")).toBeVisible();
+    expect(
+      within(panel).queryByRole("option", { name: /Date de fin/ }),
+      "un terme déprécié n'est pas proposé",
+    ).toBeNull();
+
+    await user.click(within(panel).getByRole("button", { name: "Retirer inconnu" }));
+    await user.click(within(panel).getByRole("button", { name: "Retirer Date de fin" }));
+    const add = within(panel).getByRole("button", { name: "Ajouter" });
+    expect(add).toBeDisabled();
+    await user.selectOptions(
+      within(panel).getByLabelText("Métadonnée du dictionnaire"),
+      "paysEmission",
+    );
+    await user.click(add);
+    await user.selectOptions(within(panel).getByLabelText("Métadonnée du dictionnaire"), "montant");
+    await user.click(within(panel).getByRole("button", { name: "Ajouter" }));
+    await user.click(within(panel).getByRole("button", { name: "Monter Montant" }));
+    expect(within(panel).getByRole("button", { name: "Monter Montant" })).toBeDisabled();
+    await user.click(within(panel).getByRole("button", { name: "Descendre Montant" }));
+    const pays = within(panel).getByRole("listitem", { name: /Pays d'émission/ });
+    expect(pays).toHaveTextContent("Liste de valeurs · valeurs : MAR, FRA, ESP");
+    await user.click(within(pays).getByRole("switch", { name: "Obligatoire au dépôt" }));
     await save(user);
 
     expect(definition()["metadataSchema"]).toEqual({
       type: "object",
-      properties: { pays: { type: "string", enum: ["MA"], title: "Pays" } },
+      required: ["paysEmission"],
+      properties: {
+        paysEmission: { type: "string", enum: ["MAR", "FRA", "ESP"], title: "Pays d'émission" },
+        montant: { type: "number", minimum: 0, title: "Montant" },
+      },
     });
   });
 });

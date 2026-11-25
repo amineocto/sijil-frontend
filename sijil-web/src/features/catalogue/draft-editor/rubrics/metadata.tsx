@@ -1,294 +1,223 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import type { EditorValues } from "@/features/catalogue/draft-editor/form";
-import { Button, SelectField, TextField } from "@/shared/ui";
-import { CloseIcon } from "@/shared/ui/icons";
-import { ChipsField, Switch } from "./controls";
-import { objectOf, omit, stringsOf, usePart, type Json } from "./part";
+import {
+  constraintsOf,
+  FORMAT_LABELS,
+  schemaOf as termSchema,
+  STATUS_LABELS,
+  type Term,
+  useTerms,
+} from "@/features/catalogue/dictionary/terms";
+import { Button, Notice, SelectField, Tag, TextLink } from "@/shared/ui";
+import { ChevronIcon, CloseIcon } from "@/shared/ui/icons";
+import { Switch } from "./controls";
+import { objectOf, stringsOf, usePart, type Json } from "./part";
 
-/** Formats proposés pour une métadonnée, et leur traduction en schéma JSON. */
-export const FORMATS = [
-  { value: "text", label: "Texte" },
-  { value: "date", label: "Date" },
-  { value: "integer", label: "Nombre entier" },
-  { value: "number", label: "Nombre décimal" },
-  { value: "boolean", label: "Oui ou non" },
-  { value: "enum", label: "Liste de valeurs" },
-] as const;
-
-type Format = (typeof FORMATS)[number]["value"];
-
-export interface Field {
-  name: string;
-  title: string;
-  format: Format;
-  required: boolean;
-  maxLength: string;
-  values: string[];
-  /** Attributs du schéma que l'écran ne présente pas (pattern, minimum…), conservés tels quels. */
-  rest: Json;
+/** Métadonnées du schéma, dans l'ordre de ses propriétés. */
+export function namesOf(schema: Json): string[] {
+  return Object.keys(objectOf(schema["properties"]));
 }
 
-/** Format d'une propriété du schéma. */
-export function formatOf(property: Json): Format {
-  if (Array.isArray(property["enum"])) return "enum";
-  if (property["type"] === "boolean") return "boolean";
-  if (property["type"] === "integer") return "integer";
-  if (property["type"] === "number") return "number";
-  if (property["format"] === "date") return "date";
-  return "text";
-}
-
-/** Champs lus dans le schéma des métadonnées, dans l'ordre de ses propriétés. */
-export function fieldsOf(schema: Json): Field[] {
-  const required = stringsOf(schema["required"]);
-  return Object.entries(objectOf(schema["properties"])).map(([name, raw]) => {
-    const property = objectOf(raw);
-    const { title, maxLength, enum: values } = property;
-    const rest = omit(property, ["type", "format", "title", "maxLength", "enum"]);
-    return {
-      name,
-      title: typeof title === "string" ? title : "",
-      format: formatOf(property),
-      required: required.includes(name),
-      maxLength: typeof maxLength === "number" ? String(maxLength) : "",
-      values: stringsOf(values),
-      rest,
-    };
-  });
-}
-
-/** Schéma des métadonnées réécrit depuis les champs ; les autres clés de la racine sont gardées. */
-export function schemaOf(fields: Field[], previous: Json): Json {
-  const properties: Json = {};
-  for (const f of fields) {
-    const property: Json = { ...f.rest };
-    if (f.format === "boolean") property["type"] = "boolean";
-    else if (f.format === "integer") property["type"] = "integer";
-    else if (f.format === "number") property["type"] = "number";
-    else {
-      property["type"] = "string";
-      if (f.format === "date") property["format"] = "date";
-      if (f.format === "enum") property["enum"] = f.values;
-      if (f.format === "text" && f.maxLength) property["maxLength"] = Number(f.maxLength);
-    }
-    // Libellé gardé tel que saisi : le rogner à chaque frappe effacerait l'espace en cours.
-    if (f.title !== "") property["title"] = f.title;
-    properties[f.name] = property;
-  }
-  const required = fields.filter((f) => f.required).map((f) => f.name);
-  const root = omit(previous, ["required", "properties"]);
+/** Schéma avec le terme ajouté en dernier, tel que le catalogue le recopiera. */
+export function withTerm(schema: Json, term: Term): Json {
   return {
     type: "object",
-    ...root,
-    ...(required.length ? { required } : {}),
-    properties,
+    ...schema,
+    properties: { ...objectOf(schema["properties"]), [term.code]: termSchema(term) },
   };
 }
 
-/** Nom technique tiré d'un libellé : « Date d'expiration » → dateExpiration. */
-export function technicalName(title: string): string {
-  const words = title
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^A-Za-z0-9]+/g, " ")
-    .trim()
-    .split(" ")
-    .filter((w) => w.length > 1 || /\d/.test(w));
-  const name = words
-    .map((w, i) =>
-      i === 0 ? w.toLowerCase() : (w[0] ?? "").toUpperCase() + w.slice(1).toLowerCase(),
-    )
-    .join("");
-  return /^[a-z]/.test(name) ? name.slice(0, 64) : "";
+/** Schéma sans la métadonnée, ni dans les propriétés ni parmi les obligatoires. */
+export function without(schema: Json, name: string): Json {
+  const properties = Object.fromEntries(
+    Object.entries(objectOf(schema["properties"])).filter(([n]) => n !== name),
+  );
+  return required({ ...schema, properties }, name, false);
 }
 
-const NAME = /^[a-z][A-Za-z0-9]{0,63}$/;
+/** Schéma où la métadonnée a pris la place de sa voisine (ordre d'affichage au dépôt). */
+export function moved(schema: Json, name: string, delta: -1 | 1): Json {
+  const entries = Object.entries(objectOf(schema["properties"]));
+  const from = entries.findIndex(([n]) => n === name);
+  const source = entries[from];
+  const target = entries[from + delta];
+  if (!source || !target) return schema;
+  entries[from] = target;
+  entries[from + delta] = source;
+  return { ...schema, properties: Object.fromEntries(entries) };
+}
 
-/** Rubrique « Métadonnées » : les champs saisis au dépôt, un par ligne. */
+/** Schéma où la métadonnée est, ou n'est plus, exigée au dépôt. */
+export function required(schema: Json, name: string, value: boolean): Json {
+  const current = stringsOf(schema["required"]).filter((n) => n !== name);
+  const next = value ? [...current, name] : current;
+  const rest = { ...schema };
+  delete rest["required"];
+  return next.length ? { ...rest, required: next } : rest;
+}
+
+/**
+ * Rubrique « Métadonnées » (ADR 0038) : le contributeur choisit des termes actifs du dictionnaire,
+ * tenu par le Data Office ; il ne règle que l'obligation au dépôt et l'ordre d'affichage.
+ */
 export function MetadataEditor({ form }: { form: UseFormReturn<EditorValues> }) {
   const part = usePart<Json>(form, "metadataSchema");
+  const terms = useTerms();
+  const [chosen, setChosen] = useState("");
   const schema = objectOf(part.value);
-  const fields = fieldsOf(schema);
-  const write = (next: Field[]) => {
-    part.set(schemaOf(next, schema));
-  };
-  const update = (index: number, patch: Partial<Field>) => {
-    write(fields.map((f, i) => (i === index ? { ...f, ...patch } : f)));
-  };
-  // Deux propriétés du même nom se fondraient en une : un nom pris reçoit un suffixe.
-  const freeName = (base: string, index = -1) => {
-    const taken = (name: string) => fields.some((f, i) => i !== index && f.name === name);
-    let n = 1;
-    let name = base;
-    while (taken(name)) name = `${base}${String(++n)}`;
-    return name;
-  };
+  const names = namesOf(schema);
+  const mandatory = stringsOf(schema["required"]);
+  const byCode = new Map((terms.data ?? []).map((t) => [t.code, t]));
+  const available = (terms.data ?? []).filter(
+    (t) => t.status === "ACTIF" && !names.includes(t.code),
+  );
+
   return (
     <div className="flex flex-col gap-4">
       <p className="text-sm text-gray-600">
-        Les informations demandées au dépôt d&apos;un document de ce type. Le nom technique est
-        déduit du libellé ; il ne change plus une fois le type publié.
+        Les informations demandées au dépôt d&apos;un document de ce type, choisies dans le{" "}
+        <TextLink to="/catalogue/dictionnaire">dictionnaire de métadonnées</TextLink>. Il vous
+        manque un champ ? Demandez-le au Data Office.
       </p>
-      {fields.length === 0 && (
+      {terms.isError && (
+        <Notice tone="danger" role="alert" title="Dictionnaire indisponible">
+          Les termes ne peuvent pas être chargés ; réessayez plus tard.
+        </Notice>
+      )}
+      {names.length === 0 ? (
         <p className="rounded-lg border border-dashed border-gray-300 p-4 text-sm text-gray-700">
           Aucune métadonnée pour l&apos;instant.
         </p>
-      )}
-      <ol className="flex flex-col gap-3">
-        {fields.map((field, index) => {
-          const taken = fields.filter((_, i) => i !== index).map((f) => f.name);
-          return (
-            <li
-              key={index}
-              aria-label={`Métadonnée ${String(index + 1)} : ${field.title || field.name}`}
-              className="flex flex-col gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <p className="text-sm font-semibold text-gray-900">
-                  {field.title || field.name || "Nouvelle métadonnée"}
-                </p>
-                <button
-                  type="button"
-                  aria-label={`Supprimer la métadonnée ${field.title || field.name}`}
-                  onClick={() => {
-                    write(fields.filter((_, i) => i !== index));
-                  }}
-                  className="flex size-8 items-center justify-center rounded-lg text-gray-600 hover:bg-red-50 hover:text-red-700"
-                >
-                  <CloseIcon className="size-4" />
-                </button>
-              </div>
-              <div className="grid gap-4 md:grid-cols-3">
-                <TextField
-                  label="Libellé"
-                  value={field.title}
-                  onChange={(e) => {
-                    const title = e.currentTarget.value;
-                    // Le nom suit le libellé tant qu'il n'a pas été choisi à la main.
-                    const follows =
-                      !field.name ||
-                      /^champ\d*$/.test(field.name) ||
-                      field.name === freeName(technicalName(field.title), index);
-                    update(index, {
-                      title,
-                      ...(follows
-                        ? { name: freeName(technicalName(title) || field.name, index) }
-                        : {}),
-                    });
-                  }}
-                />
-                <NameField
-                  name={field.name}
-                  taken={taken}
-                  onChange={(name) => {
-                    update(index, { name });
-                  }}
-                />
-                <SelectField
-                  label="Format"
-                  options={FORMATS.map((f) => ({ value: f.value, label: f.label }))}
-                  value={field.format}
-                  onChange={(e) => {
-                    update(index, { format: e.currentTarget.value as Format });
-                  }}
-                />
-              </div>
-              {field.format === "text" && (
-                <div className="max-w-xs">
-                  <TextField
-                    label="Longueur maximale"
-                    description="Facultative."
-                    type="number"
-                    min={1}
-                    value={field.maxLength}
-                    onChange={(e) => {
-                      update(index, { maxLength: e.currentTarget.value });
-                    }}
-                  />
+      ) : (
+        <ol className="flex flex-col gap-3">
+          {names.map((name, index) => {
+            const term = byCode.get(name);
+            const title = term?.labelFr ?? name;
+            return (
+              <li
+                key={name}
+                aria-label={`Métadonnée ${String(index + 1)} : ${title}`}
+                className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="flex min-w-0 flex-col gap-0.5">
+                    <span className="font-semibold text-gray-900">{title}</span>
+                    <span className="font-mono text-xs text-gray-600">{name}</span>
+                    {term && (
+                      <span className="text-sm text-gray-600">
+                        {FORMAT_LABELS[term.format]} · {constraintsOf(term)}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <IconButton
+                      label={`Monter ${title}`}
+                      disabled={index === 0}
+                      onClick={() => {
+                        part.set(moved(schema, name, -1));
+                      }}
+                    >
+                      <ChevronIcon className="size-4 -rotate-90" />
+                    </IconButton>
+                    <IconButton
+                      label={`Descendre ${title}`}
+                      disabled={index === names.length - 1}
+                      onClick={() => {
+                        part.set(moved(schema, name, 1));
+                      }}
+                    >
+                      <ChevronIcon className="size-4 rotate-90" />
+                    </IconButton>
+                    <IconButton
+                      label={`Retirer ${title}`}
+                      onClick={() => {
+                        part.set(without(schema, name));
+                      }}
+                    >
+                      <CloseIcon className="size-4" />
+                    </IconButton>
+                  </div>
                 </div>
-              )}
-              {field.format === "enum" && (
-                <ChipsField
-                  label="Valeurs permises"
-                  placeholder="Ajouter une valeur"
-                  values={field.values}
-                  onChange={(values) => {
-                    update(index, { values });
+                {terms.isSuccess && !term && (
+                  <p className="flex flex-wrap items-center gap-2 text-sm text-red-700">
+                    <Tag variant="danger">Hors dictionnaire</Tag>
+                    La soumission sera refusée : retirez cette métadonnée ou demandez le terme au
+                    Data Office.
+                  </p>
+                )}
+                {term && term.status !== "ACTIF" && (
+                  <p className="flex flex-wrap items-center gap-2 text-sm text-amber-800">
+                    <Tag variant="warning">{STATUS_LABELS[term.status]}</Tag>
+                    Ce terme n&apos;est plus admis dans une nouvelle version : remplacez-le.
+                  </p>
+                )}
+                <Switch
+                  label="Obligatoire au dépôt"
+                  checked={mandatory.includes(name)}
+                  onChange={(value) => {
+                    part.set(required(schema, name, value));
                   }}
                 />
-              )}
-              <Switch
-                label="Obligatoire au dépôt"
-                checked={field.required}
-                onChange={(required) => {
-                  update(index, { required });
-                }}
-              />
-            </li>
-          );
-        })}
-      </ol>
-      <div>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="min-w-64 flex-1 sm:max-w-md">
+          <SelectField
+            label="Métadonnée du dictionnaire"
+            options={[
+              {
+                value: "",
+                label: available.length ? "Choisir un terme actif" : "Aucun terme disponible",
+              },
+              ...available.map((t) => ({ value: t.code, label: `${t.labelFr} (${t.code})` })),
+            ]}
+            value={chosen}
+            onChange={(e) => {
+              setChosen(e.currentTarget.value);
+            }}
+          />
+        </div>
         <Button
           variant="secondary"
-          size="sm"
+          disabled={!byCode.has(chosen)}
           onClick={() => {
-            write([
-              ...fields,
-              {
-                name: freeName("champ"),
-                title: "",
-                format: "text",
-                required: false,
-                maxLength: "",
-                values: [],
-                rest: {},
-              },
-            ]);
+            const term = byCode.get(chosen);
+            if (!term) return;
+            part.set(withTerm(schema, term));
+            setChosen("");
           }}
         >
-          Ajouter une métadonnée
+          Ajouter
         </Button>
       </div>
     </div>
   );
 }
 
-/**
- * Nom technique : la saisie reste locale tant qu'elle n'est pas un nom valide et libre, pour ne
- * jamais écrire dans le schéma une propriété vide ou en double.
- */
-function NameField({
-  name,
-  taken,
-  onChange,
+function IconButton({
+  label,
+  disabled = false,
+  onClick,
+  children,
 }: {
-  name: string;
-  taken: string[];
-  onChange: (name: string) => void;
+  label: string;
+  disabled?: boolean;
+  onClick: () => void;
+  children: ReactNode;
 }) {
-  const [draft, setDraft] = useState({ base: name, value: name });
-  // Le nom a changé ailleurs (il suit le libellé) : la saisie en cours est abandonnée.
-  const value = draft.base === name ? draft.value : name;
   return (
-    <TextField
-      label="Nom technique"
-      value={value}
-      error={nameError(value, taken)}
-      onChange={(e) => {
-        const next = e.currentTarget.value;
-        const valid = nameError(next, taken) === undefined;
-        setDraft({ base: valid ? next : name, value: next });
-        if (valid) onChange(next);
-      }}
-    />
+    <button
+      type="button"
+      aria-label={label}
+      disabled={disabled}
+      onClick={onClick}
+      className="flex size-8 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-200 hover:text-gray-900 disabled:opacity-40 disabled:hover:bg-transparent"
+    >
+      {children}
+    </button>
   );
-}
-
-function nameError(name: string, taken: string[]): string | undefined {
-  if (name === "") return "Le nom technique est obligatoire";
-  if (!NAME.test(name)) return "Une minuscule puis lettres et chiffres, sans espace";
-  if (taken.includes(name)) return "Ce nom technique est déjà pris";
-  return undefined;
 }

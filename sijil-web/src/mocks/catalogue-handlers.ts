@@ -3,6 +3,7 @@ import type { Definition, Schemas } from "@/shared/api";
 import {
   initialRequirementSets,
   initialSharing,
+  initialTerms,
   PARCOURS,
   REQUIRED_FOR_SUBMISSION,
   SESSION,
@@ -21,12 +22,14 @@ export class CatalogueStub {
 
   requirementSets: Schemas["RequirementSet"][] = initialRequirementSets();
   sharing: Schemas["TypeSharing"][] = initialSharing();
+  terms: Schemas["MetadataTerm"][] = initialTerms();
 
   reset() {
     this.types = initialTypes();
     this.session = SESSION;
     this.requirementSets = initialRequirementSets();
     this.sharing = initialSharing();
+    this.terms = initialTerms();
   }
 
   handlers() {
@@ -34,6 +37,7 @@ export class CatalogueStub {
       http.get("/api/parcours", () => HttpResponse.json(PARCOURS)),
       ...this.requirementHandlers(),
       ...this.sharingHandlers(),
+      ...this.dictionaryHandlers(),
       http.get("/api/types", ({ request }) => this.list(new URL(request.url).searchParams)),
       http.post("/api/types", async ({ request }) =>
         this.createType((await request.json()) as Schemas["NewType"]),
@@ -191,6 +195,87 @@ export class CatalogueStub {
   }
 
   /** Partage 360 (ADR 0025) : administrateur du domaine, pour son seul parcours. */
+  /** Dictionnaire (ADR 0038) : lecture pour tous, écriture par le Data Office. */
+  private dictionaryHandlers() {
+    const dataOffice = () => this.session.roles.includes("catalogue-data-office");
+    const forbidden = () =>
+      HttpResponse.json(
+        { status: 403, title: "Accès refusé", detail: "Rôle catalogue-data-office requis." },
+        { status: 403, headers: CORRELATION },
+      );
+    const withEtag = (t: Schemas["MetadataTerm"]) => ({ ...t, etag: `"${String(t.revision)}"` });
+    return [
+      http.get("/api/metadata-terms", () =>
+        HttpResponse.json([...this.terms].sort((a, b) => a.code.localeCompare(b.code))),
+      ),
+      http.get("/api/metadata-terms/:code", ({ params }) => {
+        const found = this.terms.find((t) => t.code === params["code"]);
+        return found
+          ? HttpResponse.json(withEtag(found))
+          : HttpResponse.json({ status: 404, title: "Terme inconnu" }, { status: 404 });
+      }),
+      http.post("/api/metadata-terms", async ({ request }) => {
+        if (!dataOffice()) return forbidden();
+        const body = (await request.json()) as Schemas["NewMetadataTerm"];
+        if (this.terms.some((t) => t.code === body.code)) {
+          return HttpResponse.json(
+            { status: 409, title: "Conflit", detail: `Le terme ${body.code} existe déjà.` },
+            { status: 409, headers: CORRELATION },
+          );
+        }
+        const created: Schemas["MetadataTerm"] = {
+          labelAr: null,
+          labelEn: null,
+          definition: null,
+          maxLength: null,
+          pattern: null,
+          minimum: null,
+          maximum: null,
+          filenetProperty: null,
+          values: [],
+          ...body,
+          status: "ACTIF",
+          revision: 0,
+          updatedBy: this.session.user,
+          updatedAt: new Date().toISOString(),
+        };
+        this.terms.push(created);
+        return HttpResponse.json(withEtag(created), { status: 201 });
+      }),
+      http.put("/api/metadata-terms/:code", async ({ params, request }) => {
+        if (!dataOffice()) return forbidden();
+        const index = this.terms.findIndex((t) => t.code === params["code"]);
+        const current = this.terms[index];
+        if (!current) return HttpResponse.json({ status: 404, title: "Inconnu" }, { status: 404 });
+        if (request.headers.get("If-Match") !== `"${String(current.revision)}"`) {
+          return HttpResponse.json(
+            { status: 412, title: "Modifié entre-temps", detail: "Rechargez le terme." },
+            { status: 412, headers: CORRELATION },
+          );
+        }
+        const body = (await request.json()) as Schemas["MetadataTermUpdate"];
+        const changed: Schemas["MetadataTerm"] = {
+          ...current,
+          labelAr: null,
+          labelEn: null,
+          definition: null,
+          maxLength: null,
+          pattern: null,
+          minimum: null,
+          maximum: null,
+          filenetProperty: null,
+          values: [],
+          ...body,
+          revision: current.revision + 1,
+          updatedBy: this.session.user,
+          updatedAt: new Date().toISOString(),
+        };
+        this.terms[index] = changed;
+        return HttpResponse.json(withEtag(changed));
+      }),
+    ];
+  }
+
   private sharingHandlers() {
     const allowed = (parcours: string) =>
       this.session.roles.includes("catalogue-admin-domaine") &&
