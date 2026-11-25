@@ -90,17 +90,36 @@ export function Tag({
   children: ReactNode;
 }) {
   return (
-    <Badge variant={variant} size="sm">
+    <Badge variant={variant} size="sm" className="whitespace-nowrap">
       {children}
     </Badge>
   );
 }
 
-/** Tableau de la charte : en-tête gris, lignes séparées, défilement horizontal si besoin. */
-export function Table({ className, ...props }: TableHTMLAttributes<HTMLTableElement>) {
+/**
+ * Tableau de la charte : en-tête gris, lignes séparées, défilement horizontal si besoin. `bare` :
+ * sans cadre propre, quand une carte l'entoure déjà (pas de double bordure).
+ */
+export function Table({
+  className,
+  bare = false,
+  ...props
+}: TableHTMLAttributes<HTMLTableElement> & { bare?: boolean }) {
   return (
-    <div className="w-full overflow-x-auto rounded-lg border border-gray-200 bg-white">
-      <table {...props} className={twMerge("w-full border-collapse text-sm", className)} />
+    <div
+      className={
+        bare
+          ? "w-full overflow-x-auto [&_tr>*:first-child]:ps-6 [&_tr>*:last-child]:pe-6"
+          : "w-full overflow-x-auto rounded-lg border border-gray-200 bg-white"
+      }
+    >
+      <table
+        {...props}
+        className={twMerge(
+          "w-full border-collapse text-sm [&_thead_th]:bg-gray-50 [&_thead_th]:text-xs [&_thead_th]:font-semibold [&_thead_th]:tracking-wide [&_thead_th]:text-gray-600 [&_thead_th]:uppercase",
+          className,
+        )}
+      />
     </div>
   );
 }
@@ -209,7 +228,11 @@ export function Tabs({
   const prefix = useId();
   return (
     <div>
-      <div role="tablist" aria-label={label} className="inline-flex flex-wrap gap-6">
+      <div
+        role="tablist"
+        aria-label={label}
+        className="flex w-full overflow-x-auto border-b border-gray-200 [scrollbar-width:none]"
+      >
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -221,7 +244,7 @@ export function Tabs({
             onClick={() => {
               setSelected(tab.id);
             }}
-            className="inline-flex items-center gap-2 border-b-2 border-transparent px-4 py-2 font-semibold text-gray-600 transition-all hover:border-orange-500 hover:bg-orange-50 hover:text-orange-700 aria-selected:border-orange-700 aria-selected:text-orange-700"
+            className="-mb-px inline-flex shrink-0 items-center gap-2 border-b-2 border-transparent px-4 py-2.5 text-sm font-semibold whitespace-nowrap text-gray-600 transition-colors hover:border-orange-500 hover:bg-orange-50 hover:text-orange-700 aria-selected:border-orange-700 aria-selected:text-orange-700"
           >
             {tab.label}
           </button>

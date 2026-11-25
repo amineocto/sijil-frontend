@@ -19,9 +19,8 @@ import { Drawer } from "@/shared/ui/Drawer";
 import {
   CatalogueIcon,
   ChecklistIcon,
-  CollapseIcon,
   CompassIcon,
-  ExpandIcon,
+  ChevronIcon,
   LogoutIcon,
   ReviewIcon,
   SearchIcon,
@@ -143,9 +142,11 @@ export function Layout() {
             title={expanded ? "Réduire le menu" : "Déplier le menu"}
             onClick={menu.toggle}
             data-tour="menu"
-            className="absolute top-12 -right-4 z-10 flex size-8 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-sm hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-orange-700 focus-visible:outline-none"
+            className="absolute top-16 -right-4 z-30 flex size-8 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-md transition-colors hover:border-orange-300 hover:text-orange-700 focus-visible:ring-2 focus-visible:ring-orange-700 focus-visible:outline-none"
           >
-            {expanded ? <CollapseIcon className="size-4" /> : <ExpandIcon className="size-4" />}
+            <ChevronIcon
+              className={`size-4 transition-transform ${expanded ? "" : "rotate-180"}`}
+            />
           </button>
           <Brand expanded={expanded} />
           <Menu id="menu-principal" session={session.data} expanded={expanded} />

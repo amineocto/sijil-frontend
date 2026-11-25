@@ -107,3 +107,70 @@
   background: var(--sijil-color-background);
   padding: var(--sijil-space-2);
 }
+
+/*
+ * Listes de choix au style de la charte. Le contrôle reste un <select> natif (nom accessible, valeur
+ * de formulaire, clavier) ; sa flèche est dessinée par Sijil. Là où le navigateur le permet
+ * (`appearance: base-select`, Chromium récent), la liste ouverte prend aussi le style web au lieu du
+ * menu du système ; ailleurs, elle reste celle du système.
+ */
+@layer components {
+  .sijil-select {
+    appearance: none;
+    cursor: pointer;
+  }
+
+  @supports (appearance: base-select) {
+    .sijil-select,
+    .sijil-select::picker(select) {
+      appearance: base-select;
+    }
+
+    /* Le rendu web aligne le choix en haut et ajoute une marge : texte centré, comme un champ. */
+    .sijil-select {
+      display: flex;
+      align-items: center;
+      margin: 0;
+      padding-block: 0;
+    }
+
+    .sijil-select::picker-icon {
+      display: none;
+    }
+
+    .sijil-select::picker(select) {
+      margin-block: 4px;
+      padding: 4px;
+      border: 1px solid var(--color-gray-200);
+      border-radius: 0.625rem;
+      background: #fff;
+      box-shadow:
+        0 4px 10px rgb(0 0 0 / 0.08),
+        0 1px 4px rgb(0 0 0 / 0.04);
+      max-height: 18rem;
+    }
+
+    .sijil-select option {
+      padding: 0.5rem 0.75rem;
+      border-radius: 0.375rem;
+      font-size: 0.875rem;
+      color: var(--color-gray-900);
+    }
+
+    .sijil-select option:hover,
+    .sijil-select option:focus-visible {
+      background: var(--color-orange-50);
+      outline: none;
+    }
+
+    .sijil-select option:checked {
+      background: var(--color-orange-50);
+      color: var(--color-orange-700);
+      font-weight: 600;
+    }
+
+    .sijil-select option::checkmark {
+      display: none;
+    }
+  }
+}

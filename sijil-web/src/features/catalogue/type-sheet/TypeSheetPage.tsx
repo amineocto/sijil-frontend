@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router";
 import { ErrorState } from "@sijil/ui-kit";
 import { api, call, isApiError, type Schemas } from "@/shared/api";
 import { Page, Section } from "@/shared/ui/page";
+import { familyLabel } from "@/features/dossier/dossier";
 import { QueryState } from "@/shared/QueryState";
 import { StatusBadge } from "@/features/catalogue/shared/StatusBadge";
 import { diffDefinitions } from "@/features/catalogue/type-sheet/diff";
@@ -66,8 +67,8 @@ function Sheet({ sheet }: { sheet: Schemas["TypeSheet"] }) {
       subtitle={
         <>
           <span>
-            {sheet.family ?? "Famille non renseignée"} · parcours {sheet.ownerParcours} · référent{" "}
-            {sheet.referentParcours}
+            {sheet.family ? familyLabel(sheet.family) : "Famille non renseignée"} · parcours{" "}
+            {sheet.ownerParcours} · référent {sheet.referentParcours}
           </span>
           {latest && <StatusBadge status={latest.status} />}
         </>
@@ -96,8 +97,8 @@ function Sheet({ sheet }: { sheet: Schemas["TypeSheet"] }) {
         </Notice>
       )}
       {isApiError(newVersion.error) && <ErrorState error={newVersion.error} headingLevel={3} />}
-      <Section title="Versions" bodyClassName="p-0">
-        <Table aria-label="Versions" className="[&_tr:last-child>td]:border-b-0">
+      <Section title="Versions" flush>
+        <Table bare aria-label="Versions" className="[&_tr:last-child>td]:border-b-0">
           <thead>
             <tr>
               <Th scope="col">Version</Th>

@@ -3,21 +3,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { EmptyState, LoadingState } from "@sijil/ui-kit";
 import { api, call, isApiError, type Schemas } from "@/shared/api";
 import { formatDate } from "@/shared/labels";
-import { Page } from "@/shared/ui/page";
+import { DataTable, Page } from "@/shared/ui/page";
 import { QueryState } from "@/shared/QueryState";
 import { canAdministerSharing, useSession } from "@/shared/session";
-import {
-  Button,
-  Heading,
-  Notice,
-  Panel,
-  SelectField,
-  Table,
-  Tag,
-  Td,
-  TextAreaField,
-  Th,
-} from "@/shared/ui";
+import { Button, Heading, Notice, Panel, SelectField, Tag, TextAreaField } from "@/shared/ui";
 
 type Sharing = Schemas["TypeSharing"];
 
@@ -83,6 +72,21 @@ function SharingList({ parcours }: { parcours: string }) {
   useEffect(() => {
     if (done) doneRef.current?.scrollIntoView({ block: "nearest" });
   }, [done]);
+  const decided = (s: Sharing) =>
+    s.decidedBy ? `${s.decidedBy}${s.decidedAt ? `, le ${formatDate(s.decidedAt)}` : ""}` : "—";
+  const action = (s: Sharing) => (
+    <Button
+      variant="secondary"
+      size="sm"
+      aria-label={`${s.shared ? "Ne plus partager" : "Partager"} ${s.typeCode}`}
+      onClick={() => {
+        setDone(null);
+        setSelected(s);
+      }}
+    >
+      {s.shared ? "Ne plus partager" : "Partager"}
+    </Button>
+  );
   return (
     <QueryState query={sharing}>
       {({ items }) =>
@@ -101,48 +105,43 @@ function SharingList({ parcours }: { parcours: string }) {
                 </Notice>
               </div>
             )}
-            <Table aria-label={`Partage des types du parcours ${parcours}`}>
-              <thead>
-                <tr>
-                  <Th scope="col">Type</Th>
-                  <Th scope="col">Libellé</Th>
-                  <Th scope="col">État</Th>
-                  <Th scope="col">Décidé par</Th>
-                  <Th scope="col">Motif</Th>
-                  <Th scope="col">Action</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((s) => (
-                  <tr key={s.typeCode}>
-                    <Td>{s.typeCode}</Td>
-                    <Td>{labels.get(s.typeCode) ?? "—"}</Td>
-                    <Td>
-                      {s.shared ? <Tag variant="success">Partagé</Tag> : <Tag>Non partagé</Tag>}
-                    </Td>
-                    <Td>
-                      {s.decidedBy
-                        ? `${s.decidedBy}${s.decidedAt ? `, le ${formatDate(s.decidedAt)}` : ""}`
-                        : "—"}
-                    </Td>
-                    <Td>{s.reason ?? "—"}</Td>
-                    <Td>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        aria-label={`${s.shared ? "Ne plus partager" : "Partager"} ${s.typeCode}`}
-                        onClick={() => {
-                          setDone(null);
-                          setSelected(s);
-                        }}
-                      >
-                        {s.shared ? "Ne plus partager" : "Partager"}
-                      </Button>
-                    </Td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
+            <DataTable
+              label={`Partage des types du parcours ${parcours}`}
+              rows={items}
+              rowKey={(s) => s.typeCode}
+              columns={[
+                {
+                  header: "Type",
+                  cell: (s) => (
+                    <div className="flex flex-col gap-0.5">
+                      <span className="font-semibold">{labels.get(s.typeCode) ?? s.typeCode}</span>
+                      <span className="font-mono text-xs text-gray-600">{s.typeCode}</span>
+                    </div>
+                  ),
+                },
+                {
+                  header: "État",
+                  cell: (s) =>
+                    s.shared ? <Tag variant="success">Partagé</Tag> : <Tag>Non partagé</Tag>,
+                },
+                { header: "Décidé par", cell: (s) => decided(s) },
+                { header: "Motif", cell: (s) => s.reason ?? "—", className: "max-xl:hidden" },
+                { header: "Action", align: "end", cell: (s) => action(s) },
+              ]}
+              mobile={(s) => (
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 flex-col gap-0.5">
+                      <span className="font-semibold">{labels.get(s.typeCode) ?? s.typeCode}</span>
+                      <span className="font-mono text-xs text-gray-600">{s.typeCode}</span>
+                    </div>
+                    {s.shared ? <Tag variant="success">Partagé</Tag> : <Tag>Non partagé</Tag>}
+                  </div>
+                  <span className="text-sm text-gray-600">{decided(s)}</span>
+                  <div>{action(s)}</div>
+                </div>
+              )}
+            />
             {selected && (
               <Decision
                 key={selected.typeCode}

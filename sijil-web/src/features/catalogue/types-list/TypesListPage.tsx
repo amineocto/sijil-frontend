@@ -102,7 +102,7 @@ export function TypesListPage() {
               ...STATUSES.map((s) => ({ value: s, label: STATUS_LABELS[s] })),
             ]}
           />
-          <div className="md:mt-7">
+          <div className="md:mt-[1.625rem]">
             <Button type="submit" variant="secondary">
               Filtrer
             </Button>

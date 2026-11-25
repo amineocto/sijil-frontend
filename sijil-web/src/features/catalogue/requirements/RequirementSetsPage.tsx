@@ -1,10 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { EmptyState } from "@sijil/ui-kit";
 import { api, call } from "@/shared/api";
-import { Page } from "@/shared/ui/page";
+import { DataTable, Page } from "@/shared/ui/page";
 import { QueryState } from "@/shared/QueryState";
 import { canContributeToCatalogue, useSession } from "@/shared/session";
-import { ButtonLink, Table, Tag, Td, TextLink, Th } from "@/shared/ui";
+import { ButtonLink, Tag, TextLink } from "@/shared/ui";
 
 export const SET_STATUS_LABELS: Record<string, string> = {
   BROUILLON: "Brouillon",
@@ -34,35 +34,55 @@ export function RequirementSetsPage() {
           items.length === 0 ? (
             <EmptyState title="Aucun jeu d'exigences" />
           ) : (
-            <Table>
-              <caption className="sr-only">Dernière version de chaque jeu</caption>
-              <thead>
-                <tr>
-                  <Th scope="col">Jeu</Th>
-                  <Th scope="col">Libellé</Th>
-                  <Th scope="col">Parcours</Th>
-                  <Th scope="col">Version</Th>
-                  <Th scope="col">Statut</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((s) => (
-                  <tr key={s.code}>
-                    <Td>
-                      <TextLink to={`/catalogue/exigences/${s.code}/versions/${String(s.version)}`}>
+            <DataTable
+              label="Dernière version de chaque jeu"
+              rows={items}
+              rowKey={(s) => s.code}
+              columns={[
+                {
+                  header: "Jeu",
+                  cell: (s) => (
+                    <div className="flex flex-col gap-0.5">
+                      <span className="font-semibold">{s.definition.label}</span>
+                      <TextLink
+                        to={`/catalogue/exigences/${s.code}/versions/${String(s.version)}`}
+                        className="font-mono text-xs"
+                      >
                         {s.code}
                       </TextLink>
-                    </Td>
-                    <Td>{s.definition.label}</Td>
-                    <Td>{s.parcours}</Td>
-                    <Td>{s.version}</Td>
-                    <Td>
+                    </div>
+                  ),
+                },
+                { header: "Parcours", cell: (s) => s.parcours },
+                {
+                  header: "Version",
+                  cell: (s) => (
+                    <span className="flex items-center gap-2">
+                      v{s.version}
                       <Tag>{SET_STATUS_LABELS[s.status] ?? s.status}</Tag>
-                    </Td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
+                    </span>
+                  ),
+                },
+              ]}
+              mobile={(s) => (
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 flex-col gap-0.5">
+                    <span className="font-semibold">{s.definition.label}</span>
+                    <TextLink
+                      to={`/catalogue/exigences/${s.code}/versions/${String(s.version)}`}
+                      className="font-mono text-xs"
+                    >
+                      {s.code}
+                    </TextLink>
+                    <span className="text-sm text-gray-600">{s.parcours}</span>
+                  </div>
+                  <span className="flex shrink-0 items-center gap-2">
+                    v{s.version}
+                    <Tag>{SET_STATUS_LABELS[s.status] ?? s.status}</Tag>
+                  </span>
+                </div>
+              )}
+            />
           )
         }
       </QueryState>

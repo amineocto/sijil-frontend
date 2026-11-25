@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import { dossierPath } from "@/features/dossier/paths";
 import { PARTY_OPTIONS } from "@/shared/labels";
 import type { PartyType } from "@/shared/types";
-import { SearchIcon } from "@/shared/ui/icons";
+import { Chevron, SearchIcon } from "@/shared/ui/icons";
 
 /**
  * Recherche d'un dossier par partie, dans l'en-tête : type de partie et identifiant, puis ouverture
@@ -37,20 +37,23 @@ export function PartyLookup({
       <label className="sr-only" htmlFor={`${prefix}-type`}>
         Type de partie
       </label>
-      <select
-        id={`${prefix}-type`}
-        value={type}
-        onChange={(e) => {
-          setType(e.currentTarget.value as PartyType);
-        }}
-        className="h-full rounded-s-xl border-e border-gray-200 bg-gray-50 ps-3 pe-2 text-sm font-medium text-gray-700 focus:outline-none"
-      >
-        {PARTY_OPTIONS.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
+      <span className="relative h-full shrink-0">
+        <select
+          id={`${prefix}-type`}
+          value={type}
+          onChange={(e) => {
+            setType(e.currentTarget.value as PartyType);
+          }}
+          className="sijil-select h-full rounded-s-xl border-e border-gray-200 bg-gray-50 ps-3 pe-8 text-sm font-medium text-gray-700 focus:outline-none focus-visible:bg-orange-50"
+        >
+          {PARTY_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        <Chevron className="end-2.5" />
+      </span>
       <label className="sr-only" htmlFor={`${prefix}-id`}>
         Identifiant de la partie
       </label>

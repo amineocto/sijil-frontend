@@ -58,6 +58,9 @@ export function Field({
   );
 }
 
-/** Classes des champs d'`@awb/ui`, pour les contrôles natifs (liste, fichier). */
+/**
+ * Classes des champs d'`@awb/ui`, pour les contrôles natifs : 40 px de haut comme les boutons de la
+ * charte (champs et boutons s'alignent), 16 px de texte sur mobile (pas de zoom à la saisie).
+ */
 export const CONTROL =
-  "w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-gray-900 outline-none transition-all hover:border-gray-400 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 aria-[invalid=true]:border-red-500 disabled:bg-gray-50 disabled:text-gray-500";
+  "h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-base text-gray-900 outline-none transition-colors hover:border-gray-400 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 aria-[invalid=true]:border-red-500 disabled:bg-gray-50 disabled:text-gray-500 sm:text-sm";

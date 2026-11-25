@@ -141,7 +141,7 @@ function Sheet({
         </Notice>
       )}
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
-        <section className="min-w-0 rounded-xl border border-gray-200 bg-white p-5 shadow-xs">
+        <section className="min-w-0 self-start rounded-xl border border-gray-200 bg-white p-6 shadow-xs">
           <Tabs
             label="Contenu du document"
             tabs={[
@@ -159,8 +159,8 @@ function Sheet({
           />
         </section>
         <div className="flex min-w-0 flex-col gap-5">
-          <Section title="Informations" bodyClassName="p-0">
-            <Table aria-label="Métadonnées" className="[&_tr:last-child>*]:border-b-0">
+          <Section title="Informations" flush>
+            <Table bare aria-label="Métadonnées" className="[&_tr:last-child>*]:border-b-0">
               <tbody>
                 {Object.entries(document.metadata).map(([name, value]) => (
                   <tr key={name}>
@@ -206,7 +206,7 @@ function Sheet({
             />
           </Section>
           {canContribute(session.data, document.parcours) && (
-            <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-xs">
+            <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-xs">
               <DocumentActions document={document} etag={etag} />
             </section>
           )}

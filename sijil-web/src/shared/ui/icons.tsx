@@ -112,3 +112,29 @@ export const CloseIcon = (p: IconProps) => (
     <path d="M6 6l12 12M18 6 6 18" />
   </Icon>
 );
+
+/** Chevron vers la gauche (réduire) ; tourné d'un demi-tour, vers la droite (déplier). */
+export const ChevronIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="m15 18-6-6 6-6" />
+  </Icon>
+);
+
+/** Flèche de la liste de choix (celle du navigateur est masquée : même rendu partout). */
+export function Chevron({ className = "end-3" }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      focusable="false"
+      viewBox="0 0 20 20"
+      fill="currentColor"
+      className={`pointer-events-none absolute top-1/2 size-4 -translate-y-1/2 text-gray-500 ${className}`}
+    >
+      <path
+        fillRule="evenodd"
+        d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.06l3.71-3.83a.75.75 0 1 1 1.08 1.04l-4.25 4.39a.75.75 0 0 1-1.08 0L5.21 8.27a.75.75 0 0 1 .02-1.06z"
+        clipRule="evenodd"
+      />
+    </svg>
+  );
+}

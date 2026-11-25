@@ -79,27 +79,32 @@ export function Page({
   );
 }
 
-/** Carte de section du poste CRC : titre et action dans un bandeau, contenu en dessous. */
+/**
+ * Carte de section : même cadre que `Panel` (bordure, rayon, marges de 24 px), titre en tête et
+ * action à droite. `flush` : le contenu (un tableau) va jusqu'aux bords, sous un filet.
+ */
 export function Section({
   title,
   action,
   children,
   className = "",
-  bodyClassName = "p-5",
+  flush = false,
 }: {
   title: ReactNode;
   action?: ReactNode;
   children: ReactNode;
   className?: string;
-  bodyClassName?: string;
+  flush?: boolean;
 }) {
   return (
-    <section className={`rounded-xl border border-gray-200 bg-white shadow-xs ${className}`}>
-      <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-5 py-3.5">
-        <h2 className="text-base font-semibold text-gray-900">{title}</h2>
+    <section
+      className={`overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xs ${className}`}
+    >
+      <div className="flex items-center justify-between gap-3 px-6 pt-5">
+        <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
         {action}
       </div>
-      <div className={bodyClassName}>{children}</div>
+      <div className={flush ? "mt-4 border-t border-gray-200" : "px-6 pt-4 pb-6"}>{children}</div>
     </section>
   );
 }

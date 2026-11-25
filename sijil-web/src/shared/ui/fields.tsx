@@ -2,6 +2,7 @@ import type { InputHTMLAttributes, Ref, SelectHTMLAttributes, TextareaHTMLAttrib
 import { Checkbox, Radio, Textarea, type TextareaProps } from "@awb/ui";
 import { twMerge } from "tailwind-merge";
 import { CONTROL, Field, type FieldProps } from "@/shared/ui/Field";
+import { Chevron } from "@/shared/ui/icons";
 
 /** Attributs natifs du contrôle ; `ref` pour react-hook-form (`register`). */
 /**
@@ -104,14 +105,22 @@ export function SelectField({
       hideLabel={hideLabel}
     >
       {(ids) => (
-        <select {...select} {...ids} required={required} className={CONTROL}>
-          {placeholder !== undefined && <option value="">{placeholder}</option>}
-          {options.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
+        <div className="relative">
+          <select
+            {...select}
+            {...ids}
+            required={required}
+            className={twMerge(CONTROL, "sijil-select pe-9")}
+          >
+            {placeholder !== undefined && <option value="">{placeholder}</option>}
+            {options.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+          <Chevron />
+        </div>
       )}
     </Field>
   );

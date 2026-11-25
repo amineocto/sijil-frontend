@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { EmptyState } from "@sijil/ui-kit";
 import { api, call } from "@/shared/api";
-import { Page } from "@/shared/ui/page";
+import { DataTable, Page } from "@/shared/ui/page";
 import { QueryState } from "@/shared/QueryState";
-import { Muted, Table, Td, TextLink, Th } from "@/shared/ui";
+import { Muted, TextLink } from "@/shared/ui";
 
 /** Écran « File de revue » : versions soumises qui attendent un réviseur. */
 export function ReviewQueuePage() {
@@ -21,33 +21,41 @@ export function ReviewQueuePage() {
           page.items.length === 0 ? (
             <EmptyState title="Aucune version en attente de revue" />
           ) : (
-            <Table>
-              <caption className="sr-only">Versions en revue, par code de type</caption>
-              <thead>
-                <tr>
-                  <Th scope="col">Type</Th>
-                  <Th scope="col">Libellé</Th>
-                  <Th scope="col">Parcours propriétaire</Th>
-                  <Th scope="col">Soumise par</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {page.items.map((t) => (
-                  <tr key={t.code}>
-                    <Td>
+            <DataTable
+              label="Versions en revue, par code de type"
+              rows={page.items}
+              rowKey={(t) => t.code}
+              columns={[
+                {
+                  header: "Version",
+                  cell: (t) => (
+                    <div className="flex flex-col gap-0.5">
                       <TextLink
                         to={`/catalogue/types/${t.code}/versions/${String(t.latest.version)}/revue`}
                       >
                         {t.code} v{t.latest.version}
                       </TextLink>
-                    </Td>
-                    <Td>{t.label ?? "—"}</Td>
-                    <Td>{t.ownerParcours}</Td>
-                    <Td>{t.latest.submittedBy ?? "—"}</Td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
+                      <span className="text-xs text-gray-600">{t.label ?? "—"}</span>
+                    </div>
+                  ),
+                },
+                { header: "Parcours propriétaire", cell: (t) => t.ownerParcours },
+                { header: "Soumise par", cell: (t) => t.latest.submittedBy ?? "—" },
+              ]}
+              mobile={(t) => (
+                <div className="flex flex-col gap-1">
+                  <TextLink
+                    to={`/catalogue/types/${t.code}/versions/${String(t.latest.version)}/revue`}
+                  >
+                    {t.code} v{t.latest.version}
+                  </TextLink>
+                  <span className="text-sm text-gray-700">{t.label ?? "—"}</span>
+                  <span className="text-sm text-gray-600">
+                    {t.ownerParcours} · soumise par {t.latest.submittedBy ?? "—"}
+                  </span>
+                </div>
+              )}
+            />
           )
         }
       </QueryState>
