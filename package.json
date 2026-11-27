@@ -1,0 +1,25 @@
+{
+  "name": "sijil-frontend",
+  "private": true,
+  "description": "Sijil : front unique sijil-web et kit d'interface, séparés du dépôt backend sijil-kit",
+  "workspaces": [
+    "ui-kit",
+    "sijil-web"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "ci": "npm run contract:check && npm run ci --workspaces --if-present",
+    "contract:check": "node scripts/check-contract.mjs",
+    "contract:sync": "node scripts/check-contract.mjs --sync"
+  },
+  "overrides": {
+    "openapi-typescript": {
+      "typescript": "$typescript"
+    }
+  },
+  "devDependencies": {
+    "typescript": "6.0.3"
+  }
+}

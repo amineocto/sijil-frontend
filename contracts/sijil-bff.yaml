@@ -1,0 +1,1344 @@
+openapi: 3.1.0
+info:
+  title: sijil-bff
+  version: 2.2.0
+  description: |
+    BFF unique du front `sijil-web` (documents et catalogue), endpoints par écran (09-fronts.md,
+    L4E-02, L3B-02, ADR 0032). 2.0.0 : la session réunit les rôles des documents et du catalogue,
+    et `parcours` devient une liste ; les écrans du catalogue (`/api/parcours`, `/api/types/**`,
+    `/api/reviews`) viennent de l'ancien `sijil-catalogue-bff`, aux mêmes chemins.
+
+    Authentification (ADR 0011, O4) :
+    - Connexion OIDC par code d'autorisation avec PKCE (`/oauth2/authorization/sijil`), session
+      serveur (cookie `SIJIL_SESSION`, `HttpOnly`, `Secure`, `SameSite=Lax`). Déconnexion :
+      `POST /logout` avec l'en-tête CSRF ; la réponse `{"redirectUrl": "…"}` donne l'adresse de
+      déconnexion de l'IdP, sans jeton. Le navigateur ne voit jamais de jeton.
+    - Un appel `/api/**` sans session reçoit 401 (pas de redirection) ; une session expirée côté
+      IdP (échange de jetons refusé) donne aussi 401.
+    - Le BFF appelle `sijil-api` et `sijil-catalogue` avec un jeton échangé (RFC 8693) de leur
+      audience, qui porte l'utilisateur, son profil et son parcours. Les API décident seules des
+      droits ; leurs refus (Problem Details) sont rendus tels quels.
+    - Rôles du catalogue : contributeur pour rédiger, soumettre et réutiliser ; réviseur pour revoir
+      et déprécier (403 sinon, vérifié par le BFF puis par le catalogue, qui vérifie aussi le parcours
+      propriétaire et les quatre yeux).
+    - Toute écriture exige l'en-tête `X-XSRF-TOKEN`, copie du cookie `XSRF-TOKEN` (403 sinon).
+    - Le contenu d'un document n'est jamais donné par URL présignée : l'aperçu est relayé par le
+      BFF. Seule l'URL d'envoi vers la quarantaine (un objet, 5 minutes) est rendue au front.
+
+    Formes reprises de `sijil-api.yaml` et `sijil-catalogue.yaml`. Une panne d'une API donne 502.
+servers:
+  - url: /
+paths:
+  /api/session:
+    get:
+      operationId: getSession
+      summary: Utilisateur connecté, profil, parcours et rôles (affichage seulement)
+      responses:
+        '200':
+          description: Session
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Session' }
+        '401': { $ref: '#/components/responses/Problem' }
+  /api/document-types:
+    get:
+      operationId: listDocumentTypes
+      summary: Types publiés que l'utilisateur peut déposer (écran « Dépôt »)
+      parameters:
+        - { name: q, in: query, schema: { type: string, minLength: 2, maxLength: 100 } }
+      responses:
+        '200':
+          description: Types publiés
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/JsonObject' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+  /api/document-types/{code}:
+    get:
+      operationId: getDocumentType
+      summary: Version en vigueur d'un type et sa définition (schéma des métadonnées)
+      parameters:
+        - $ref: '#/components/parameters/Code'
+      responses:
+        '200':
+          description: Version en vigueur
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/JsonObject' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+  /api/documents:
+    get:
+      operationId: searchDocuments
+      summary: Écran « Recherche » (documents Sijil)
+      parameters:
+        - { name: partyType, in: query, required: true, schema: { type: string, enum: [CLIENT, PERSONNE, COMPTE] } }
+        - { name: partyId, in: query, required: true, schema: { type: string, minLength: 1, maxLength: 64 } }
+        - { name: documentType, in: query, schema: { type: string, maxLength: 64 } }
+        - { name: cursor, in: query, schema: { type: string, maxLength: 2048 } }
+        - $ref: '#/components/parameters/AccessPurpose'
+        - $ref: '#/components/parameters/BreakGlassReason'
+      responses:
+        '200':
+          description: Page de documents
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/JsonObject' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+    post:
+      operationId: createDocument
+      summary: Finaliser un dépôt (session dont le fichier a été envoyé, parties, métadonnées)
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/JsonObject' }
+      responses:
+        '202':
+          description: Document reçu, en quarantaine
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/JsonObject' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+  /api/upload-sessions:
+    post:
+      operationId: createUploadSession
+      summary: Ouvrir une session de dépôt ; rend l'URL d'envoi direct vers la quarantaine
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/JsonObject' }
+      responses:
+        '201':
+          description: Session ouverte
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/JsonObject' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+  /api/documents/{id}:
+    get:
+      operationId: getDocument
+      summary: Écran « Fiche document » ; ETag repris de `sijil-api`
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+        - $ref: '#/components/parameters/AccessPurpose'
+        - $ref: '#/components/parameters/BreakGlassReason'
+      responses:
+        '200':
+          description: Document
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/JsonObject' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+    patch:
+      operationId: updateMetadata
+      summary: Modifier les métadonnées (JSON Merge Patch et motif)
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/JsonObject' }
+      responses:
+        '200':
+          description: Document modifié
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/JsonObject' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '412': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+    delete:
+      operationId: deleteDocument
+      summary: Suppression logique avec motif
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Reason' }
+      responses:
+        '200':
+          description: Document supprimé logiquement
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/JsonObject' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '412': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+  /api/documents/{id}/restorations:
+    post:
+      operationId: restoreDocument
+      summary: Restaurer un document supprimé logiquement
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Reason' }
+      responses:
+        '200':
+          description: Document restauré
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/JsonObject' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '412': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+  /api/documents/{id}/reception:
+    get:
+      operationId: getReception
+      summary: Suivi de la quarantaine d'un document déposé par le parcours de l'utilisateur
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+      responses:
+        '200':
+          description: État de la réception
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/JsonObject' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+  /api/documents/{id}/preview:
+    get:
+      operationId: previewDocument
+      summary: Aperçu du contenu, relayé par le BFF (jamais d'URL présignée de lecture)
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+        - { name: version, in: query, schema: { type: integer, minimum: 1 } }
+        - $ref: '#/components/parameters/AccessPurpose'
+        - $ref: '#/components/parameters/BreakGlassReason'
+      responses:
+        '200':
+          description: Contenu (PDF ou image affichés ; autre format en téléchargement)
+          content:
+            application/pdf: {}
+            image/*: {}
+            application/octet-stream: {}
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+  /api/search:
+    get:
+      operationId: searchFullText
+      summary: Recherche plein texte des documents Sijil d'une partie (L5-08, via la façade)
+      parameters:
+        - { name: q, in: query, required: true, schema: { type: string, minLength: 2, maxLength: 200 } }
+        - { name: partyType, in: query, required: true, schema: { type: string, enum: [CLIENT, PERSONNE, COMPTE] } }
+        - { name: partyId, in: query, required: true, schema: { type: string, minLength: 1, maxLength: 32 } }
+        - { name: cursor, in: query, schema: { type: string, maxLength: 2048 } }
+      responses:
+        '200':
+          description: Page de documents (forme `SearchResponse` de `vision360-api.yaml`)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/JsonObject' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /api/documents/{id}/thumbnail:
+    get:
+      operationId: getThumbnail
+      summary: Vignette de la version courante, relayée par le BFF (L5-08)
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+        - $ref: '#/components/parameters/AccessPurpose'
+      responses:
+        '200':
+          description: Vignette PNG
+          content:
+            image/png: {}
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+  /api/documents/{id}/versions:
+    get:
+      operationId: listVersions
+      summary: Versions du document
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+        - $ref: '#/components/parameters/AccessPurpose'
+        - $ref: '#/components/parameters/BreakGlassReason'
+      responses:
+        '200':
+          description: Versions
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/JsonObject' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+    post:
+      operationId: addVersion
+      summary: Nouvelle version à partir d'une session de dépôt
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+        - $ref: '#/components/parameters/IfMatch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/JsonObject' }
+      responses:
+        '202':
+          description: Version reçue, en quarantaine
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/JsonObject' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '412': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+  /api/documents/{id}/metadata-revisions:
+    get:
+      operationId: listMetadataRevisions
+      summary: Historique des métadonnées
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+        - $ref: '#/components/parameters/AccessPurpose'
+        - $ref: '#/components/parameters/BreakGlassReason'
+      responses:
+        '200':
+          description: Révisions
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/JsonObject' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+  /api/documents/{id}/usages:
+    get:
+      operationId: listUsages
+      summary: Usages du document par parcours
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+        - $ref: '#/components/parameters/AccessPurpose'
+        - $ref: '#/components/parameters/BreakGlassReason'
+      responses:
+        '200':
+          description: Usages
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/JsonObject' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+  /api/requirement-sets:
+    get:
+      operationId: listRequirementSets
+      summary: Jeux d'exigences documentaires, dernière version de chacun (lot 7)
+      parameters:
+        - name: parcours
+          in: query
+          schema: { type: string, pattern: '^[a-z][a-z0-9-]{1,31}$' }
+      responses:
+        '200':
+          description: Jeux d'exigences
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/RequirementSet' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+    post:
+      operationId: createRequirementSet
+      summary: Nouvelle version en brouillon (contributeur du parcours propriétaire)
+      parameters:
+        - $ref: '#/components/parameters/RequiredIdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, definition]
+              additionalProperties: false
+              properties:
+                code: { type: string, pattern: '^[A-Z][A-Z0-9_]{1,63}$' }
+                definition: { $ref: '#/components/schemas/RequirementSetDefinition' }
+      responses:
+        '201':
+          description: Brouillon créé
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RequirementSet' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+  /api/requirement-sets/{code}/versions/{version}:
+    get:
+      operationId: getRequirementSetVersion
+      summary: Une version, avec son ETag
+      parameters:
+        - $ref: '#/components/parameters/Code'
+        - $ref: '#/components/parameters/Version'
+      responses:
+        '200':
+          description: Version
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RequirementSet' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+    put:
+      operationId: saveRequirementSet
+      summary: Modification du brouillon, à la révision lue
+      parameters:
+        - $ref: '#/components/parameters/Code'
+        - $ref: '#/components/parameters/Version'
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [definition]
+              additionalProperties: false
+              properties:
+                definition: { $ref: '#/components/schemas/RequirementSetDefinition' }
+      responses:
+        '200':
+          description: Brouillon modifié
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RequirementSet' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '412': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+        '428': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+  /api/requirement-sets/{code}/versions/{version}/publication:
+    post:
+      operationId: publishRequirementSet
+      summary: Publication par un réviseur du catalogue qui n'a pas rédigé la version (quatre yeux)
+      parameters:
+        - $ref: '#/components/parameters/Code'
+        - $ref: '#/components/parameters/Version'
+        - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '200':
+          description: Version publiée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RequirementSet' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '412': { $ref: '#/components/responses/Problem' }
+        '428': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+  /api/parcours/{parcours}/sharing:
+    get:
+      operationId: listTypeSharing
+      summary: Écran « Partage 360 » (ADR 0025, ajout 2.2.0) ; types éligibles au portefeuille client et leur partage par ce parcours
+      description: |
+        Réservé au rôle `catalogue-admin-domaine`, pour un parcours de l'utilisateur (403 sinon) ;
+        le catalogue vérifie de nouveau le rôle et le parcours sur le jeton échangé.
+      parameters:
+        - $ref: '#/components/parameters/ParcoursPath'
+      responses:
+        '200':
+          description: Partage des types éligibles, triés par code
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                additionalProperties: false
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/TypeSharing' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+  /api/parcours/{parcours}/sharing/{code}:
+    put:
+      operationId: setTypeSharing
+      summary: Partage d'un type par le parcours, ou retrait du partage (ADR 0025, ajout 2.2.0)
+      description: |
+        Mêmes droits que la liste. Seul un type éligible peut être partagé (422) ; la décision est
+        tracée par le catalogue et émet `document-type.sharing-changed.v1`.
+      parameters:
+        - $ref: '#/components/parameters/ParcoursPath'
+        - $ref: '#/components/parameters/Code'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TypeSharingRequest' }
+      responses:
+        '200':
+          description: État du partage après la décision
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TypeSharing' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+  /api/completeness-evaluations:
+    post:
+      operationId: evaluateCompleteness
+      summary: Complétude documentaire d'un dossier (panneau de la fiche, simulateur de l'éditeur)
+      description: |
+        Relais de `POST /v1/completeness-evaluations` de la façade, avec les droits de l'utilisateur.
+        Une `definition` simulée exige le rôle `catalogue-contributeur` (ADR 0033 §7).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CompletenessRequest' }
+      responses:
+        '200':
+          description: Résultat
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CompletenessResult' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /api/parcours:
+    get:
+      operationId: listParcours
+      summary: Parcours du référentiel
+      responses:
+        '200':
+          description: Parcours
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Parcours' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+  /api/types:
+    get:
+      operationId: listTypes
+      summary: Écran « Liste des types »
+      parameters:
+        - { name: parcours, in: query, schema: { type: string } }
+        - { name: family, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/TypeStatus' } }
+        - { name: q, in: query, schema: { type: string, minLength: 2, maxLength: 100 } }
+        - { name: cursor, in: query, schema: { type: string, maxLength: 2048 } }
+      responses:
+        '200':
+          description: Page de types
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TypePage' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+    post:
+      operationId: createType
+      summary: Créer un type (version 1 en brouillon)
+      parameters:
+        - $ref: '#/components/parameters/RequiredIdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NewType' }
+      responses:
+        '201':
+          description: Brouillon créé
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Editor' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+  /api/types/{code}:
+    get:
+      operationId: getTypeSheet
+      summary: Écran « Fiche d'un type » (versions et définitions)
+      parameters:
+        - $ref: '#/components/parameters/Code'
+      responses:
+        '200':
+          description: Fiche
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TypeSheet' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+  /api/types/{code}/editor:
+    get:
+      operationId: getEditor
+      summary: "Écran « Éditeur » : brouillon en cours du type"
+      parameters:
+        - $ref: '#/components/parameters/Code'
+      responses:
+        '200':
+          description: Brouillon ; `etag` à renvoyer dans `If-Match`
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Editor' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+    put:
+      operationId: saveDraft
+      summary: Enregistrer le brouillon
+      parameters:
+        - $ref: '#/components/parameters/Code'
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DraftUpdate' }
+      responses:
+        '200':
+          description: Brouillon enregistré
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Editor' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '412': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+  /api/types/{code}/new-version:
+    post:
+      operationId: createVersion
+      summary: Ouvrir une nouvelle version en brouillon, copie de la dernière
+      parameters:
+        - $ref: '#/components/parameters/Code'
+        - $ref: '#/components/parameters/RequiredIdempotencyKey'
+      responses:
+        '201':
+          description: Brouillon créé
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Editor' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+  /api/types/{code}/submission:
+    post:
+      operationId: submitDraft
+      summary: "Écran « Soumission » : contrôles automatiques puis soumission"
+      parameters:
+        - $ref: '#/components/parameters/Code'
+        - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '200':
+          description: Version soumise
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Editor' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '412': { $ref: '#/components/responses/Problem' }
+        '422':
+          description: Contrôles en échec, erreurs par rubrique (pointeur JSON)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+  /api/types/{code}/reuses:
+    post:
+      operationId: declareReuse
+      summary: "Écran « Réutilisation » : le parcours de l'utilisateur réutilise le type, avec la finalité"
+      parameters:
+        - $ref: '#/components/parameters/Code'
+        - $ref: '#/components/parameters/RequiredIdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NewReuse' }
+      responses:
+        '201':
+          description: Réutilisation déclarée (journalisée, sans approbation)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Reuse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409':
+          description: Le parcours réutilise déjà ce type
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422':
+          description: Type du parcours de l'utilisateur
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+  /api/reviews:
+    get:
+      operationId: listReviews
+      summary: "Écran « File de revue » : types dont une version est EN_REVUE"
+      parameters:
+        - { name: cursor, in: query, schema: { type: string, maxLength: 2048 } }
+      responses:
+        '200':
+          description: Page de types
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TypePage' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+  /api/types/{code}/versions/{version}:
+    get:
+      operationId: getVersion
+      summary: "Écran « Revue » : une version et son `etag`"
+      parameters:
+        - $ref: '#/components/parameters/Code'
+        - $ref: '#/components/parameters/Version'
+      responses:
+        '200':
+          description: Version ; `etag` à renvoyer dans `If-Match`
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Editor' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+  /api/types/{code}/versions/{version}/review:
+    post:
+      operationId: reviewVersion
+      summary: Approuver avec une date d'effet, ou demander des modifications avec un motif
+      parameters:
+        - $ref: '#/components/parameters/Code'
+        - $ref: '#/components/parameters/Version'
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Review' }
+      responses:
+        '200':
+          description: Version après la revue
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Editor' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403':
+          description: Pas réviseur, ou réviseur auteur de la version (quatre yeux)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '412': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+  /api/types/{code}/versions/{version}/deprecation:
+    post:
+      operationId: deprecateVersion
+      summary: Déprécier une version publiée
+      parameters:
+        - $ref: '#/components/parameters/Code'
+        - $ref: '#/components/parameters/Version'
+        - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '200':
+          description: Version dépréciée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Editor' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '412': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+  /api/metadata-terms:
+    get:
+      operationId: listMetadataTerms
+      summary: Dictionnaire de métadonnées, par code (ADR 0038)
+      responses:
+        '200':
+          description: Termes, actifs, dépréciés et retirés
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/MetadataTerm' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+    post:
+      operationId: createMetadataTerm
+      summary: Nouveau terme, actif dès sa création (Data Office)
+      parameters:
+        - $ref: '#/components/parameters/RequiredIdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NewMetadataTerm' }
+      responses:
+        '201':
+          description: Terme créé
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MetadataTerm' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+  /api/metadata-terms/{code}:
+    get:
+      operationId: getMetadataTerm
+      summary: Un terme, avec son ETag
+      parameters:
+        - $ref: '#/components/parameters/TermCode'
+      responses:
+        '200':
+          description: Terme
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MetadataTerm' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+    put:
+      operationId: saveMetadataTerm
+      summary: Modification d'un terme, à la révision lue (Data Office)
+      parameters:
+        - $ref: '#/components/parameters/TermCode'
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MetadataTermUpdate' }
+      responses:
+        '200':
+          description: Terme modifié
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MetadataTerm' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '412': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+        '428': { $ref: '#/components/responses/Problem' }
+        '502': { $ref: '#/components/responses/Problem' }
+components:
+  parameters:
+    DocumentId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    TermCode:
+      name: code
+      in: path
+      required: true
+      schema: { type: string, pattern: '^[a-z][A-Za-z0-9]{0,63}$' }
+    Code:
+      name: code
+      in: path
+      required: true
+      schema: { type: string, pattern: '^[A-Z][A-Z0-9_]{1,63}$' }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: Clé de rejeu d'un même envoi ; le BFF en crée une à défaut.
+      schema: { type: string, maxLength: 128 }
+    IfMatch:
+      name: If-Match
+      in: header
+      required: true
+      schema: { type: string, maxLength: 128 }
+    ParcoursPath:
+      name: parcours
+      in: path
+      required: true
+      schema: { type: string, pattern: '^[a-z][a-z0-9-]{1,31}$' }
+    Version:
+      name: version
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+    RequiredIdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: >-
+        Clé de rejeu d'une même intention, tirée par l'écran ; obligatoire, le BFF n'en invente
+        jamais (04-conventions-api, AUD-20261120-240, AUD-20261120-345).
+      schema: { type: string, minLength: 8, maxLength: 128, pattern: '^[A-Za-z0-9_-]+$' }
+    AccessPurpose:
+      name: X-Access-Purpose
+      in: header
+      description: Finalité saisie par l'utilisateur pour un document d'un autre parcours (ADR 0018), relayée.
+      schema: { type: string, maxLength: 255 }
+    BreakGlassReason:
+      name: X-Break-Glass-Reason
+      in: header
+      description: |
+        Motif de bris de glace saisi par l'utilisateur pour du RESTREINT, relayé seulement pour le
+        rôle `sijil-bris-de-glace` (403 sinon, ADR 0011).
+      schema: { type: string, maxLength: 255 }
+  responses:
+    Problem:
+      description: Erreur (Problem Details)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+  schemas:
+    MetadataTerm:
+      type: object
+      additionalProperties: false
+      required: [code, labelFr, format, values, personalData, status, revision, updatedBy, updatedAt]
+      properties:
+        code: { type: string }
+        labelFr: { type: string }
+        labelAr: { type: [string, 'null'] }
+        labelEn: { type: [string, 'null'] }
+        definition: { type: [string, 'null'] }
+        format: { $ref: '#/components/schemas/MetadataFormat' }
+        maxLength: { type: [integer, 'null'] }
+        pattern: { type: [string, 'null'] }
+        values: { type: array, items: { type: string } }
+        minimum: { type: [number, 'null'] }
+        maximum: { type: [number, 'null'] }
+        personalData: { $ref: '#/components/schemas/PersonalData' }
+        filenetProperty: { type: [string, 'null'] }
+        status: { $ref: '#/components/schemas/MetadataTermStatus' }
+        revision: { type: integer }
+        updatedBy: { type: string }
+        updatedAt: { type: string, format: date-time }
+        etag: { type: [string, 'null'], description: "À renvoyer dans If-Match (lecture d'un terme)" }
+    MetadataFormat:
+      enum: [TEXT, DATE, INTEGER, NUMBER, BOOLEAN, ENUM]
+    MetadataTermStatus:
+      enum: [ACTIF, DEPRECIE, RETIRE]
+    PersonalData:
+      enum: [AUCUNE, PERSONNELLE, SENSIBLE]
+    NewMetadataTerm:
+      type: object
+      additionalProperties: false
+      required: [code, labelFr, format, personalData]
+      properties:
+        code: { type: string, pattern: '^[a-z][A-Za-z0-9]{0,63}$' }
+        labelFr: { type: string, minLength: 1, maxLength: 120 }
+        labelAr: { type: string, maxLength: 120 }
+        labelEn: { type: string, maxLength: 120 }
+        definition: { type: string, maxLength: 1000 }
+        format: { $ref: '#/components/schemas/MetadataFormat' }
+        maxLength: { type: integer, minimum: 1, maximum: 100000 }
+        pattern: { type: string, maxLength: 200 }
+        values: { type: array, maxItems: 200, items: { type: string, minLength: 1, maxLength: 120 } }
+        minimum: { type: number }
+        maximum: { type: number }
+        personalData: { $ref: '#/components/schemas/PersonalData' }
+        filenetProperty: { type: string, maxLength: 128 }
+    MetadataTermUpdate:
+      type: object
+      additionalProperties: false
+      required: [labelFr, personalData, status]
+      properties:
+        labelFr: { type: string, minLength: 1, maxLength: 120 }
+        labelAr: { type: string, maxLength: 120 }
+        labelEn: { type: string, maxLength: 120 }
+        definition: { type: string, maxLength: 1000 }
+        maxLength: { type: integer, minimum: 1, maximum: 100000 }
+        pattern: { type: string, maxLength: 200 }
+        values: { type: array, maxItems: 200, items: { type: string, minLength: 1, maxLength: 120 } }
+        minimum: { type: number }
+        maximum: { type: number }
+        personalData: { $ref: '#/components/schemas/PersonalData' }
+        filenetProperty: { type: string, maxLength: 128 }
+        status: { $ref: '#/components/schemas/MetadataTermStatus' }
+    TypeSharing:
+      type: object
+      additionalProperties: false
+      required: [typeCode, shared]
+      properties:
+        typeCode: { type: string, pattern: '^[A-Z][A-Z0-9_]{1,63}$' }
+        shared: { type: boolean }
+        decidedBy: { type: [string, 'null'], maxLength: 128 }
+        decidedAt: { type: [string, 'null'], format: date-time }
+        reason: { type: [string, 'null'], maxLength: 500 }
+    TypeSharingRequest:
+      type: object
+      additionalProperties: false
+      required: [shared]
+      properties:
+        shared: { type: boolean }
+        reason: { type: string, maxLength: 500 }
+    JsonObject:
+      description: Forme reprise de l'API appelée (`sijil-api.yaml` ou `sijil-catalogue.yaml`).
+      type: object
+      additionalProperties: true
+    Reason:
+      type: object
+      required: [reason]
+      additionalProperties: false
+      properties:
+        reason: { type: string, minLength: 1, maxLength: 500 }
+    Session:
+      type: object
+      required: [user, roles, parcours]
+      additionalProperties: false
+      properties:
+        user: { type: string }
+        profil: { type: [string, 'null'] }
+        parcours:
+          description: Parcours pour lesquels l'utilisateur contribue.
+          type: array
+          items: { type: string }
+        roles:
+          description: Rôles des écrans, documents et catalogue (ADR 0032).
+          type: array
+          items:
+            type: string
+            enum: [sijil-lecteur, sijil-contributeur, sijil-admin, sijil-bris-de-glace, catalogue-lecteur, catalogue-contributeur, catalogue-reviseur, catalogue-admin-domaine, catalogue-data-office]
+    TypeStatus:
+      type: string
+      enum: [BROUILLON, SOUMIS, EN_REVUE, PUBLIE, DEPRECIE, RETIRE]
+    Parcours:
+      type: object
+      required: [code, label, team, active]
+      additionalProperties: false
+      properties:
+        code: { type: string }
+        label: { type: string }
+        team: { type: string }
+        active: { type: boolean }
+    TypePage:
+      type: object
+      required: [items, hasMore]
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/TypeSummary' }
+        nextCursor: { type: [string, 'null'] }
+        hasMore: { type: boolean }
+    TypeSummary:
+      type: object
+      required: [code, ownerParcours, referentParcours, latest]
+      additionalProperties: false
+      properties:
+        code: { type: string }
+        label: { type: [string, 'null'] }
+        family: { type: [string, 'null'] }
+        ownerParcours: { type: string }
+        referentParcours: { type: string }
+        latest: { $ref: '#/components/schemas/VersionSummary' }
+    VersionSummary:
+      type: object
+      required: [version, status]
+      additionalProperties: false
+      properties:
+        version: { type: integer, minimum: 1 }
+        status: { $ref: '#/components/schemas/TypeStatus' }
+        effectiveFrom: { type: [string, 'null'], format: date }
+        submittedBy: { type: [string, 'null'] }
+        reviewedBy: { type: [string, 'null'] }
+    TypeVersion:
+      type: object
+      required: [version, status, definition]
+      additionalProperties: false
+      properties:
+        version: { type: integer, minimum: 1 }
+        status: { $ref: '#/components/schemas/TypeStatus' }
+        effectiveFrom: { type: [string, 'null'], format: date }
+        submittedBy: { type: [string, 'null'] }
+        reviewedBy: { type: [string, 'null'] }
+        reviewReason: { type: [string, 'null'] }
+        definition: { type: object, additionalProperties: true }
+    TypeSheet:
+      type: object
+      required: [code, ownerParcours, referentParcours, versions, reuses, canEdit]
+      additionalProperties: false
+      properties:
+        code: { type: string }
+        family: { type: [string, 'null'] }
+        ownerParcours: { type: string }
+        referentParcours: { type: string }
+        versions:
+          description: Versions, de la plus récente à la plus ancienne.
+          type: array
+          items: { $ref: '#/components/schemas/TypeVersion' }
+        reuses:
+          description: Parcours qui réutilisent le type, par date de déclaration.
+          type: array
+          items: { $ref: '#/components/schemas/Reuse' }
+        canEdit:
+          description: L'utilisateur contribue pour le parcours propriétaire (le serveur refuse sinon).
+          type: boolean
+    Editor:
+      type: object
+      required: [code, version, status, etag, definition]
+      additionalProperties: false
+      properties:
+        code: { type: string }
+        version: { type: integer, minimum: 1 }
+        status: { $ref: '#/components/schemas/TypeStatus' }
+        etag: { type: string }
+        reviewReason: { type: [string, 'null'] }
+        definition: { type: object, additionalProperties: true }
+    NewType:
+      type: object
+      required: [code, definition]
+      additionalProperties: false
+      properties:
+        code: { type: string, pattern: '^[A-Z][A-Z0-9_]{1,63}$' }
+        referentParcours: { type: string }
+        definition: { type: object, additionalProperties: true }
+    Reuse:
+      type: object
+      required: [parcours, purpose, declaredBy, declaredAt]
+      additionalProperties: false
+      properties:
+        parcours: { type: string }
+        purpose: { type: string, maxLength: 500 }
+        declaredBy: { type: string }
+        declaredAt: { type: string, format: date-time }
+    NewReuse:
+      type: object
+      required: [purpose]
+      additionalProperties: false
+      properties:
+        purpose: { type: string, minLength: 1, maxLength: 500 }
+    Review:
+      type: object
+      required: [decision]
+      additionalProperties: false
+      properties:
+        decision: { type: string, enum: [APPROVE, REQUEST_CHANGES] }
+        effectiveFrom: { type: string, format: date }
+        reason: { type: string, maxLength: 1000 }
+        comment: { type: string, maxLength: 4000 }
+    DraftUpdate:
+      type: object
+      required: [definition]
+      additionalProperties: false
+      properties:
+        definition: { type: object, additionalProperties: true }
+    RequirementSetDefinition:
+      description: Voir `schemas/requirement-set-definition.schema.json` (vérifiée par le catalogue).
+      type: object
+      required: [label, requirements]
+      properties:
+        label: { type: string }
+        requirements:
+          type: array
+          items:
+            type: object
+            required: [id, anyOf, freshness]
+            properties:
+              id: { type: string }
+              label: { type: string }
+              anyOf: { type: array, items: { type: string } }
+              count: { type: integer }
+              for:
+                type: object
+                properties:
+                  roles: { type: array, items: { type: string } }
+                  level: { type: string }
+              freshness: { type: string }
+              minAssurance: { type: string }
+              reusable: { type: boolean }
+              when: { type: object, additionalProperties: true }
+    RequirementSet:
+      type: object
+      required: [code, version, parcours, status, definition, draftedBy, draftedAt]
+      additionalProperties: false
+      properties:
+        code: { type: string }
+        version: { type: integer }
+        parcours: { type: string }
+        status: { enum: [BROUILLON, PUBLIE, REMPLACE] }
+        definition: { $ref: '#/components/schemas/RequirementSetDefinition' }
+        draftedBy: { type: string }
+        draftedAt: { type: string, format: date-time }
+        publishedBy: { type: [string, 'null'] }
+        publishedAt: { type: [string, 'null'], format: date-time }
+        etag: { type: [string, 'null'], description: "À renvoyer dans If-Match (lecture d'une version)" }
+    CompletenessParty:
+      type: object
+      required: [kind, externalId, role]
+      additionalProperties: false
+      properties:
+        kind: { enum: [CLIENT, PERSONNE, COMPTE] }
+        externalId: { type: string, pattern: '^[A-Za-z0-9_-]{1,32}$' }
+        role: { enum: [TITULAIRE, CO_TITULAIRE, GARANT, MANDATAIRE, REPRESENTANT_LEGAL, AUTRE] }
+    CompletenessRequest:
+      type: object
+      required: [parties]
+      additionalProperties: false
+      properties:
+        requirementSet: { type: string }
+        definition: { $ref: '#/components/schemas/RequirementSetDefinition' }
+        context: { type: object, additionalProperties: { type: string } }
+        evaluationDate: { type: string, format: date }
+        parties:
+          type: array
+          minItems: 1
+          maxItems: 10
+          items: { $ref: '#/components/schemas/CompletenessParty' }
+        collectedDocumentIds: { type: array, items: { type: string } }
+    CompletenessState:
+      type: string
+      enum: [SATISFAITE, MANQUANTE, EXPIREE, INSUFFISANTE, NON_APPLICABLE]
+    CompletenessResult:
+      description: Forme reprise de `vision360-api.yaml` (CompletenessResult).
+      type: object
+      required: [requirementSet, version, evaluationDate, complete, partial, hiddenByAccessPolicy, requirements, toRequest]
+      properties:
+        requirementSet: { type: string }
+        version: { type: integer }
+        evaluationDate: { type: string, format: date }
+        complete: { type: boolean }
+        partial: { type: boolean }
+        hiddenByAccessPolicy: { type: integer }
+        requirements:
+          type: array
+          items:
+            type: object
+            required: [id, anyOf, parties]
+            properties:
+              id: { type: string }
+              label: { type: [string, 'null'] }
+              anyOf: { type: array, items: { type: string } }
+              parties:
+                type: array
+                items:
+                  type: object
+                  required: [state, required, candidates]
+                  properties:
+                    party:
+                      oneOf:
+                        - { $ref: '#/components/schemas/CompletenessParty' }
+                        - { type: 'null' }
+                    state: { $ref: '#/components/schemas/CompletenessState' }
+                    required: { type: integer }
+                    candidates:
+                      type: array
+                      items:
+                        type: object
+                        required: [id, type, source, status, createdAt]
+                        properties:
+                          id: { type: string }
+                          type: { type: string }
+                          source: { type: string }
+                          status: { type: string }
+                          createdAt: { type: string, format: date-time }
+                          expiresAt: { type: [string, 'null'], format: date }
+        toRequest:
+          type: array
+          items:
+            type: object
+            required: [requirementId, anyOf, state]
+            properties:
+              requirementId: { type: string }
+              party:
+                oneOf:
+                  - { $ref: '#/components/schemas/CompletenessParty' }
+                  - { type: 'null' }
+              anyOf: { type: array, items: { type: string } }
+              state: { $ref: '#/components/schemas/CompletenessState' }
+    Problem:
+      type: object
+      required: [type, title, status]
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        code: { type: string, description: "Code stable de l'erreur métier (ADR 0027 §2), absent pour une erreur de protocole" }
+        correlationId: { type: string }
+        errors:
+          type: array
+          items: { type: object }

@@ -13,7 +13,7 @@ export default defineConfig(({ command }) => ({
       "@": fileURLToPath(new URL("./src", import.meta.url)),
       // Logo de la charte, livré par @awb/ui hors de ses exports.
       "@awb-logo": fileURLToPath(
-        new URL("../../node_modules/@awb/ui/dist/awb-logo.svg", import.meta.url),
+        new URL("../node_modules/@awb/ui/dist/awb-logo.svg", import.meta.url),
       ),
     },
   },

@@ -6,8 +6,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "api": "openapi-typescript ../../contracts/sijil-bff.yaml -o src/api/schema.d.ts",
-    "api:check": "openapi-typescript ../../contracts/sijil-bff.yaml -o src/api/schema.d.ts --check",
+    "api": "openapi-typescript ../contracts/sijil-bff.yaml -o src/api/schema.d.ts",
+    "api:check": "openapi-typescript ../contracts/sijil-bff.yaml -o src/api/schema.d.ts --check",
     "lint": "eslint . --max-warnings 0",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

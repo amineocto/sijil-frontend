@@ -7,7 +7,7 @@
 @layer theme, base, awb, components, utilities;
 @import "tailwindcss";
 /* Classes des composants d'@awb/ui compilées par le Tailwind de Sijil : un seul ordre d'utilitaires (px-4 puis pl-10…), au lieu de deux compilations qui s'écrasent. */
-@source "../../../../node_modules/@awb/ui/dist/components";
+@source "../../../node_modules/@awb/ui/dist/components";
 @import "@fontsource-variable/open-sans";
 
 @theme {

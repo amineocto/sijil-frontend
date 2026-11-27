@@ -1,0 +1,14 @@
+# Détection de secrets (SEC-05) : règles par défaut de gitleaks, sans les dossiers générés.
+title = "Sijil"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Dossiers générés ou téléchargés"
+paths = [
+  '''(^|/)node_modules/''',
+  '''(^|/)target/''',
+  '''(^|/)dist/''',
+  '''(^|/)coverage/''',
+]
