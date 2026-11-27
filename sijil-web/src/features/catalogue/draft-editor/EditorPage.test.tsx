@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { renderAt, seriousViolations } from "@/test/render";
@@ -10,6 +10,27 @@ function draftOf(code: string) {
 }
 
 describe("Éditeur de brouillon", () => {
+  it("dit qu'il n'y a pas de brouillon, au brouillon comme à la soumission", async () => {
+    server.use(
+      http.get("/api/types/:code/editor", () =>
+        HttpResponse.json(
+          { title: "Introuvable", status: 404, detail: "Aucun brouillon" },
+          { status: 404, headers: { "Content-Type": "application/problem+json" } },
+        ),
+      ),
+    );
+    renderAt("/catalogue/types/RIB/brouillon");
+    expect(await screen.findByText("Aucun brouillon en cours")).toBeVisible();
+    expect(screen.getByRole("link", { name: "sa fiche" })).toHaveAttribute(
+      "href",
+      "/catalogue/types/RIB",
+    );
+    cleanup();
+    renderAt("/catalogue/types/RIB/soumission");
+    expect(await screen.findByText("Aucun brouillon en cours")).toBeVisible();
+    expect(screen.getByRole("heading", { name: /Soumission du type RIB/ })).toBeVisible();
+  });
+
   it("enregistre le brouillon avec If-Match, sans violation axe", async () => {
     const user = userEvent.setup();
     const { container } = renderAt("/catalogue/types/RIB/brouillon");

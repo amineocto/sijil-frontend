@@ -135,7 +135,7 @@ export function ChipsField({
                 onClick={() => {
                   onChange(values.filter((x) => x !== v));
                 }}
-                className="flex size-6 items-center justify-center rounded-full text-gray-500 hover:bg-gray-200 hover:text-gray-900"
+                className="flex size-6 items-center justify-center rounded-full text-gray-500 hover:bg-gray-200 hover:text-gray-900 in-[fieldset:disabled]:hidden"
               >
                 <CloseIcon className="size-3.5" />
               </button>
@@ -143,7 +143,8 @@ export function ChipsField({
           ))}
         </ul>
       )}
-      <div className="flex gap-2">
+      {/* En lecture seule (fieldset désactivé), ni saisie ni retrait. */}
+      <div className="flex gap-2 in-[fieldset:disabled]:hidden">
         <input
           id={id}
           value={draft}
@@ -193,7 +194,7 @@ export function CheckboxGroup({
   onChange: (values: string[]) => void;
 }) {
   return (
-    <fieldset className="flex flex-col gap-2">
+    <fieldset className="flex min-w-0 flex-col gap-2">
       <legend className="mb-1.5 text-sm font-medium text-gray-700">{legend}</legend>
       <div className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
         {options.map((o) => (

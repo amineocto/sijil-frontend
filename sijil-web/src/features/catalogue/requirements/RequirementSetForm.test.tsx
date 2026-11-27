@@ -149,6 +149,28 @@ describe("Formulaire d'un jeu d'exigences", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("Ajoutez au moins une exigence");
   });
 
+  it("n'affiche aucun bouton de modification en lecture seule", () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <RequirementSetForm
+          value={{ ...ONE, requirements: [{ ...IDENTITY, when: { segment: "PRO" } }] }}
+          readOnly
+          showErrors={false}
+          onChange={() => undefined}
+        />
+      </QueryClientProvider>,
+    );
+    const card = screen.getByRole("region", { name: "Identité" });
+    expect(
+      within(card).queryByRole("button", { name: /Supprimer|Retirer CIN|Ajouter/ }),
+    ).toBeNull();
+    expect(within(card).queryByLabelText(/Nouvelle condition/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Ajouter une exigence" })).toBeNull();
+    expect(within(card).getByText("CIN")).toBeVisible();
+    expect(within(card).getByText("Quand « segment » vaut PRO")).toBeVisible();
+  });
+
   it("dit les erreurs du serveur dans les mots du formulaire", async () => {
     server.use(
       http.post("/api/requirement-sets", () =>

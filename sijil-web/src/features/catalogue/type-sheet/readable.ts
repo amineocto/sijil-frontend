@@ -153,9 +153,15 @@ function leaves(
       for (const [k, v] of leaves(child, [...path, key])) out.set(k, v);
     }
   } else if (path.length > 0) {
-    out.set(path.join("/"), { path, value });
+    const named = canonicalPath(path);
+    out.set(named.join("/"), { path: named, value });
   }
   return out;
+}
+
+/** `visibility.client` est l'ancien nom de `visibility.portfolio` (ADR 0025) : un seul champ. */
+function canonicalPath(path: string[]): string[] {
+  return path[0] === "visibility" && path[1] === "client" ? ["visibility", "portfolio"] : path;
 }
 
 /** Champs modifiés entre deux définitions, rangés par rubrique de l'éditeur. */

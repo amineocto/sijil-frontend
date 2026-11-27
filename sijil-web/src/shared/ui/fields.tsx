@@ -180,7 +180,7 @@ export function RadioGroup({
   onChange: (value: string) => void;
 }) {
   return (
-    <fieldset className="flex flex-col gap-2">
+    <fieldset className="flex min-w-0 flex-col gap-2">
       <legend className="mb-1 text-sm font-medium text-gray-700">{legend}</legend>
       {options.map((o) => (
         <Radio

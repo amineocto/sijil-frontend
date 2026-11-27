@@ -211,7 +211,7 @@ function TermForm({
         if ((current || CODE.test(v.code)) && v.labelFr.trim()) save.mutate();
       }}
     >
-      <fieldset disabled={readOnly} className="flex flex-col gap-4">
+      <fieldset disabled={readOnly} className="flex min-w-0 flex-col gap-4">
         <div className="grid gap-4 md:grid-cols-2">
           <TextField
             label="Nom technique"

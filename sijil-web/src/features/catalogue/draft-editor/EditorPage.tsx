@@ -43,6 +43,8 @@ import {
   TextField,
   TextLink,
 } from "@/shared/ui";
+import { CodeIcon, RUBRIC_ICONS } from "@/shared/ui/icons";
+import { NoDraft } from "@/features/catalogue/shared/NoDraft";
 
 /** Écran « Éditeur de brouillon » : formulaire par rubriques, enregistrement avec `If-Match`. */
 export function EditorPage() {
@@ -57,7 +59,7 @@ export function EditorPage() {
       subtitle="La version publiée reste en vigueur pour les dépôts jusqu'à la publication de ce brouillon."
       width="wide"
     >
-      <QueryState query={editor}>
+      <QueryState query={editor} notFound={<NoDraft code={code} />}>
         {(data) => <EditorForm key={String(data.version)} initial={data} />}
       </QueryState>
     </Page>
@@ -137,9 +139,7 @@ function EditorForm({ initial }: { initial: Schemas["Editor"] }) {
         </Notice>
       )}
       <Panel>
-        <fieldset disabled={!editable}>
-          <Rubriques form={form} />
-        </fieldset>
+        <Rubriques form={form} readOnly={!editable} />
       </Panel>
       {save.isSuccess && !form.formState.isDirty && (
         <Notice tone="success" role="status" title="Brouillon enregistré" />
@@ -186,13 +186,17 @@ function EditorForm({ initial }: { initial: Schemas["Editor"] }) {
 export function DefinitionView({ definition }: { definition: Record<string, unknown> }) {
   const form = useForm<EditorValues>({ defaultValues: toValues(definition) });
   return (
-    <fieldset disabled aria-label="Définition du type, en lecture seule">
-      <Rubriques form={form} />
-    </fieldset>
+    <div role="group" aria-label="Définition du type, en lecture seule">
+      <Rubriques form={form} readOnly />
+    </div>
   );
 }
 
-function Rubriques({ form }: { form: UseFormReturn<EditorValues> }) {
+/**
+ * Rubriques en onglets. En lecture seule, seul le contenu de chaque onglet est désactivé : les
+ * onglets restent cliquables (un fieldset désactivé désactive aussi leurs boutons).
+ */
+function Rubriques({ form, readOnly }: { form: UseFormReturn<EditorValues>; readOnly: boolean }) {
   const errors = form.formState.errors;
   return (
     <Tabs
@@ -207,6 +211,7 @@ function Rubriques({ form }: { form: UseFormReturn<EditorValues> }) {
           id: rubrique.id,
           label: (
             <>
+              <CodeIcon icons={RUBRIC_ICONS} code={rubrique.id} className="size-4 shrink-0" />
               {rubrique.label}
               {count > 0 && (
                 <span
@@ -219,7 +224,7 @@ function Rubriques({ form }: { form: UseFormReturn<EditorValues> }) {
             </>
           ),
           content: (
-            <div className="flex flex-col gap-5">
+            <fieldset disabled={readOnly} className="flex min-w-0 flex-col gap-5">
               {rubrique.id === "identite" && <IdentityFields form={form} />}
               {rubrique.id === "sensibilite" && (
                 <SelectField
@@ -244,7 +249,7 @@ function Rubriques({ form }: { form: UseFormReturn<EditorValues> }) {
               )}
               <StructuredRubric id={rubrique.id} form={form} />
               {rubrique.id === "metadonnees" && <MetadataPreviewOf form={form} />}
-            </div>
+            </fieldset>
           ),
         };
       })}

@@ -110,7 +110,7 @@ export function MetadataEditor({ form }: { form: UseFormReturn<EditorValues> }) 
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 in-[fieldset:disabled]:hidden">
                     <IconButton
                       label={`Monter ${title}`}
                       disabled={index === 0}
@@ -164,7 +164,7 @@ export function MetadataEditor({ form }: { form: UseFormReturn<EditorValues> }) 
           })}
         </ol>
       )}
-      <div className="flex flex-wrap items-end gap-3">
+      <div className="flex flex-wrap items-end gap-3 in-[fieldset:disabled]:hidden">
         <div className="min-w-64 flex-1 sm:max-w-md">
           <SelectField
             label="Métadonnée du dictionnaire"

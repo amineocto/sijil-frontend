@@ -7,6 +7,7 @@ import { Page } from "@/shared/ui/page";
 import { QueryState } from "@/shared/QueryState";
 import { RUBRIQUES, rubriqueOf } from "@/features/catalogue/shared/rubriques";
 import { Button, Notice, Panel, TextLink } from "@/shared/ui";
+import { NoDraft } from "@/features/catalogue/shared/NoDraft";
 
 /** Écran « Soumission » : contrôles automatiques du serveur, erreurs par rubrique. */
 export function SubmissionPage() {
@@ -21,7 +22,9 @@ export function SubmissionPage() {
       subtitle="Contrôles automatiques de la version, puis envoi en revue : personne ne publie seul son propre travail."
       width="wide"
     >
-      <QueryState query={editor}>{(data) => <Submission draft={data} />}</QueryState>
+      <QueryState query={editor} notFound={<NoDraft code={code} />}>
+        {(data) => <Submission draft={data} />}
+      </QueryState>
     </Page>
   );
 }

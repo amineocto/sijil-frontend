@@ -20,8 +20,15 @@ describe("Fiche d'un type", () => {
     expect(changed).toHaveTextContent("10");
     expect(changed).toHaveTextContent("15");
     const definition = screen.getByRole("group", { name: "Définition du type, en lecture seule" });
-    expect(definition).toBeDisabled();
+    expect(within(definition).getByLabelText(/Libellé français/)).toBeDisabled();
     expect(within(definition).getByLabelText(/Libellé français/)).not.toHaveValue("");
+    // Les champs sont figés, mais on passe d'une rubrique à l'autre.
+    const retention = within(definition).getByRole("tab", { name: /Rétention/ });
+    expect(retention).toBeEnabled();
+    await user.click(retention);
+    expect(retention).toHaveAttribute("aria-selected", "true");
+    const duration = within(definition).getByRole("group", { name: /Durée de conservation/ });
+    for (const input of within(duration).getAllByRole("spinbutton")) expect(input).toBeDisabled();
     expect(screen.getByRole("link", { name: "Modifier le brouillon" })).toHaveAttribute(
       "href",
       "/catalogue/types/CIN/brouillon",
@@ -83,5 +90,12 @@ describe("Fiche d'un type", () => {
         after: "Sensible",
       },
     ]);
+    // L'ancien nom `client` et `portfolio` sont le même champ : pas de faux changement.
+    expect(
+      fieldChanges(
+        { visibility: { client: true, subsidiaries: false } },
+        { visibility: { portfolio: true, subsidiaries: false } },
+      ),
+    ).toEqual([]);
   });
 });

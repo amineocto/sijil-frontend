@@ -9,6 +9,7 @@ import { useTypeIndex } from "@/features/dossier/typeIndex";
 import type { Schemas } from "@/shared/api";
 import { PARTY_ROLE_LABELS, PARTY_TYPE_LABELS } from "@/shared/labels";
 import { Button, Heading, SelectField, Tag, TextField } from "@/shared/ui";
+import { AddIcon, DeleteIcon } from "@/shared/ui/icons";
 
 export type Definition = Schemas["RequirementSetDefinition"];
 export type Requirement = Definition["requirements"][number];
@@ -96,7 +97,7 @@ export function RequirementSetForm({
     onChange({ ...value, requirements: value.requirements.map((r, j) => (j === i ? next : r)) });
   };
   return (
-    <fieldset disabled={readOnly} className="flex flex-col gap-5">
+    <fieldset disabled={readOnly} className="flex min-w-0 flex-col gap-5">
       <TextField
         label="Libellé du jeu"
         description="Par exemple « Ouverture de compte particulier »."
@@ -114,6 +115,7 @@ export function RequirementSetForm({
           index={i}
           requirement={r}
           problems={problems}
+          readOnly={readOnly}
           onChange={(next) => {
             setRequirement(i, next);
           }}
@@ -135,6 +137,7 @@ export function RequirementSetForm({
               onChange({ ...value, requirements: [...value.requirements, NEW_REQUIREMENT] });
             }}
           >
+            <AddIcon className="size-4" />
             Ajouter une exigence
           </Button>
         </div>
@@ -149,12 +152,14 @@ function RequirementCard({
   index,
   requirement: r,
   problems,
+  readOnly,
   onChange,
   onRemove,
 }: {
   index: number;
   requirement: Requirement;
   problems: Record<string, string>;
+  readOnly: boolean;
   onChange: (next: Requirement) => void;
   onRemove: () => void;
 }) {
@@ -183,9 +188,12 @@ function RequirementCard({
     >
       <div className="flex items-center justify-between gap-3">
         <Heading level={4}>{title}</Heading>
-        <Button variant="ghost" size="sm" aria-label={`Supprimer ${title}`} onClick={onRemove}>
-          Supprimer
-        </Button>
+        {!readOnly && (
+          <Button variant="ghost" size="sm" aria-label={`Supprimer ${title}`} onClick={onRemove}>
+            <DeleteIcon className="size-4" />
+            Supprimer
+          </Button>
+        )}
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         <TextField
@@ -211,34 +219,40 @@ function RequirementCard({
         />
       </div>
       <div className="flex flex-col gap-2">
-        <SelectField
-          label="Types de document acceptés"
-          description="Un seul des types choisis suffit."
-          placeholder={available.length ? "Ajouter un type" : "Aucun autre type"}
-          options={available}
-          value={pick}
-          error={problems[`${n}.anyOf`]}
-          onChange={(e) => {
-            const code = e.currentTarget.value;
-            if (code) set({ anyOf: [...r.anyOf, code] });
-            setPick("");
-          }}
-        />
+        {readOnly ? (
+          <p className="text-sm font-medium text-gray-700">Types de document acceptés</p>
+        ) : (
+          <SelectField
+            label="Types de document acceptés"
+            description="Un seul des types choisis suffit."
+            placeholder={available.length ? "Ajouter un type" : "Aucun autre type"}
+            options={available}
+            value={pick}
+            error={problems[`${n}.anyOf`]}
+            onChange={(e) => {
+              const code = e.currentTarget.value;
+              if (code) set({ anyOf: [...r.anyOf, code] });
+              setPick("");
+            }}
+          />
+        )}
         {r.anyOf.length > 0 && (
           <ul className="flex flex-wrap gap-2" aria-label="Types acceptés">
             {r.anyOf.map((code) => (
               <li key={code} className="flex items-center gap-1">
                 <Tag variant="outline">{types[code]?.label ?? code}</Tag>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  aria-label={`Retirer ${types[code]?.label ?? code}`}
-                  onClick={() => {
-                    set({ anyOf: r.anyOf.filter((c) => c !== code) });
-                  }}
-                >
-                  Retirer
-                </Button>
+                {!readOnly && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    aria-label={`Retirer ${types[code]?.label ?? code}`}
+                    onClick={() => {
+                      set({ anyOf: r.anyOf.filter((c) => c !== code) });
+                    }}
+                  >
+                    Retirer
+                  </Button>
+                )}
               </li>
             ))}
           </ul>
@@ -351,6 +365,7 @@ function RequirementCard({
         }}
       />
       <Conditions
+        readOnly={readOnly}
         when={(r.when ?? {}) as Record<string, Scalar | Scalar[]>}
         onChange={(when) => {
           set({ when: Object.keys(when).length ? when : undefined });
@@ -366,9 +381,11 @@ function RequirementCard({
  */
 function Conditions({
   when,
+  readOnly,
   onChange,
 }: {
   when: Record<string, Scalar | Scalar[]>;
+  readOnly: boolean;
   onChange: (next: Record<string, Scalar | Scalar[]>) => void;
 }) {
   const [field, setField] = useState("");
@@ -389,37 +406,47 @@ function Conditions({
           Aucune : l&apos;exigence s&apos;applique à toutes les demandes.
         </p>
       )}
-      {entries.map(([key, v]) => (
-        <ChipsField
-          key={key}
-          label={`Quand « ${key} » vaut`}
-          description="L'une de ces valeurs ; retirez-les toutes pour supprimer la condition."
-          values={valuesOf(v).map(String)}
-          onChange={(texts) => {
-            update(key, texts);
-          }}
-        />
-      ))}
-      <div className="flex items-end gap-2">
-        <TextField
-          label="Nouvelle condition sur le champ"
-          description="Nom d'un champ du contexte transmis par le parcours, par exemple segment."
-          value={field}
-          onChange={(e) => {
-            setField(e.currentTarget.value.replace(/[^A-Za-z0-9]/g, ""));
-          }}
-        />
-        <Button
-          variant="secondary"
-          disabled={!/^[a-zA-Z][a-zA-Z0-9]{0,31}$/.test(field) || field in when}
-          onClick={() => {
-            onChange({ ...when, [field]: [] as Scalar[] });
-            setField("");
-          }}
-        >
-          Ajouter la condition
-        </Button>
-      </div>
+      {readOnly &&
+        entries.map(([key, v]) => (
+          <p key={key} className="text-sm text-gray-800">
+            Quand « {key} » vaut {valuesOf(v).map(String).join(" ou ")}
+          </p>
+        ))}
+      {!readOnly &&
+        entries.map(([key, v]) => (
+          <ChipsField
+            key={key}
+            label={`Quand « ${key} » vaut`}
+            description="L'une de ces valeurs ; retirez-les toutes pour supprimer la condition."
+            values={valuesOf(v).map(String)}
+            onChange={(texts) => {
+              update(key, texts);
+            }}
+          />
+        ))}
+      {!readOnly && (
+        <div className="flex items-end gap-2">
+          <TextField
+            label="Nouvelle condition sur le champ"
+            description="Nom d'un champ du contexte transmis par le parcours, par exemple segment."
+            value={field}
+            onChange={(e) => {
+              setField(e.currentTarget.value.replace(/[^A-Za-z0-9]/g, ""));
+            }}
+          />
+          <Button
+            variant="secondary"
+            disabled={!/^[a-zA-Z][a-zA-Z0-9]{0,31}$/.test(field) || field in when}
+            onClick={() => {
+              onChange({ ...when, [field]: [] as Scalar[] });
+              setField("");
+            }}
+          >
+            <AddIcon className="size-4" />
+            Ajouter la condition
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

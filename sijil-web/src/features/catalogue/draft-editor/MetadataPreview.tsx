@@ -13,7 +13,7 @@ export function MetadataPreview({ schemaText }: { schemaText: string }) {
   return (
     <fieldset
       disabled
-      className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4"
+      className="flex min-w-0 flex-col gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4"
     >
       <legend className="px-1 text-sm font-semibold text-gray-700">
         Aperçu du formulaire généré
