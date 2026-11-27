@@ -29,6 +29,21 @@ describe("Dictionnaire de métadonnées (ADR 0038)", () => {
     expect(screen.getByText("Aucun terme ne correspond à la recherche.")).toBeVisible();
   });
 
+  it("un profil hors Data Office consulte un terme en lecture seule", async () => {
+    stub.session = SESSION;
+    const user = userEvent.setup();
+    renderAt("/catalogue/dictionnaire");
+
+    expect(await screen.findByText("Dictionnaire tenu par le Data Office")).toBeVisible();
+    await user.click(await screen.findByRole("button", { name: "Consulter numeroCin" }));
+    const form = await screen.findByRole("form", { name: "Terme numeroCin" });
+    expect(within(form).getByLabelText(/Libellé français/)).toBeDisabled();
+    expect(within(form).getByLabelText(/Libellé français/)).toHaveValue("Numéro de CIN");
+    expect(within(form).queryByRole("button", { name: "Enregistrer" })).not.toBeInTheDocument();
+    await user.click(within(form).getByRole("button", { name: "Fermer" }));
+    expect(screen.queryByRole("form", { name: "Terme numeroCin" })).not.toBeInTheDocument();
+  });
+
   it("le Data Office crée un terme à liste de valeurs, et un code pris est refusé", async () => {
     stub.session = DATA_OFFICE;
     const user = userEvent.setup();

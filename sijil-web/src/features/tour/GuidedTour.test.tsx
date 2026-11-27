@@ -23,6 +23,7 @@ describe("Visite guidée", () => {
       "nav-recherche",
       "nav-catalogue",
       "nav-exigences",
+      "nav-dictionnaire",
       "menu",
       "utilisateur",
       "visite",
@@ -33,7 +34,10 @@ describe("Visite guidée", () => {
     expect(targets(REVIEWER)).not.toContain("nav-depot");
     expect(targets(DOMAIN_ADMIN)).toContain("nav-partage");
     expect(targets(DATA_OFFICE)).toContain("nav-dictionnaire");
-    expect(targets(REVIEWER)).not.toContain("nav-dictionnaire");
+    expect(targets(REVIEWER)).toContain("nav-dictionnaire");
+    expect(tourSteps(DATA_OFFICE).find((s) => s.target === "nav-dictionnaire")?.body).toContain(
+      "dépréciez-les",
+    );
     expect(profileLabel(DATA_OFFICE)).toBe("Data Office");
     expect(profileLabel(CONTRIBUTOR)).toBe("contributeur du parcours eer (documents et catalogue)");
     expect(profileLabel({ ...CONTRIBUTOR, roles: ["catalogue-contributeur"] })).toBe(

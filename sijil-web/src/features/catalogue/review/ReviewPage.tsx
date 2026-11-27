@@ -6,11 +6,11 @@ import { api, call, isApiError, type Schemas } from "@/shared/api";
 import { STATUS_LABELS } from "@/features/catalogue/shared/labels";
 import { Page } from "@/shared/ui/page";
 import { QueryState } from "@/shared/QueryState";
-import { diffDefinitions } from "@/features/catalogue/type-sheet/diff";
+import { ChangesTable } from "@/features/catalogue/type-sheet/ChangesTable";
+import { DefinitionView } from "@/features/catalogue/draft-editor/EditorPage";
 import { reviewSchema, today, type ReviewForm } from "@/features/catalogue/review/form";
 import {
   Button,
-  CodeBlock,
   Heading,
   Notice,
   Panel,
@@ -98,7 +98,6 @@ function Changes({
   after: Record<string, unknown>;
   since: number | undefined;
 }) {
-  const changes = diffDefinitions(before, after);
   return (
     <Panel className="flex flex-col gap-4">
       <Heading level={3}>
@@ -106,18 +105,10 @@ function Changes({
           ? "Définition proposée (première version)"
           : `Différences avec la version publiée v${String(since)}`}
       </Heading>
-      {changes.length === 0 ? (
-        <p className="text-sm text-gray-900">Aucune rubrique modifiée.</p>
+      {since === undefined ? (
+        <DefinitionView definition={after} />
       ) : (
-        changes.map((change) => (
-          <section key={change.key} aria-label={`Rubrique ${change.key}`}>
-            <Heading level={4}>{change.key}</Heading>
-            <div className="grid gap-3 md:grid-cols-2">
-              <CodeBlock aria-label={`${change.key} avant`}>{shown(change.before)}</CodeBlock>
-              <CodeBlock aria-label={`${change.key} après`}>{shown(change.after)}</CodeBlock>
-            </div>
-          </section>
-        ))
+        <ChangesTable before={before} after={after} empty="Aucune rubrique modifiée." />
       )}
     </Panel>
   );
@@ -236,8 +227,4 @@ function Decision({
       </form>
     </Panel>
   );
-}
-
-function shown(value: unknown): string {
-  return value === undefined ? "(absente)" : JSON.stringify(value, null, 2);
 }

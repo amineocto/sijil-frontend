@@ -53,9 +53,10 @@ describe("Revue d'une version", () => {
     const user = userEvent.setup();
     const { container } = renderAt(REVIEW);
 
-    const changed = await screen.findByRole("region", { name: "Rubrique maxSizeMb" });
-    expect(within(changed).getByLabelText("maxSizeMb avant")).toHaveTextContent("10");
-    expect(within(changed).getByLabelText("maxSizeMb après")).toHaveTextContent("5");
+    const table = await screen.findByRole("table", { name: "Champs modifiés" });
+    const changed = within(table).getByText("Taille maximale (Mo)").closest("tr") as HTMLElement;
+    expect(changed).toHaveTextContent("10");
+    expect(changed).toHaveTextContent("5");
     expect(screen.getByText(/Différences avec la version publiée v1/)).toBeVisible();
     expect(await seriousViolations(container)).toEqual([]);
 

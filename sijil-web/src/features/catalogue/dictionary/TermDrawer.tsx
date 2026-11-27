@@ -98,10 +98,13 @@ function termsOf(v: Values) {
  */
 export function TermDrawer({
   code,
+  readOnly = false,
   onClose,
   onSaved,
 }: {
   code: string | undefined;
+  /** Consultation par un profil qui ne tient pas le dictionnaire. */
+  readOnly?: boolean;
   onClose: () => void;
   onSaved: (term: Term) => void;
 }) {
@@ -111,7 +114,11 @@ export function TermDrawer({
       call(api.GET("/api/metadata-terms/{code}", { params: { path: { code: code ?? "" } } })),
     enabled: code !== undefined,
   });
-  const title = code ? `Modifier le terme ${code}` : "Nouveau terme";
+  const title = readOnly
+    ? `Terme ${code ?? ""}`
+    : code
+      ? `Modifier le terme ${code}`
+      : "Nouveau terme";
   return (
     <Drawer
       label={title}
@@ -129,7 +136,12 @@ export function TermDrawer({
             <LoadingState />
           )
         ) : (
-          <TermForm current={current.data} onCancel={onClose} onSaved={onSaved} />
+          <TermForm
+            current={current.data}
+            readOnly={readOnly}
+            onCancel={onClose}
+            onSaved={onSaved}
+          />
         )}
       </div>
     </Drawer>
@@ -138,10 +150,12 @@ export function TermDrawer({
 
 function TermForm({
   current,
+  readOnly,
   onCancel,
   onSaved,
 }: {
   current: Term | undefined;
+  readOnly: boolean;
   onCancel: () => void;
   onSaved: (term: Term) => void;
 }) {
@@ -182,7 +196,13 @@ function TermForm({
 
   return (
     <form
-      aria-label={current ? `Modification du terme ${current.code}` : "Nouveau terme"}
+      aria-label={
+        readOnly && current
+          ? `Terme ${current.code}`
+          : current
+            ? `Modification du terme ${current.code}`
+            : "Nouveau terme"
+      }
       className="flex flex-col gap-4"
       noValidate
       onSubmit={(e) => {
@@ -191,160 +211,167 @@ function TermForm({
         if ((current || CODE.test(v.code)) && v.labelFr.trim()) save.mutate();
       }}
     >
-      <div className="grid gap-4 md:grid-cols-2">
+      <fieldset disabled={readOnly} className="flex flex-col gap-4">
+        <div className="grid gap-4 md:grid-cols-2">
+          <TextField
+            label="Nom technique"
+            description={
+              current ? "Ne change plus." : "Celui du schéma des types, par exemple dateExpiration."
+            }
+            required
+            readOnly={current !== undefined}
+            value={v.code}
+            error={codeError}
+            onChange={(e) => {
+              set({ code: e.currentTarget.value });
+            }}
+          />
+          <SelectField
+            label="Format"
+            description={current ? "Ne change plus." : undefined}
+            disabled={current !== undefined}
+            options={Object.entries(FORMAT_LABELS).map(([value, label]) => ({ value, label }))}
+            value={v.format}
+            onChange={(e) => {
+              set({ format: e.currentTarget.value as TermFormat });
+            }}
+          />
+        </div>
         <TextField
-          label="Nom technique"
-          description={
-            current ? "Ne change plus." : "Celui du schéma des types, par exemple dateExpiration."
-          }
+          label="Libellé français"
           required
-          readOnly={current !== undefined}
-          value={v.code}
-          error={codeError}
+          value={v.labelFr}
+          error={labelError}
           onChange={(e) => {
-            set({ code: e.currentTarget.value });
+            set({ labelFr: e.currentTarget.value });
           }}
         />
-        <SelectField
-          label="Format"
-          description={current ? "Ne change plus." : undefined}
-          disabled={current !== undefined}
-          options={Object.entries(FORMAT_LABELS).map(([value, label]) => ({ value, label }))}
-          value={v.format}
-          onChange={(e) => {
-            set({ format: e.currentTarget.value as TermFormat });
-          }}
-        />
-      </div>
-      <TextField
-        label="Libellé français"
-        required
-        value={v.labelFr}
-        error={labelError}
-        onChange={(e) => {
-          set({ labelFr: e.currentTarget.value });
-        }}
-      />
-      <div className="grid gap-4 md:grid-cols-2">
-        <TextField
-          label="Libellé arabe"
-          dir="rtl"
-          lang="ar"
-          value={v.labelAr}
-          onChange={(e) => {
-            set({ labelAr: e.currentTarget.value });
-          }}
-        />
-        <TextField
-          label="Libellé anglais"
-          lang="en"
-          value={v.labelEn}
-          onChange={(e) => {
-            set({ labelEn: e.currentTarget.value });
-          }}
-        />
-      </div>
-      <TextAreaField
-        label="Définition"
-        description="Ce que la métadonnée contient et d'où elle vient."
-        rows={2}
-        value={v.definition}
-        onChange={(e) => {
-          set({ definition: e.currentTarget.value });
-        }}
-      />
-      {v.format === "TEXT" && (
         <div className="grid gap-4 md:grid-cols-2">
           <TextField
-            label="Longueur maximale"
-            type="number"
-            min={1}
-            value={v.maxLength}
+            label="Libellé arabe"
+            dir="rtl"
+            lang="ar"
+            value={v.labelAr}
             onChange={(e) => {
-              set({ maxLength: e.currentTarget.value });
+              set({ labelAr: e.currentTarget.value });
             }}
           />
           <TextField
-            label="Motif"
-            description="Expression régulière, par exemple ^[A-Z]{3}$."
-            value={v.pattern}
+            label="Libellé anglais"
+            lang="en"
+            value={v.labelEn}
             onChange={(e) => {
-              set({ pattern: e.currentTarget.value });
+              set({ labelEn: e.currentTarget.value });
             }}
           />
         </div>
-      )}
-      {v.format === "ENUM" && (
-        <ChipsField
-          label="Valeurs permises"
-          placeholder="Ajouter une valeur"
-          values={v.values}
-          onChange={(values) => {
-            set({ values });
+        <TextAreaField
+          label="Définition"
+          description="Ce que la métadonnée contient et d'où elle vient."
+          rows={2}
+          value={v.definition}
+          onChange={(e) => {
+            set({ definition: e.currentTarget.value });
           }}
         />
-      )}
-      {(v.format === "INTEGER" || v.format === "NUMBER") && (
+        {v.format === "TEXT" && (
+          <div className="grid gap-4 md:grid-cols-2">
+            <TextField
+              label="Longueur maximale"
+              type="number"
+              min={1}
+              value={v.maxLength}
+              onChange={(e) => {
+                set({ maxLength: e.currentTarget.value });
+              }}
+            />
+            <TextField
+              label="Motif"
+              description="Expression régulière, par exemple ^[A-Z]{3}$."
+              value={v.pattern}
+              onChange={(e) => {
+                set({ pattern: e.currentTarget.value });
+              }}
+            />
+          </div>
+        )}
+        {v.format === "ENUM" && (
+          <ChipsField
+            label="Valeurs permises"
+            placeholder="Ajouter une valeur"
+            values={v.values}
+            onChange={(values) => {
+              set({ values });
+            }}
+          />
+        )}
+        {(v.format === "INTEGER" || v.format === "NUMBER") && (
+          <div className="grid gap-4 md:grid-cols-2">
+            <TextField
+              label="Minimum"
+              type="number"
+              value={v.minimum}
+              onChange={(e) => {
+                set({ minimum: e.currentTarget.value });
+              }}
+            />
+            <TextField
+              label="Maximum"
+              type="number"
+              value={v.maximum}
+              onChange={(e) => {
+                set({ maximum: e.currentTarget.value });
+              }}
+            />
+          </div>
+        )}
         <div className="grid gap-4 md:grid-cols-2">
-          <TextField
-            label="Minimum"
-            type="number"
-            value={v.minimum}
+          <SelectField
+            label="Donnée personnelle"
+            description="Classification à confirmer avec le DPO (ADR 0018)."
+            options={Object.entries(PERSONAL_DATA_LABELS).map(([value, label]) => ({
+              value,
+              label,
+            }))}
+            value={v.personalData}
             onChange={(e) => {
-              set({ minimum: e.currentTarget.value });
+              set({ personalData: e.currentTarget.value as Values["personalData"] });
             }}
           />
           <TextField
-            label="Maximum"
-            type="number"
-            value={v.maximum}
+            label="Propriété FileNet"
+            description="Facultative tant que l'atelier FileNet n'a pas fixé les propriétés."
+            value={v.filenetProperty}
             onChange={(e) => {
-              set({ maximum: e.currentTarget.value });
+              set({ filenetProperty: e.currentTarget.value });
             }}
           />
         </div>
-      )}
-      <div className="grid gap-4 md:grid-cols-2">
-        <SelectField
-          label="Donnée personnelle"
-          description="Classification à confirmer avec le DPO (ADR 0018)."
-          options={Object.entries(PERSONAL_DATA_LABELS).map(([value, label]) => ({ value, label }))}
-          value={v.personalData}
-          onChange={(e) => {
-            set({ personalData: e.currentTarget.value as Values["personalData"] });
-          }}
-        />
-        <TextField
-          label="Propriété FileNet"
-          description="Facultative tant que l'atelier FileNet n'a pas fixé les propriétés."
-          value={v.filenetProperty}
-          onChange={(e) => {
-            set({ filenetProperty: e.currentTarget.value });
-          }}
-        />
-      </div>
-      {current && (
-        <SelectField
-          label="Statut"
-          description="Un terme déprécié n'est plus admis dans une nouvelle version ; un terme retiré ne change plus."
-          options={Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }))}
-          value={v.status}
-          onChange={(e) => {
-            set({ status: e.currentTarget.value as Values["status"] });
-          }}
-        />
-      )}
+        {current && (
+          <SelectField
+            label="Statut"
+            description="Un terme déprécié n'est plus admis dans une nouvelle version ; un terme retiré ne change plus."
+            options={Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }))}
+            value={v.status}
+            onChange={(e) => {
+              set({ status: e.currentTarget.value as Values["status"] });
+            }}
+          />
+        )}
+      </fieldset>
       {save.error && (
         <Notice tone="danger" role="alert" title="Enregistrement refusé">
           {isApiError(save.error) ? save.error.message : "Une erreur est survenue."}
         </Notice>
       )}
       <div className="flex gap-3">
-        <Button type="submit" loading={save.isPending}>
-          Enregistrer
-        </Button>
-        <Button variant="ghost" onClick={onCancel}>
-          Annuler
+        {!readOnly && (
+          <Button type="submit" loading={save.isPending}>
+            Enregistrer
+          </Button>
+        )}
+        <Button variant={readOnly ? "secondary" : "ghost"} onClick={onCancel}>
+          {readOnly ? "Fermer" : "Annuler"}
         </Button>
       </div>
     </form>

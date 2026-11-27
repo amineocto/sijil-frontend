@@ -7,12 +7,12 @@ import { Page, Section } from "@/shared/ui/page";
 import { familyLabel } from "@/features/dossier/dossier";
 import { QueryState } from "@/shared/QueryState";
 import { StatusBadge } from "@/features/catalogue/shared/StatusBadge";
-import { diffDefinitions } from "@/features/catalogue/type-sheet/diff";
+import { ChangesTable } from "@/features/catalogue/type-sheet/ChangesTable";
+import { DefinitionView } from "@/features/catalogue/draft-editor/EditorPage";
 import { ReuseSection } from "@/features/catalogue/type-sheet/ReuseSection";
 import {
   Button,
   ButtonLink,
-  CodeBlock,
   Heading,
   Notice,
   Panel,
@@ -104,6 +104,7 @@ function Sheet({ sheet }: { sheet: Schemas["TypeSheet"] }) {
           <p className="text-sm whitespace-pre-line text-gray-700">{definition.description}</p>
         </Section>
       )}
+      <DefinitionSection versions={sheet.versions} />
       <Section title="Versions" flush>
         <Table bare aria-label="Versions" className="[&_tr:last-child>td]:border-b-0">
           <thead>
@@ -145,7 +146,6 @@ function VersionDiff({ versions }: { versions: Version[] }) {
   }));
   const before = versions.find((v) => String(v.version) === left);
   const after = versions.find((v) => String(v.version) === right);
-  const changes = before && after ? diffDefinitions(before.definition, after.definition) : [];
   return (
     <Panel className="flex flex-col gap-4">
       <Heading level={3}>Différences entre deux versions</Heading>
@@ -167,25 +167,47 @@ function VersionDiff({ versions }: { versions: Version[] }) {
           }}
         />
       </div>
-      {changes.length === 0 ? (
-        <p className="text-sm text-gray-900">Aucune différence entre ces deux versions.</p>
-      ) : (
-        <div className="flex flex-col gap-4" role="group" aria-label="Rubriques modifiées">
-          {changes.map((change) => (
-            <section key={change.key} aria-label={`Rubrique ${change.key}`}>
-              <Heading level={4}>{change.key}</Heading>
-              <div className="grid gap-3 md:grid-cols-2">
-                <CodeBlock aria-label={`${change.key} avant`}>{shown(change.before)}</CodeBlock>
-                <CodeBlock aria-label={`${change.key} après`}>{shown(change.after)}</CodeBlock>
-              </div>
-            </section>
-          ))}
-        </div>
+      {before && after && (
+        <ChangesTable
+          before={before.definition}
+          after={after.definition}
+          empty="Aucune différence entre ces deux versions."
+        />
       )}
     </Panel>
   );
 }
 
-function shown(value: unknown): string {
-  return value === undefined ? "(absente)" : JSON.stringify(value, null, 2);
+/**
+ * Plan de classement d'une version, en formulaires de lecture : la version en vigueur par défaut
+ * (la plus récente publiée), ou toute autre version choisie.
+ */
+function DefinitionSection({ versions }: { versions: Version[] }) {
+  const current = versions.find((v) => v.status === "PUBLIE") ?? versions[0];
+  const [chosen, setChosen] = useState(String(current?.version ?? ""));
+  const shownVersion = versions.find((v) => String(v.version) === chosen);
+  if (!shownVersion) return null;
+  return (
+    <Panel className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <Heading level={3}>Définition du type</Heading>
+        {versions.length > 1 && (
+          <div className="w-48">
+            <SelectField
+              label="Version affichée"
+              options={versions.map((v) => ({
+                value: String(v.version),
+                label: `v${String(v.version)}`,
+              }))}
+              value={chosen}
+              onChange={(e) => {
+                setChosen(e.currentTarget.value);
+              }}
+            />
+          </div>
+        )}
+      </div>
+      <DefinitionView key={chosen} definition={shownVersion.definition} />
+    </Panel>
+  );
 }

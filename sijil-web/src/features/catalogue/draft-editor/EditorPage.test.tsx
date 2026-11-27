@@ -38,20 +38,14 @@ describe("Éditeur de brouillon", () => {
     });
   });
 
-  it("valide en ligne le libellé et le JSON des rubriques", async () => {
+  it("valide en ligne le libellé et compte l'erreur sur sa rubrique", async () => {
     const user = userEvent.setup();
     renderAt("/catalogue/types/RIB/brouillon");
     const label = await screen.findByLabelText(/Libellé français/);
     await user.clear(label);
-    await user.click(screen.getByRole("tab", { name: "Rétention" }));
-    await user.click(screen.getByRole("button", { name: "Modifier en JSON (avancé)" }));
-    const retention = screen.getByLabelText("retention (JSON)");
-    await user.type(retention, "{{ pas du json");
     await user.click(screen.getByRole("button", { name: "Enregistrer" }));
 
-    expect((await screen.findAllByText("JSON invalide"))[0]).toBeVisible();
-    expect(screen.getByRole("tab", { name: /Rétention/ })).toHaveTextContent("1");
-    expect(screen.getByRole("tab", { name: /Identité/ })).toHaveTextContent("1");
+    expect(await screen.findByRole("tab", { name: /Identité/ })).toHaveTextContent("1");
     expect(draftOf("RIB")?.revision).toBe(0);
   });
 
@@ -124,20 +118,28 @@ describe("Éditeur de brouillon", () => {
     });
   });
 
-  it("garde le mode avancé tant que le JSON d'une rubrique est invalide", async () => {
+  it("n'offre ni JSON ni rendu PDF/A, et enregistre une rétention sans politique ni base légale", async () => {
     const user = userEvent.setup();
     renderAt("/catalogue/types/RIB/brouillon");
     await screen.findByLabelText(/Libellé français/);
-    await user.click(screen.getByRole("tab", { name: "FileNet" }));
-    const panel = screen.getByRole("tabpanel", { name: "FileNet" });
-    await user.click(within(panel).getByRole("button", { name: "Modifier en JSON (avancé)" }));
-    await user.type(within(panel).getByLabelText("filenet (JSON)"), "{{ cassé");
+    expect(screen.queryByRole("button", { name: /JSON/ })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/PDF\/A/)).not.toBeInTheDocument();
 
-    expect(within(panel).getByRole("status")).toHaveTextContent("JSON invalide");
-    expect(
-      within(panel).queryByRole("button", { name: "Revenir aux champs" }),
-    ).not.toBeInTheDocument();
-    expect(within(panel).queryByLabelText("Classe documentaire FileNet")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Rétention" }));
+    const panel = screen.getByRole("tabpanel", { name: "Rétention" });
+    expect(within(panel).getByLabelText(/Politique de rétention/)).not.toBeRequired();
+    expect(within(panel).getByLabelText(/Base légale/)).not.toBeRequired();
+    await user.selectOptions(within(panel).getByLabelText(/Point de départ/), "CREATION");
+    await user.type(within(panel).getByLabelText("Durée de conservation : nombre"), "5");
+    await user.selectOptions(within(panel).getByLabelText(/À l'échéance/), "NONE");
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent("Brouillon enregistré");
+    expect(draftOf("RIB")?.definition["retention"]).toEqual({
+      startEvent: "CREATION",
+      duration: "P5Y",
+      onExpiry: "NONE",
+    });
   });
 
   it("affiche les erreurs du serveur sur le champ ou, à défaut, en liste", async () => {

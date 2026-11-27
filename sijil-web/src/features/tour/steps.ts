@@ -84,13 +84,22 @@ export function tourSteps(session: Session): TourStep[] {
       target: "nav-catalogue",
       title: "Catalogue des types",
       body: canContributeToCatalogue(session)
-        ? "Chaque type de document décrit ses métadonnées, sa durée de conservation, sa sensibilité et son stockage. Vous rédigez une nouvelle version, la soumettez aux contrôles, puis un réviseur la publie : personne ne publie seul son propre travail."
-        : "Chaque type de document décrit ses métadonnées, sa durée de conservation, sa sensibilité et son stockage. Vous y consultez les versions publiées et leur historique.",
+        ? "Le plan de classement : chaque type de document décrit, rubrique par rubrique, ses métadonnées (choisies dans le dictionnaire), sa conservation, son stockage, ses traitements et sa sensibilité. La politique de rétention et la base légale sont facultatives tant que la conformité ne les a pas validées. Vous rédigez une nouvelle version, la soumettez aux contrôles, puis un réviseur la publie : personne ne publie seul son propre travail."
+        : "Le plan de classement : chaque type de document décrit ses métadonnées, sa conservation, son stockage et sa sensibilité. Sa fiche montre la définition en formulaires de lecture, version par version, et les champs modifiés entre deux versions.",
     });
     steps.push({
       target: "nav-exigences",
       title: "Exigences documentaires",
-      body: "Un jeu d'exigences liste les pièces attendues pour un dossier (par exemple une pièce d'identité valide du titulaire). Son simulateur montre ce qui manquerait à un client avant toute publication.",
+      body: canContributeToCatalogue(session)
+        ? "Un jeu d'exigences liste les pièces attendues pour un dossier. Vous le décrivez dans un formulaire, une carte par pièce : types acceptés, parties concernées, fraîcheur, confiance minimale et conditions d'application. Le simulateur montre ce qui manquerait à un client avant toute publication."
+        : "Un jeu d'exigences liste les pièces attendues pour un dossier (par exemple une pièce d'identité valide du titulaire), avec les parties concernées et la fraîcheur demandée.",
+    });
+    steps.push({
+      target: "nav-dictionnaire",
+      title: "Dictionnaire de métadonnées",
+      body: canGovernDictionary(session)
+        ? "Vous tenez les termes que les types de document demandent au dépôt : créez-les, modifiez-les, dépréciez-les ou retirez-les depuis cet écran. Nom technique et format ne changent plus après la création : un changement de sens crée un nouveau terme et déprécie l'ancien."
+        : "Les métadonnées communes à tous les types : nom technique, format, contraintes et classification des données personnelles. Vous consultez chaque terme ; le Data Office les tient, et un type ne choisit que des termes actifs.",
     });
   }
   if (canReview(session)) {
@@ -98,13 +107,6 @@ export function tourSteps(session: Session): TourStep[] {
       target: "nav-revues",
       title: "File de revue",
       body: "Les versions soumises attendent votre décision : approuver avec une date d'effet, ou demander des modifications avec un motif. Vous publiez aussi les jeux d'exigences rédigés par les parcours.",
-    });
-  }
-  if (canGovernDictionary(session)) {
-    steps.push({
-      target: "nav-dictionnaire",
-      title: "Dictionnaire de métadonnées",
-      body: "Vous tenez les termes que les types de document demandent au dépôt : nom technique, format, contraintes et classification des données personnelles. Les parcours ne choisissent que des termes actifs ; un changement de sens crée un nouveau terme et déprécie l'ancien.",
     });
   }
   if (canAdministerSharing(session)) {

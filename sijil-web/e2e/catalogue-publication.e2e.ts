@@ -49,9 +49,11 @@ test("un contributeur rédige et soumet, un réviseur approuve, le type est publ
   // Réviseur : file de revue, différences, approbation à la date du jour.
   await page.goto("/catalogue/revues?demo=reviseur");
   await page.getByRole("link", { name: "CIN v2" }).click();
-  await expect(page.getByRole("region", { name: "Rubrique labels" })).toContainText(
-    "Carte nationale d'identité électronique",
-  );
+  await expect(
+    page
+      .getByRole("table", { name: "Champs modifiés" })
+      .getByRole("row", { name: /Libellé › français/ }),
+  ).toContainText("Carte nationale d'identité électronique");
   expect(await seriousViolations(page)).toEqual([]);
   await page.getByRole("button", { name: "Enregistrer la revue" }).click();
   await expect(page.getByRole("status")).toContainText("Publié");

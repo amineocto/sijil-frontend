@@ -39,20 +39,21 @@ export function DictionaryPage() {
         t.labelFr.toLowerCase().includes(query))
     );
   };
-  const edit = (t: Term) =>
-    governs && t.status !== "RETIRE" ? (
-      <Button
-        variant="secondary"
-        size="sm"
-        aria-label={`Modifier ${t.code}`}
-        onClick={() => {
-          setSaved(null);
-          setOpen(t);
-        }}
-      >
-        Modifier
-      </Button>
-    ) : null;
+  // Le Data Office modifie un terme non retiré ; les autres profils le consultent.
+  const editable = (t: Term) => governs && t.status !== "RETIRE";
+  const edit = (t: Term) => (
+    <Button
+      variant="secondary"
+      size="sm"
+      aria-label={`${editable(t) ? "Modifier" : "Consulter"} ${t.code}`}
+      onClick={() => {
+        setSaved(null);
+        setOpen(t);
+      }}
+    >
+      {editable(t) ? "Modifier" : "Consulter"}
+    </Button>
+  );
 
   return (
     <Page
@@ -71,6 +72,12 @@ export function DictionaryPage() {
         )
       }
     >
+      {!governs && (
+        <Notice tone="info" role="note" title="Dictionnaire tenu par le Data Office">
+          Vous le consultez en lecture. Pour un terme manquant ou à corriger, adressez-vous au Data
+          Office, seul habilité à créer, modifier, déprécier ou retirer un terme.
+        </Notice>
+      )}
       {saved && (
         <Notice tone="success" role="status" title="Terme enregistré">
           {saved.labelFr} ({saved.code}) est {STATUS_LABELS[saved.status].toLowerCase()}.
@@ -128,7 +135,7 @@ export function DictionaryPage() {
                 },
                 { header: "Donnée personnelle", cell: (t) => PERSONAL_DATA_LABELS[t.personalData] },
                 { header: "Statut", cell: (t) => <StatusTag term={t} /> },
-                ...(governs ? [{ header: "Action", align: "end" as const, cell: edit }] : []),
+                { header: "Action", align: "end" as const, cell: edit },
               ]}
               mobile={(t) => (
                 <div className="flex flex-col gap-2">
@@ -139,7 +146,7 @@ export function DictionaryPage() {
                   <span className="text-sm text-gray-600">
                     {FORMAT_LABELS[t.format]} · {constraintsOf(t)}
                   </span>
-                  {edit(t) && <div>{edit(t)}</div>}
+                  <div>{edit(t)}</div>
                 </div>
               )}
             />
@@ -150,6 +157,7 @@ export function DictionaryPage() {
         <TermDrawer
           key={open?.code ?? "nouveau"}
           code={open?.code}
+          readOnly={open !== null && !editable(open)}
           onClose={() => {
             setOpen(undefined);
           }}

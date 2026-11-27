@@ -29,7 +29,6 @@ import {
   VisibilityEditor,
 } from "@/features/catalogue/draft-editor/rubrics/editors";
 import { MetadataEditor } from "@/features/catalogue/draft-editor/rubrics/metadata";
-import { parse } from "@/features/catalogue/draft-editor/rubrics/part";
 import { FAMILY_LABELS } from "@/features/dossier/dossier";
 import { PARTY_TYPE_LABELS, SENSITIVITY_LABELS } from "@/shared/labels";
 import {
@@ -180,19 +179,27 @@ function EditorForm({ initial }: { initial: Schemas["Editor"] }) {
   );
 }
 
+/**
+ * Définition d'un type en lecture seule (fiche, revue) : les mêmes formulaires que l'éditeur,
+ * désactivés, pour qu'un utilisateur métier la lise sans JSON.
+ */
+export function DefinitionView({ definition }: { definition: Record<string, unknown> }) {
+  const form = useForm<EditorValues>({ defaultValues: toValues(definition) });
+  return (
+    <fieldset disabled aria-label="Définition du type, en lecture seule">
+      <Rubriques form={form} />
+    </fieldset>
+  );
+}
+
 function Rubriques({ form }: { form: UseFormReturn<EditorValues> }) {
   const errors = form.formState.errors;
-  const [advanced, setAdvanced] = useState<Record<string, boolean>>({});
-  const texts = useWatch({ control: form.control, name: "json" });
   return (
     <Tabs
       label="Rubriques de la définition"
       keepMounted
       tabs={RUBRIQUES.map((rubrique) => {
         const count = errorCount(rubrique, errors);
-        // Un texte qui n'est pas du JSON ne s'édite qu'en mode avancé : les champs l'écraseraient.
-        const broken = rubrique.jsonKeys.some((key) => !parse(texts[key] ?? "").valid);
-        const showJson = broken || advanced[rubrique.id] === true;
         const jsonErrors = rubrique.jsonKeys
           .map((key) => errors.json?.[key]?.message)
           .filter((m): m is string => Boolean(m));
@@ -226,7 +233,7 @@ function Rubriques({ form }: { form: UseFormReturn<EditorValues> }) {
                   {...form.register("sensitivity")}
                 />
               )}
-              {!showJson && jsonErrors.length > 0 && (
+              {jsonErrors.length > 0 && (
                 <Notice tone="danger" title="À corriger dans cette rubrique">
                   <ul className="list-disc ps-5">
                     {jsonErrors.map((m) => (
@@ -235,37 +242,7 @@ function Rubriques({ form }: { form: UseFormReturn<EditorValues> }) {
                   </ul>
                 </Notice>
               )}
-              {!showJson && <StructuredRubric id={rubrique.id} form={form} />}
-              {broken && (
-                <Notice tone="warning" title="JSON invalide" role="status">
-                  Corrigez le texte de cette rubrique pour retrouver ses champs.
-                </Notice>
-              )}
-              {showJson &&
-                rubrique.jsonKeys.map((key) => (
-                  <TextAreaField
-                    key={key}
-                    label={`${key} (JSON)`}
-                    rows={4}
-                    className="font-mono text-sm"
-                    error={errors.json?.[key]?.message}
-                    {...form.register(`json.${key}`)}
-                  />
-                ))}
-              {rubrique.jsonKeys.length > 0 && !broken && (
-                <div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    aria-pressed={showJson}
-                    onClick={() => {
-                      setAdvanced({ ...advanced, [rubrique.id]: !showJson });
-                    }}
-                  >
-                    {showJson ? "Revenir aux champs" : "Modifier en JSON (avancé)"}
-                  </Button>
-                </div>
-              )}
+              <StructuredRubric id={rubrique.id} form={form} />
               {rubrique.id === "metadonnees" && <MetadataPreviewOf form={form} />}
             </div>
           ),

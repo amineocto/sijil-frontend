@@ -103,7 +103,7 @@ const ON_EXPIRY = [
   { value: "PURGE", label: "Purger (si la purge est activée pour le parcours)" },
 ];
 
-/** Rétention : politique validée par la conformité, point de départ et durée. */
+/** Rétention : point de départ, durée, action à l'échéance ; politique et base légale facultatives (ADR 0039). */
 export function RetentionEditor({ form }: { form: Form }) {
   const part = usePart<Json>(form, "retention");
   const r = objectOf(part.value);
@@ -115,8 +115,7 @@ export function RetentionEditor({ form }: { form: Form }) {
     <div className="grid gap-4 md:grid-cols-2">
       <TextField
         label="Politique de rétention"
-        description="Code de la politique validée par la conformité, par exemple KYC_10A ; ses termes sont recopiés à la soumission."
-        required
+        description="Facultative : code d'une politique validée par la conformité, par exemple KYC_10A. Si vous en citez une, ses termes remplacent ceux saisis ici à la soumission."
         value={text(r["policy"])}
         onChange={(e) => {
           update({ policy: e.currentTarget.value.toUpperCase() });
@@ -173,7 +172,7 @@ export function RetentionEditor({ form }: { form: Form }) {
       />
       <TextField
         label="Base légale"
-        required
+        description="Facultative : la raison juridique de la conservation."
         maxLength={500}
         value={text(r["legalBasis"])}
         onChange={(e) => {
@@ -376,13 +375,7 @@ export function ProcessingEditor({ form }: { form: Form }) {
             updateProcessing({ extraction: e.currentTarget.value });
           }}
         />
-        <Switch
-          label="Rendu PDF/A d'archivage"
-          checked={p["pdfa"] === true}
-          onChange={(pdfa) => {
-            updateProcessing({ pdfa });
-          }}
-        />
+        {/* Rendu PDF/A retiré de l'écran tant que la conversion n'existe pas (B-025). */}
         <Switch
           label="Détection du type"
           description="Signale un document déposé sous un autre type (« type à vérifier »)."

@@ -149,7 +149,7 @@ describe("Rubriques de l'éditeur : saisie", () => {
     await user.click(within(panel).getByRole("switch", { name: /prospect/ }));
     await user.click(within(panel).getByRole("switch", { name: /OCR/ }));
     await user.selectOptions(within(panel).getByLabelText("Extraction de champs"), "MRZ");
-    await user.click(within(panel).getByRole("switch", { name: /PDF\/A/ }));
+    expect(within(panel).queryByRole("switch", { name: /PDF\/A/ })).not.toBeInTheDocument();
     await user.click(within(panel).getByRole("switch", { name: "Détection du type" }));
     await user.type(within(panel).getByLabelText(/Mots-clés/), "carte nationale{Enter}");
     await user.type(within(panel).getByLabelText(/Code MRZ/), "id");
@@ -161,7 +161,6 @@ describe("Rubriques de l'éditeur : saisie", () => {
       processing: {
         ocr: true,
         extraction: "MRZ",
-        pdfa: true,
         detection: { enabled: true, keywords: ["carte nationale"], mrz: "ID", minScore: 0.8 },
       },
     });

@@ -9,16 +9,22 @@ import { api, call, isApiError, type Schemas } from "@/shared/api";
 import { Page } from "@/shared/ui/page";
 import { QueryState } from "@/shared/QueryState";
 import { canContributeToCatalogue, canReview, useSession } from "@/shared/session";
-import { Button, Heading, Notice, Panel, Tag, TextAreaField, TextField } from "@/shared/ui";
+import { Button, Heading, Notice, Panel, Tag, TextField } from "@/shared/ui";
+import {
+  cleaned,
+  problemsOf,
+  RequirementSetForm,
+  type Definition,
+} from "@/features/catalogue/requirements/RequirementSetForm";
 
 type RequirementSet = Schemas["RequirementSet"];
-type Definition = Schemas["RequirementSetDefinition"];
 
 const TEMPLATE: Definition = {
-  label: "Nouveau jeu",
+  label: "",
   requirements: [
     {
-      id: "identite",
+      id: "piece-d-identite",
+      label: "Pièce d'identité",
       anyOf: ["CIN", "PASSEPORT"],
       for: { roles: ["TITULAIRE"] },
       freshness: "VALID_ON_DATE",
@@ -54,11 +60,12 @@ function Editor({ set }: { set: RequirementSet | undefined }) {
   const navigate = useNavigate();
   const queries = useQueryClient();
   const [code, setCode] = useState(set?.code ?? "");
-  const [text, setText] = useState(JSON.stringify(set?.definition ?? TEMPLATE, null, 2));
+  const [definition, setDefinition] = useState<Definition>(set?.definition ?? TEMPLATE);
+  const [checked, setChecked] = useState(false);
   const [key] = useState(() => crypto.randomUUID());
   const draft = set === undefined || set.status === "BROUILLON";
   const editable = draft && canContributeToCatalogue(session.data, set?.parcours);
-  const definition = parse(text);
+  const valid = Object.keys(problemsOf(definition)).length === 0;
 
   const save = useMutation({
     mutationFn: (d: Definition) =>
@@ -121,27 +128,22 @@ function Editor({ set }: { set: RequirementSet | undefined }) {
             }}
           />
         )}
-        <TextAreaField
-          label="Définition (JSON)"
-          description="Exigences : types acceptés, parties visées, fraîcheur, confiance, conditions"
-          rows={12}
+        <RequirementSetForm
+          value={definition}
+          onChange={setDefinition}
           readOnly={!editable}
-          error={definition === undefined ? "JSON invalide" : undefined}
-          className="font-mono text-sm"
-          value={text}
-          onChange={(event) => {
-            setText(event.currentTarget.value);
-          }}
+          showErrors={checked}
         />
         {save.error && <Problem error={save.error} title="Enregistrement refusé" />}
         {publish.error && <Problem error={publish.error} title="Publication refusée" />}
         <div className="flex flex-wrap gap-3">
           {editable && (
             <Button
-              disabled={definition === undefined || (set === undefined && !code)}
+              disabled={set === undefined && !code}
               loading={save.isPending}
               onClick={() => {
-                if (definition) save.mutate(definition);
+                setChecked(true);
+                if (valid) save.mutate(cleaned(definition));
               }}
             >
               Enregistrer le brouillon
@@ -167,7 +169,7 @@ function Editor({ set }: { set: RequirementSet | undefined }) {
             submitLabel="Simuler"
             pending={simulate.isPending}
             onSubmit={(evaluation) => {
-              if (definition) simulate.mutate({ definition, ...evaluation });
+              simulate.mutate({ definition: cleaned(definition), ...evaluation });
             }}
           />
           {simulate.error && <Problem error={simulate.error} title="Simulation impossible" />}
@@ -193,7 +195,7 @@ function Problem({ error, title }: { error: unknown; title: string }) {
         <ul className="mt-2 list-disc ps-5">
           {error.fieldErrors.map((f) => (
             <li key={`${f.field}-${f.code}`}>
-              {f.field || "définition"} : {f.code}
+              {fieldLabel(f.field)} : {f.code}
             </li>
           ))}
         </ul>
@@ -202,11 +204,22 @@ function Problem({ error, title }: { error: unknown; title: string }) {
   );
 }
 
-function parse(text: string): Definition | undefined {
-  try {
-    const value: unknown = JSON.parse(text);
-    return typeof value === "object" && value !== null ? (value as Definition) : undefined;
-  } catch {
-    return undefined;
+/** `/requirements/0/anyOf` → « Exigence 1, types acceptés ». */
+function fieldLabel(pointer: string): string {
+  const names: Record<string, string> = {
+    label: "libellé",
+    id: "identifiant",
+    anyOf: "types acceptés",
+    count: "nombre de pièces",
+    for: "parties concernées",
+    freshness: "fraîcheur",
+    minAssurance: "confiance minimale",
+    when: "conditions",
+  };
+  const [, root, index, key] = pointer.split("/");
+  if (root === "requirements" && index !== undefined) {
+    const n = Number(index) + 1;
+    return `Exigence ${String(n)}${key ? `, ${names[key] ?? key}` : ""}`;
   }
+  return root ? (names[root] ?? root) : "Définition";
 }
