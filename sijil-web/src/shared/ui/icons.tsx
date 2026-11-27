@@ -1,147 +1,191 @@
-import type { SVGProps } from "react";
+import { forwardRef, type ReactNode } from "react";
+import {
+  Archive,
+  ArrowDown,
+  ArrowUp,
+  Ban,
+  BookOpen,
+  Building2,
+  CalendarCheck,
+  ChevronDown,
+  ChevronLeft,
+  ChevronsLeft,
+  ChevronsRight,
+  CircleCheck,
+  CircleX,
+  ClipboardCheck,
+  Compass,
+  Database,
+  Eye,
+  FileSignature,
+  FileText,
+  Gavel,
+  HandCoins,
+  Hourglass,
+  House,
+  IdCard,
+  Landmark,
+  Link,
+  ListChecks,
+  Lock,
+  LogOut,
+  Pencil,
+  PencilLine,
+  Plus,
+  ScanText,
+  Search,
+  Send,
+  Share2,
+  Shield,
+  ShieldAlert,
+  ShieldCheck,
+  ShieldQuestion,
+  Snowflake,
+  Tags,
+  Trash2,
+  TriangleAlert,
+  Upload,
+  User,
+  UserCheck,
+  Wallet,
+  X,
+  type LucideIcon,
+  type LucideProps,
+} from "lucide-react";
 
 /**
- * Icônes de trait (24 × 24, couleur du texte), dessinées ici plutôt qu'ajoutées en dépendance
- * (principe P9). Décoratives : le libellé voisin, ou l'`aria-label` du bouton, porte le sens.
+ * Icônes de l'interface (ADR 0040) : `lucide-react`, le jeu déjà embarqué par `@awb/ui`.
+ * Décoratives (`aria-hidden` posé par lucide) : le libellé voisin, ou l'`aria-label` du bouton,
+ * porte le sens. Un écran ne choisit pas l'icône d'un code métier : il la prend ici.
  */
-function Icon({ children, ...props }: SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      width={20}
-      height={20}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      focusable="false"
-      {...props}
-    >
-      {children}
-    </svg>
-  );
+export type { LucideIcon };
+
+/** Taille d'origine des icônes du menu (20 px) ; un `className` de taille la remplace. */
+function sized(Icon: LucideIcon): LucideIcon {
+  const Sized = forwardRef<SVGSVGElement, LucideProps>((props, ref) => (
+    <Icon ref={ref} size={20} {...props} />
+  ));
+  Sized.displayName = Icon.displayName;
+  return Sized as LucideIcon;
 }
 
-type IconProps = SVGProps<SVGSVGElement>;
-
-export const SearchIcon = (p: IconProps) => (
-  <Icon {...p}>
-    <circle cx="11" cy="11" r="7" />
-    <path d="m20 20-3.5-3.5" />
-  </Icon>
-);
-
-export const ClientIcon = (p: IconProps) => (
-  <Icon {...p}>
-    <circle cx="12" cy="8" r="4" />
-    <path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" />
-  </Icon>
-);
-
-export const UploadIcon = (p: IconProps) => (
-  <Icon {...p}>
-    <path d="M12 16V4m0 0-4 4m4-4 4 4M4 16v4h16v-4" />
-  </Icon>
-);
-
-export const CatalogueIcon = (p: IconProps) => (
-  <Icon {...p}>
-    <path d="M5 4h11l3 3v13H5z" />
-    <path d="M9 10h6M9 14h6" />
-  </Icon>
-);
-
-export const DictionaryIcon = (p: IconProps) => (
-  <Icon {...p}>
-    <path d="M5 4h10a4 4 0 0 1 4 4v12H9a4 4 0 0 1-4-4z" />
-    <path d="M5 16a4 4 0 0 1 4-4h10M9 8h6" />
-  </Icon>
-);
-
-export const ChecklistIcon = (p: IconProps) => (
-  <Icon {...p}>
-    <path d="m4 7 2 2 3-3M4 15l2 2 3-3M13 8h7M13 16h7" />
-  </Icon>
-);
-
-export const ReviewIcon = (p: IconProps) => (
-  <Icon {...p}>
-    <path d="M4 5h16v10H9l-5 4z" />
-    <path d="m9 10 2 2 4-4" />
-  </Icon>
-);
-
-export const ShareIcon = (p: IconProps) => (
-  <Icon {...p}>
-    <circle cx="6" cy="12" r="2.5" />
-    <circle cx="18" cy="6" r="2.5" />
-    <circle cx="18" cy="18" r="2.5" />
-    <path d="m8.3 10.8 7.4-3.6M8.3 13.2l7.4 3.6" />
-  </Icon>
-);
-
-export const DocumentIcon = (p: IconProps) => (
-  <Icon {...p}>
-    <path d="M6 3h9l4 4v14H6z" />
-    <path d="M9 12h7M9 16h5" />
-  </Icon>
-);
-
-export const CompassIcon = (p: IconProps) => (
-  <Icon {...p}>
-    <circle cx="12" cy="12" r="9" />
-    <path d="m15.5 8.5-2 5-5 2 2-5z" />
-  </Icon>
-);
-
-export const LogoutIcon = (p: IconProps) => (
-  <Icon {...p}>
-    <path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10" />
-  </Icon>
-);
-
-export const CollapseIcon = (p: IconProps) => (
-  <Icon {...p}>
-    <path d="m11 17-5-5 5-5M18 17l-5-5 5-5" />
-  </Icon>
-);
-
-export const ExpandIcon = (p: IconProps) => (
-  <Icon {...p}>
-    <path d="m13 7 5 5-5 5M6 7l5 5-5 5" />
-  </Icon>
-);
-
-export const CloseIcon = (p: IconProps) => (
-  <Icon {...p}>
-    <path d="M6 6l12 12M18 6 6 18" />
-  </Icon>
-);
-
+// Menu et en-tête.
+export const SearchIcon = sized(Search);
+export const ClientIcon = sized(User);
+export const UploadIcon = sized(Upload);
+export const CatalogueIcon = sized(FileText);
+export const DictionaryIcon = sized(BookOpen);
+export const ChecklistIcon = sized(ListChecks);
+export const ReviewIcon = sized(ClipboardCheck);
+export const ShareIcon = sized(Share2);
+export const DocumentIcon = sized(FileText);
+export const CompassIcon = sized(Compass);
+export const LogoutIcon = sized(LogOut);
+export const CollapseIcon = sized(ChevronsLeft);
+export const ExpandIcon = sized(ChevronsRight);
+export const CloseIcon = sized(X);
 /** Chevron vers la gauche (réduire) ; tourné d'un demi-tour, vers la droite (déplier). */
-export const ChevronIcon = (p: IconProps) => (
-  <Icon {...p}>
-    <path d="m15 18-6-6 6-6" />
-  </Icon>
-);
+export const ChevronIcon = sized(ChevronLeft);
+
+// Actions.
+export const EditIcon = Pencil;
+export const ViewIcon = Eye;
+export const DeleteIcon = Trash2;
+export const AddIcon = Plus;
+export const MoveUpIcon = ArrowUp;
+export const MoveDownIcon = ArrowDown;
+
+/** Rubriques de l'éditeur de type, par identifiant (`RUBRIQUES`). */
+export const RUBRIC_ICONS: Record<string, LucideIcon> = {
+  identite: IdCard,
+  metadonnees: Tags,
+  validite: CalendarCheck,
+  retention: Hourglass,
+  stockage: Database,
+  traitements: ScanText,
+  sensibilite: ShieldCheck,
+  filenet: Link,
+};
+
+/** Statut d'une version de type. */
+export const TYPE_STATUS_ICONS: Record<string, LucideIcon> = {
+  BROUILLON: PencilLine,
+  SOUMIS: Send,
+  EN_REVUE: Eye,
+  PUBLIE: CircleCheck,
+  DEPRECIE: TriangleAlert,
+  RETIRE: Ban,
+};
+
+/** Sensibilité d'un type ou d'un document. */
+export const SENSITIVITY_ICONS: Record<string, LucideIcon> = {
+  STANDARD: Shield,
+  SENSIBLE: ShieldAlert,
+  RESTREINT: Lock,
+};
+
+/** Famille de pièces. */
+export const FAMILY_ICONS: Record<string, LucideIcon> = {
+  IDENTITE: IdCard,
+  REVENUS: Wallet,
+  COMPTE: Landmark,
+  CREDIT: HandCoins,
+  CONTRAT: FileSignature,
+  GARANTIE: House,
+  ENTREPRISE: Building2,
+  MANDAT: UserCheck,
+  CONTENTIEUX: Gavel,
+};
+
+/** État du cycle de vie d'un document. */
+export const LIFECYCLE_ICONS: Record<string, LucideIcon> = {
+  EN_QUARANTAINE: ShieldQuestion,
+  ACTIF: CircleCheck,
+  REJETE_TECHNIQUE: CircleX,
+  SUPPRIME_LOGIQUE: Trash2,
+  ARCHIVE_FROID: Snowflake,
+  RESTAURATION_EN_COURS: Archive,
+  ACTIF_TEMPORAIRE: Archive,
+  RETENTION_ECHUE: Hourglass,
+};
+
+/** Icône d'un code, à la taille du texte voisin ; rien si le code n'a pas d'icône. */
+export function CodeIcon({
+  icons,
+  code,
+  className = "size-3.5 shrink-0",
+}: {
+  icons: Record<string, LucideIcon>;
+  code: string | null | undefined;
+  className?: string;
+}) {
+  const Icon = code ? icons[code] : undefined;
+  return Icon ? <Icon className={className} /> : null;
+}
 
 /** Flèche de la liste de choix (celle du navigateur est masquée : même rendu partout). */
 export function Chevron({ className = "end-3" }: { className?: string }) {
   return (
-    <svg
-      aria-hidden="true"
-      focusable="false"
-      viewBox="0 0 20 20"
-      fill="currentColor"
+    <ChevronDown
       className={`pointer-events-none absolute top-1/2 size-4 -translate-y-1/2 text-gray-500 ${className}`}
-    >
-      <path
-        fillRule="evenodd"
-        d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.06l3.71-3.83a.75.75 0 1 1 1.08 1.04l-4.25 4.39a.75.75 0 0 1-1.08 0L5.21 8.27a.75.75 0 0 1 .02-1.06z"
-        clipRule="evenodd"
-      />
-    </svg>
+    />
+  );
+}
+
+/** Libellé précédé de l'icône de son code (famille, sensibilité…). */
+export function Labelled({
+  icons,
+  code,
+  children,
+}: {
+  icons: Record<string, LucideIcon>;
+  code: string | null | undefined;
+  children: ReactNode;
+}) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <CodeIcon icons={icons} code={code} />
+      {children}
+    </span>
   );
 }

@@ -90,7 +90,7 @@ export function Tag({
   children: ReactNode;
 }) {
   return (
-    <Badge variant={variant} size="sm" className="whitespace-nowrap">
+    <Badge variant={variant} size="sm" className="gap-1 whitespace-nowrap">
       {children}
     </Badge>
   );

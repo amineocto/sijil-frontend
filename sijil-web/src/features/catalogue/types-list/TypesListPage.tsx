@@ -10,6 +10,7 @@ import { QueryState } from "@/shared/QueryState";
 import { canContributeToCatalogue, useSession } from "@/shared/session";
 import { StatusBadge } from "@/features/catalogue/shared/StatusBadge";
 import { Button, ButtonLink, Panel, SelectField, TextField, TextLink } from "@/shared/ui";
+import { FAMILY_ICONS, Labelled } from "@/shared/ui/icons";
 
 const STATUSES = Object.keys(STATUS_LABELS) as TypeStatus[];
 
@@ -145,7 +146,14 @@ export function TypesListPage() {
                   },
                   {
                     header: "Famille",
-                    cell: (type) => (type.family ? familyLabel(type.family) : "—"),
+                    cell: (type) =>
+                      type.family ? (
+                        <Labelled icons={FAMILY_ICONS} code={type.family}>
+                          {familyLabel(type.family)}
+                        </Labelled>
+                      ) : (
+                        "—"
+                      ),
                   },
                   { header: "Parcours", cell: (type) => type.ownerParcours },
                   {

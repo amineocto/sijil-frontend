@@ -24,6 +24,7 @@ import { DocumentHistory } from "@/features/document/DocumentHistory";
 import { Preview } from "@/features/document/Preview";
 import { Button, Heading, Notice, Panel, Table, Tabs, Tag, Td, Th } from "@/shared/ui";
 import { KeyValues, Page, Section } from "@/shared/ui/page";
+import { CodeIcon, LIFECYCLE_ICONS, SENSITIVITY_ICONS } from "@/shared/ui/icons";
 
 /**
  * Écran « Fiche document » : métadonnées, parties, aperçu, versions, historique et usages. Un
@@ -124,8 +125,14 @@ function Sheet({
   const heading = title ?? typeLabel(document.documentType, types);
   const tags = (
     <>
-      <Tag variant="info">{statusLabel(document.status)}</Tag>
-      <Tag>{SENSITIVITY_LABELS[document.sensitivity]}</Tag>
+      <Tag variant="info">
+        <CodeIcon icons={LIFECYCLE_ICONS} code={document.status} />
+        {statusLabel(document.status)}
+      </Tag>
+      <Tag>
+        <CodeIcon icons={SENSITIVITY_ICONS} code={document.sensitivity} />
+        {SENSITIVITY_LABELS[document.sensitivity]}
+      </Tag>
       {document.sharedInPortfolio && (
         <Tag variant="success">Partagé dans le portefeuille client</Tag>
       )}

@@ -33,7 +33,14 @@ import {
   TextField,
   type TagVariant,
 } from "@/shared/ui";
-import { DocumentIcon } from "@/shared/ui/icons";
+import {
+  CodeIcon,
+  DocumentIcon,
+  FAMILY_ICONS,
+  LIFECYCLE_ICONS,
+  Labelled,
+  SENSITIVITY_ICONS,
+} from "@/shared/ui/icons";
 import { DataTable, Page, Section } from "@/shared/ui/page";
 
 /** Pages lues au plus pour un dossier (20 documents par page côté `sijil-api`). */
@@ -306,7 +313,13 @@ function Pieces({
         },
         {
           header: "Famille",
-          cell: (d) => <span className="text-gray-700">{familyLabel(familyOf(d))}</span>,
+          cell: (d) => (
+            <span className="text-gray-700">
+              <Labelled icons={FAMILY_ICONS} code={familyOf(d)}>
+                {familyLabel(familyOf(d))}
+              </Labelled>
+            </span>
+          ),
           className: "max-xl:hidden",
         },
         {
@@ -351,6 +364,7 @@ function States({ document, otherParcours }: { document: DocumentView; otherParc
   const tags = [
     document.status !== "ACTIF" && (
       <Tag key="s" variant="info">
+        <CodeIcon icons={LIFECYCLE_ICONS} code={document.status} />
         {statusLabel(document.status)}
       </Tag>
     ),
@@ -361,7 +375,10 @@ function States({ document, otherParcours }: { document: DocumentView; otherParc
     ),
     otherParcours && <Tag key="p">Autre parcours</Tag>,
     document.sensitivity !== "STANDARD" && (
-      <Tag key="n">{SENSITIVITY_LABELS[document.sensitivity]}</Tag>
+      <Tag key="n">
+        <CodeIcon icons={SENSITIVITY_ICONS} code={document.sensitivity} />
+        {SENSITIVITY_LABELS[document.sensitivity]}
+      </Tag>
     ),
   ].filter(Boolean);
   return tags.length > 0 ? (

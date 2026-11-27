@@ -13,6 +13,7 @@ import {
   type Term,
   useTerms,
 } from "@/features/catalogue/dictionary/terms";
+import { EditIcon, ViewIcon } from "@/shared/ui/icons";
 
 type StatusFilter = "" | Term["status"];
 
@@ -51,6 +52,7 @@ export function DictionaryPage() {
         setOpen(t);
       }}
     >
+      {editable(t) ? <EditIcon className="size-4" /> : <ViewIcon className="size-4" />}
       {editable(t) ? "Modifier" : "Consulter"}
     </Button>
   );

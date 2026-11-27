@@ -21,6 +21,7 @@ import {
   Td,
   Th,
 } from "@/shared/ui";
+import { CodeIcon, FAMILY_ICONS } from "@/shared/ui/icons";
 
 type Version = Schemas["TypeVersion"];
 
@@ -68,7 +69,8 @@ function Sheet({ sheet }: { sheet: Schemas["TypeSheet"] }) {
       }
       subtitle={
         <>
-          <span>
+          <span className="inline-flex items-center gap-1.5">
+            <CodeIcon icons={FAMILY_ICONS} code={sheet.family} />
             {sheet.family ? familyLabel(sheet.family) : "Famille non renseignée"} · parcours{" "}
             {sheet.ownerParcours} · référent {sheet.referentParcours}
           </span>
