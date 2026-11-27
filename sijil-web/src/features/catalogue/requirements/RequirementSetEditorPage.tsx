@@ -16,6 +16,7 @@ import {
   RequirementSetForm,
   type Definition,
 } from "@/features/catalogue/requirements/RequirementSetForm";
+import { CODE_HINT, idProblem, UPPER_CODE } from "@/shared/validation";
 
 type RequirementSet = Schemas["RequirementSet"];
 
@@ -65,7 +66,9 @@ function Editor({ set }: { set: RequirementSet | undefined }) {
   const [key] = useState(() => crypto.randomUUID());
   const draft = set === undefined || set.status === "BROUILLON";
   const editable = draft && canContributeToCatalogue(session.data, set?.parcours);
-  const valid = Object.keys(problemsOf(definition)).length === 0;
+  const codeProblem =
+    set === undefined ? idProblem(code, UPPER_CODE, { hint: CODE_HINT }) : undefined;
+  const valid = !codeProblem && Object.keys(problemsOf(definition)).length === 0;
 
   const save = useMutation({
     mutationFn: (d: Definition) =>
@@ -122,6 +125,8 @@ function Editor({ set }: { set: RequirementSet | undefined }) {
             label="Code du jeu"
             description="Majuscules, chiffres et _ ; par exemple CREDIT_IMMO_PARTICULIER"
             required
+            maxLength={64}
+            error={checked ? codeProblem : undefined}
             value={code}
             onChange={(event) => {
               setCode(event.currentTarget.value.toUpperCase());

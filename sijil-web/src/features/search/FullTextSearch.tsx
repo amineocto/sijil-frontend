@@ -18,6 +18,7 @@ import {
   TextLink,
   Th,
 } from "@/shared/ui";
+import { at, textProblem } from "@/shared/validation";
 
 interface Criteria {
   q: string;
@@ -42,15 +43,22 @@ export function FullTextSearch() {
     getNextPageParam: (last: FullTextPage) =>
       last.page.hasMore && last.page.nextCursor ? last.page.nextCursor : undefined,
   });
+  const [checked, setChecked] = useState(false);
+  const problems = {
+    ...at("q", textProblem(draft.q, { required: true, min: 2, max: 200 })),
+    ...at("partyId", textProblem(draft.partyId, { required: true, max: 32 })),
+  };
   return (
     <div className="flex flex-col gap-6">
       <Panel>
         <form
           aria-label="Recherche plein texte"
           className="flex max-w-3xl flex-col gap-4"
+          noValidate
           onSubmit={(event) => {
             event.preventDefault();
-            if (draft.q.trim().length >= 2 && draft.partyId.trim()) {
+            setChecked(true);
+            if (Object.keys(problems).length === 0) {
               setCriteria({ ...draft, q: draft.q.trim(), partyId: draft.partyId.trim() });
             }
           }}
@@ -59,8 +67,8 @@ export function FullTextSearch() {
             label="Texte cherché"
             description="Dans le texte des documents et leurs métadonnées (2 caractères au moins)."
             required
-            minLength={2}
             maxLength={200}
+            error={checked ? problems["q"] : undefined}
             value={draft.q}
             onChange={(e) => {
               setDraft({ ...draft, q: e.currentTarget.value });
@@ -78,6 +86,8 @@ export function FullTextSearch() {
             <TextField
               label="Identifiant de la partie"
               required
+              maxLength={32}
+              error={checked ? problems["partyId"] : undefined}
               value={draft.partyId}
               onChange={(e) => {
                 setDraft({ ...draft, partyId: e.currentTarget.value });

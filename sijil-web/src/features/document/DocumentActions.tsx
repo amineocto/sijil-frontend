@@ -6,6 +6,15 @@ import { fieldsOf, toMetadata, toValues } from "@/shared/metadata";
 import { MetadataFields } from "@/shared/MetadataFields";
 import type { DocumentView, TypeVersion } from "@/shared/types";
 import { Button, FileField, Heading, Notice, ProgressBar, TextAreaField } from "@/shared/ui";
+import {
+  at,
+  fileProblem,
+  merged,
+  metadataProblems,
+  REASON,
+  serverProblems,
+  textProblem,
+} from "@/shared/validation";
 
 type Mode = "none" | "metadata" | "version" | "delete";
 
@@ -133,6 +142,11 @@ function EditMetadata({
   const [values, setValues] = useState(() => toValues(document.metadata));
   const [reason, setReason] = useState("");
   const fields = fieldsOf(type.data?.definition.metadataSchema);
+  const [checked, setChecked] = useState(false);
+  const local = {
+    ...metadataProblems(fields, values),
+    ...at("reason", textProblem(reason, { required: true, min: REASON.min, max: REASON.max })),
+  };
   const save = useMutation({
     mutationFn: () =>
       call(
@@ -143,13 +157,16 @@ function EditMetadata({
       ),
     onSuccess: onDone,
   });
-  const errors = isApiError(save.error) ? save.error.errorsByField() : {};
+  const server = isApiError(save.error) ? serverProblems(save.error.errorsByField()) : {};
+  const errors = checked ? merged(local, server) : server;
   return (
     <form
       aria-label="Modifier les métadonnées"
+      noValidate
       onSubmit={(e) => {
         e.preventDefault();
-        save.mutate();
+        setChecked(true);
+        if (Object.keys(local).length === 0) save.mutate();
       }}
     >
       <div className="flex max-w-xl flex-col gap-4">
@@ -157,8 +174,8 @@ function EditMetadata({
         <TextAreaField
           label="Motif de la modification"
           required
-          minLength={3}
-          maxLength={500}
+          maxLength={REASON.max}
+          error={errors["reason"]?.join(", ")}
           value={reason}
           onChange={(e) => {
             setReason(e.currentTarget.value);
@@ -189,6 +206,9 @@ function NewVersion({
   const [progress, setProgress] = useState(0);
   // Une clé par fichier envoyé (AUD-20261120-339).
   const key = useMemo(() => (file ? crypto.randomUUID() : ""), [file]);
+  const [checked, setChecked] = useState(false);
+  const formats = type.data?.definition.formats ?? [];
+  const problem = fileProblem(file, formats, type.data?.definition.maxSizeMb ?? 50);
   const send = useMutation({
     mutationFn: async () => {
       if (!file || !type.data) throw new Error("Choisissez un fichier.");
@@ -208,17 +228,20 @@ function NewVersion({
   return (
     <form
       aria-label="Nouvelle version"
+      noValidate
       onSubmit={(e) => {
         e.preventDefault();
-        send.mutate();
+        setChecked(true);
+        if (!problem) send.mutate();
       }}
     >
       <div className="flex max-w-xl flex-col gap-4">
         <FileField
           label="Fichier de la nouvelle version"
           required
-          accept={(type.data?.definition.formats ?? []).join(",")}
+          accept={formats.join(",")}
           onFile={setFile}
+          error={checked ? problem : undefined}
         />
         {send.isPending && <ProgressBar value={progress} label="Envoi du fichier" />}
         <Failure error={send.error} />
@@ -242,6 +265,8 @@ function Delete({
   onDone: (revision: number) => void;
 }) {
   const [reason, setReason] = useState("");
+  const [checked, setChecked] = useState(false);
+  const reasonProblem = textProblem(reason, { required: true, min: REASON.min, max: REASON.max });
   const remove = useMutation({
     mutationFn: () =>
       call(
@@ -257,9 +282,11 @@ function Delete({
   return (
     <form
       aria-label="Supprimer le document"
+      noValidate
       onSubmit={(e) => {
         e.preventDefault();
-        remove.mutate();
+        setChecked(true);
+        if (!reasonProblem) remove.mutate();
       }}
     >
       <div className="flex max-w-xl flex-col gap-4">
@@ -267,8 +294,8 @@ function Delete({
           label="Motif de la suppression"
           description="Suppression logique : le document reste conservé et peut être restauré."
           required
-          minLength={3}
-          maxLength={500}
+          maxLength={REASON.max}
+          error={checked ? reasonProblem : undefined}
           value={reason}
           onChange={(e) => {
             setReason(e.currentTarget.value);
@@ -295,6 +322,8 @@ function Restore({
   onDone: () => void;
 }) {
   const [reason, setReason] = useState("");
+  const [checked, setChecked] = useState(false);
+  const reasonProblem = textProblem(reason, { required: true, min: REASON.min, max: REASON.max });
   const restore = useMutation({
     mutationFn: () =>
       call(
@@ -308,9 +337,11 @@ function Restore({
   return (
     <form
       aria-label="Restaurer le document"
+      noValidate
       onSubmit={(e) => {
         e.preventDefault();
-        restore.mutate();
+        setChecked(true);
+        if (!reasonProblem) restore.mutate();
       }}
     >
       <div className="flex max-w-xl flex-col gap-4">
@@ -320,8 +351,8 @@ function Restore({
         <TextAreaField
           label="Motif de la restauration"
           required
-          minLength={3}
-          maxLength={500}
+          maxLength={REASON.max}
+          error={checked ? reasonProblem : undefined}
           value={reason}
           onChange={(e) => {
             setReason(e.currentTarget.value);

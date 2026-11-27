@@ -20,9 +20,13 @@ const jsonText = z.string().refine(
 
 /** Validation en ligne de l'éditeur ; le serveur reste juge (contrôles complets à la soumission). */
 export const editorSchema = z.object({
-  labelFr: z.string().trim().min(1, "Le libellé français est obligatoire").max(200),
-  labelAr: z.string().max(200),
-  labelEn: z.string().max(200),
+  labelFr: z
+    .string()
+    .trim()
+    .min(1, "Le libellé français est obligatoire")
+    .max(120, "120 caractères au plus"),
+  labelAr: z.string().max(120, "120 caractères au plus"),
+  labelEn: z.string().max(120, "120 caractères au plus"),
   description: z.string().max(2000, "2000 caractères au plus"),
   family: z
     .string()

@@ -95,6 +95,10 @@ export interface MetadataProperty {
   title?: string;
   enum?: string[];
   maxLength?: number;
+  minLength?: number;
+  pattern?: string;
+  minimum?: number;
+  maximum?: number;
 }
 
 export interface MetadataSchema {

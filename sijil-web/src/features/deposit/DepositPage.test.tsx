@@ -43,15 +43,50 @@ describe("Dépôt", () => {
     expect(stub.documents.at(-1)?.metadata).toEqual({ numero: "EE123456" });
   });
 
-  it("montre les erreurs de métadonnées par champ", async () => {
+  it("contrôle le formulaire avant d'envoyer le fichier", async () => {
+    let sessions = 0;
+    server.use(
+      http.post("/api/upload-sessions", () => {
+        sessions++;
+        return HttpResponse.json({ title: "Inattendu", status: 500 }, { status: 500 });
+      }),
+    );
     renderAt("/depot");
     const user = userEvent.setup();
     await chooseCin(user);
-    // Le navigateur exigerait le numéro : on l'omet en supprimant la contrainte.
-    (await screen.findByRole("textbox", { name: /Numéro/ })).removeAttribute("required");
-    await fillAndSend(user, "");
-    expect(await screen.findByText("REQUIRED")).toBeInTheDocument();
-    expect(screen.getByRole("alert")).toHaveTextContent("Métadonnées invalides.");
+    await user.click(await screen.findByRole("button", { name: "Déposer" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Corrigez les champs signalés");
+    expect(screen.getByRole("textbox", { name: /Numéro/ })).toHaveAccessibleDescription(
+      /Obligatoire/,
+    );
+    expect(screen.getByText("Choisissez un fichier")).toBeVisible();
+
+    // Le numéro de CIN en minuscules : la cause est nommée, rien ne part.
+    await fillAndSend(user, "h338225");
+    expect(screen.getByText("Lettres en majuscules attendues : H338225")).toBeVisible();
+    expect(sessions).toBe(0);
+  });
+
+  it("rattache au champ les refus du serveur", async () => {
+    server.use(
+      http.post("/api/documents", () =>
+        HttpResponse.json(
+          {
+            title: "Règle métier non respectée",
+            status: 422,
+            detail: "Parties ou métadonnées non conformes au type.",
+            errors: [{ field: "metadata/numero", code: "PATTERN" }],
+          },
+          { status: 422, headers: { "Content-Type": "application/problem+json" } },
+        ),
+      ),
+    );
+    renderAt("/depot");
+    const user = userEvent.setup();
+    await chooseCin(user);
+    await fillAndSend(user, "EE1");
+    expect(await screen.findByText("Format incorrect pour ce champ")).toBeVisible();
+    expect(screen.getByRole("alert")).toHaveTextContent("Les champs concernés sont signalés.");
   });
 
   it("garde la clé d'un fichier d'un essai à l'autre, et en change avec le fichier", async () => {
@@ -137,14 +172,17 @@ describe("Dépôt", () => {
 
   it("refuse un fichier trop volumineux pour le type", async () => {
     renderAt("/depot");
-    const user = userEvent.setup();
+    const user = userEvent.setup({ applyAccept: false });
     await chooseCin(user);
     const input = document.querySelector<HTMLInputElement>('input[type="file"]');
     if (!input) throw new Error("champ fichier absent");
     const big = new File(["x"], "gros.pdf", { type: "application/pdf" });
     Object.defineProperty(big, "size", { value: 6 * 1024 * 1024 });
     await user.upload(input, big);
-    expect(await screen.findByText("Fichier trop volumineux pour ce type.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Déposer" }));
+    expect(await screen.findByText(/Fichier trop volumineux : \d+ Mo au plus/)).toBeInTheDocument();
+    await user.upload(input, new File(["x"], "note.txt", { type: "text/plain" }));
+    expect(await screen.findByText(/Format non admis pour ce type/)).toBeInTheDocument();
   });
 
   it("est réservé aux contributeurs", async () => {

@@ -21,6 +21,17 @@ import {
   TextLink,
   type Tone,
 } from "@/shared/ui";
+import {
+  at,
+  fileProblem,
+  formatLabel,
+  idProblem,
+  merged,
+  metadataProblems,
+  PARTY_ID,
+  PARTY_ID_HINT,
+  serverProblems,
+} from "@/shared/validation";
 
 /** Intervalle de suivi de la quarantaine. */
 export const RECEPTION_POLL_MS = 2000;
@@ -132,11 +143,10 @@ function Form({ type }: { type: TypeVersion }) {
   const [partyId, setPartyId] = useState(params.get("partie") ?? "");
   const [file, setFile] = useState<File | null>(null);
   const [progress, setProgress] = useState(0);
+  const [checked, setChecked] = useState(false);
   // Une clé par intention (ce fichier) : un nouvel essai après une coupure ne crée pas de doublon ;
   // un autre fichier est une autre intention (AUD-20261120-339).
   const key = useMemo(() => (file ? crypto.randomUUID() : ""), [file]);
-  const maxBytes = (type.definition.maxSizeMb ?? 50) * 1024 * 1024;
-  const tooLarge = file !== null && file.size > maxBytes;
   const deposit = useMutation({
     mutationFn: async () => {
       if (!file) throw new Error("Choisissez un fichier.");
@@ -161,14 +171,26 @@ function Form({ type }: { type: TypeVersion }) {
       </Section>
     );
   }
-  const errors = isApiError(deposit.error) ? deposit.error.errorsByField() : {};
+  // Tout ce que le navigateur peut contrôler l'est avant l'envoi du fichier (aucun aller-retour).
+  const formats = type.definition.formats ?? [];
+  const maxSizeMb = type.definition.maxSizeMb ?? 50;
+  const local = {
+    ...metadataProblems(fields, values),
+    ...at("parties/0/id", idProblem(partyId, PARTY_ID, { hint: PARTY_ID_HINT })),
+    ...at("file", fileProblem(file, formats, maxSizeMb)),
+  };
+  const server = isApiError(deposit.error) ? serverProblems(deposit.error.errorsByField()) : {};
+  const errors = checked ? merged(local, server) : server;
+  const blocked = checked && Object.keys(local).length > 0;
   return (
     <form
       aria-label="Dépôt"
+      noValidate
       className="flex flex-col gap-5"
       onSubmit={(e) => {
         e.preventDefault();
-        if (!tooLarge) deposit.mutate();
+        setChecked(true);
+        if (Object.keys(local).length === 0) deposit.mutate();
       }}
     >
       <Section title="2 · Informations">
@@ -187,7 +209,7 @@ function Form({ type }: { type: TypeVersion }) {
           <TextField
             label="Identifiant du titulaire"
             required
-            pattern="[A-Za-z0-9_\-]{1,64}"
+            error={errors["parties/0/id"]?.join(", ")}
             value={partyId}
             onChange={(e) => {
               setPartyId(e.currentTarget.value);
@@ -198,11 +220,11 @@ function Form({ type }: { type: TypeVersion }) {
       <Section title="4 · Fichier">
         <FileField
           label="Fichier"
-          description={`Formats : ${(type.definition.formats ?? []).join(", ")} ; ${String(type.definition.maxSizeMb ?? 50)} Mo au plus.`}
+          description={`Formats : ${formats.map(formatLabel).join(", ")} ; ${String(maxSizeMb)} Mo au plus.`}
           required
-          accept={(type.definition.formats ?? []).join(",")}
+          accept={formats.join(",")}
           onFile={setFile}
-          error={tooLarge ? "Fichier trop volumineux pour ce type." : undefined}
+          error={errors["file"]?.join(", ")}
         />
         {deposit.isPending && (
           <div className="mt-4">
@@ -210,9 +232,15 @@ function Form({ type }: { type: TypeVersion }) {
           </div>
         )}
       </Section>
-      {deposit.error && (
+      {blocked && (
+        <Notice tone="danger" role="alert" title="Formulaire incomplet">
+          Corrigez les champs signalés : rien n&apos;a été envoyé.
+        </Notice>
+      )}
+      {!blocked && deposit.error && (
         <Notice tone="danger" role="alert" title="Dépôt refusé">
           {deposit.error.message}
+          {Object.keys(server).length > 0 && " Les champs concernés sont signalés."}
         </Notice>
       )}
       <div className="flex justify-end">

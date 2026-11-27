@@ -27,7 +27,12 @@ export const CIN: TypeVersion = {
     metadataSchema: {
       required: ["numero"],
       properties: {
-        numero: { type: "string", title: "Numéro", maxLength: 20 },
+        numero: {
+          type: "string",
+          title: "Numéro",
+          maxLength: 20,
+          pattern: "^[A-Z]{1,2}[0-9]{1,6}$",
+        },
         dateExpiration: { type: "string", format: "date", title: "Date d'expiration" },
         nationalite: { type: "string", title: "Nationalité", enum: ["MA", "FR", "ES"] },
         pages: { type: "integer", title: "Nombre de pages" },

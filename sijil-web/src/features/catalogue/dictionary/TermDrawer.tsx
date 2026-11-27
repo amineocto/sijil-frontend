@@ -12,6 +12,7 @@ import {
   type Term,
   type TermFormat,
 } from "@/features/catalogue/dictionary/terms";
+import { at, textProblem, type Problems } from "@/shared/validation";
 
 const CODE = /^[a-z][A-Za-z0-9]{0,63}$/;
 
@@ -67,6 +68,78 @@ function valuesOf(t: Term): Values {
     filenetProperty: text(t.filenetProperty),
     status: t.status,
   };
+}
+
+/** Contrôles du contrat `MetadataTermCreate`/`Update`, faits avant l'envoi. */
+export function termProblems(v: Values, creating: boolean): Problems {
+  const isNumber = v.format === "INTEGER" || v.format === "NUMBER";
+  const numberProblem = (s: string) => {
+    if (!s.trim()) return undefined;
+    const n = Number(s);
+    if (!Number.isFinite(n)) return "Nombre attendu";
+    return v.format === "INTEGER" && !Number.isInteger(n) ? "Nombre entier attendu" : undefined;
+  };
+  const max = Number(v.maxLength);
+  return {
+    ...at(
+      "code",
+      creating && !CODE.test(v.code)
+        ? "Une minuscule puis lettres et chiffres, sans espace"
+        : undefined,
+    ),
+    ...at("labelFr", textProblem(v.labelFr, { required: true, max: 120 })),
+    ...at("labelAr", textProblem(v.labelAr, { max: 120 })),
+    ...at("labelEn", textProblem(v.labelEn, { max: 120 })),
+    ...at("definition", textProblem(v.definition, { max: 1000 })),
+    ...at("filenetProperty", textProblem(v.filenetProperty, { max: 128 })),
+    ...(v.format === "TEXT"
+      ? {
+          ...at(
+            "maxLength",
+            v.maxLength.trim() && !(Number.isInteger(max) && max >= 1 && max <= 100000)
+              ? "Nombre entier de 1 à 100 000"
+              : undefined,
+          ),
+          ...at("pattern", patternProblem(v.pattern)),
+        }
+      : {}),
+    ...(v.format === "ENUM"
+      ? at(
+          "values",
+          v.values.length === 0
+            ? "Ajoutez au moins une valeur"
+            : v.values.length > 200
+              ? "200 valeurs au plus"
+              : v.values.some((x) => x.length > 120)
+                ? "Chaque valeur fait 120 caractères au plus"
+                : undefined,
+        )
+      : {}),
+    ...(isNumber
+      ? {
+          ...at("minimum", numberProblem(v.minimum)),
+          ...at(
+            "maximum",
+            numberProblem(v.maximum) ??
+              (v.minimum.trim() && v.maximum.trim() && Number(v.minimum) > Number(v.maximum)
+                ? "Le maximum doit être supérieur ou égal au minimum"
+                : undefined),
+          ),
+        }
+      : {}),
+  };
+}
+
+/** Motif d'un terme : 200 caractères au plus, et une expression que le navigateur sait lire. */
+function patternProblem(pattern: string): string | undefined {
+  if (!pattern.trim()) return undefined;
+  if (pattern.length > 200) return "200 caractères au plus";
+  try {
+    new RegExp(pattern, "u");
+    return undefined;
+  } catch {
+    return "Expression régulière invalide";
+  }
 }
 
 /** Termes envoyés : seuls ceux du format, sans champ vide (le contrat les refuserait). */
@@ -166,12 +239,8 @@ function TermForm({
   const set = (patch: Partial<Values>) => {
     setV((previous) => ({ ...previous, ...patch }));
   };
-  const codeError =
-    !current && checked && !CODE.test(v.code)
-      ? "Une minuscule puis lettres et chiffres, sans espace"
-      : undefined;
-  const labelError =
-    checked && !v.labelFr.trim() ? "Le libellé français est obligatoire" : undefined;
+  const problems = termProblems(v, !current);
+  const shown = (key: string) => (checked ? problems[key] : undefined);
 
   const save = useMutation({
     mutationFn: () =>
@@ -208,7 +277,7 @@ function TermForm({
       onSubmit={(e) => {
         e.preventDefault();
         setChecked(true);
-        if ((current || CODE.test(v.code)) && v.labelFr.trim()) save.mutate();
+        if (Object.keys(problems).length === 0) save.mutate();
       }}
     >
       <fieldset disabled={readOnly} className="flex min-w-0 flex-col gap-4">
@@ -221,7 +290,7 @@ function TermForm({
             required
             readOnly={current !== undefined}
             value={v.code}
-            error={codeError}
+            error={shown("code")}
             onChange={(e) => {
               set({ code: e.currentTarget.value });
             }}
@@ -241,7 +310,7 @@ function TermForm({
           label="Libellé français"
           required
           value={v.labelFr}
-          error={labelError}
+          error={shown("labelFr")}
           onChange={(e) => {
             set({ labelFr: e.currentTarget.value });
           }}
@@ -249,6 +318,7 @@ function TermForm({
         <div className="grid gap-4 md:grid-cols-2">
           <TextField
             label="Libellé arabe"
+            error={shown("labelAr")}
             dir="rtl"
             lang="ar"
             value={v.labelAr}
@@ -258,6 +328,7 @@ function TermForm({
           />
           <TextField
             label="Libellé anglais"
+            error={shown("labelEn")}
             lang="en"
             value={v.labelEn}
             onChange={(e) => {
@@ -267,6 +338,7 @@ function TermForm({
         </div>
         <TextAreaField
           label="Définition"
+          error={shown("definition")}
           description="Ce que la métadonnée contient et d'où elle vient."
           rows={2}
           value={v.definition}
@@ -278,6 +350,7 @@ function TermForm({
           <div className="grid gap-4 md:grid-cols-2">
             <TextField
               label="Longueur maximale"
+              error={shown("maxLength")}
               type="number"
               min={1}
               value={v.maxLength}
@@ -287,6 +360,7 @@ function TermForm({
             />
             <TextField
               label="Motif"
+              error={shown("pattern")}
               description="Expression régulière, par exemple ^[A-Z]{3}$."
               value={v.pattern}
               onChange={(e) => {
@@ -305,10 +379,16 @@ function TermForm({
             }}
           />
         )}
+        {v.format === "ENUM" && shown("values") && (
+          <p className="text-sm text-red-700" role="alert">
+            {shown("values")}
+          </p>
+        )}
         {(v.format === "INTEGER" || v.format === "NUMBER") && (
           <div className="grid gap-4 md:grid-cols-2">
             <TextField
               label="Minimum"
+              error={shown("minimum")}
               type="number"
               value={v.minimum}
               onChange={(e) => {
@@ -317,6 +397,7 @@ function TermForm({
             />
             <TextField
               label="Maximum"
+              error={shown("maximum")}
               type="number"
               value={v.maximum}
               onChange={(e) => {
@@ -340,6 +421,7 @@ function TermForm({
           />
           <TextField
             label="Propriété FileNet"
+            error={shown("filenetProperty")}
             description="Facultative tant que l'atelier FileNet n'a pas fixé les propriétés."
             value={v.filenetProperty}
             onChange={(e) => {

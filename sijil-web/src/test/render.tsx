@@ -22,6 +22,9 @@ export function renderAt(path: string) {
 export async function seriousViolations(container: HTMLElement): Promise<string[]> {
   const results = await axe.run(container, {
     rules: { "color-contrast": { enabled: false } },
+    // Le contenu d'un aperçu (PDF dans une iframe) n'est pas une page de l'application, et jsdom
+    // ne sait pas y entrer ; la page qui l'entoure reste analysée.
+    iframes: false,
   });
   return results.violations
     .filter((v) => v.impact === "serious" || v.impact === "critical")

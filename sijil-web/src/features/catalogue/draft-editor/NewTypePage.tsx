@@ -16,7 +16,11 @@ const newTypeSchema = z.object({
     .string()
     .regex(/^[A-Z][A-Z0-9_]{1,63}$/, "Majuscules, chiffres et _ ; commence par une lettre"),
   referentParcours: z.string().min(1, "Choisissez un parcours"),
-  labelFr: z.string().trim().min(1, "Le libellé français est obligatoire"),
+  labelFr: z
+    .string()
+    .trim()
+    .min(1, "Le libellé français est obligatoire")
+    .max(120, "120 caractères au plus"),
 });
 
 type NewTypeValues = z.infer<typeof newTypeSchema>;

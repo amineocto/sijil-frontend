@@ -1,4 +1,4 @@
-import { type SyntheticEvent } from "react";
+import { type SyntheticEvent, useState } from "react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router";
 import { EmptyState } from "@sijil/ui-kit";
@@ -47,6 +47,8 @@ export function TypesListPage() {
     getNextPageParam: (last) => (last.hasMore ? (last.nextCursor ?? undefined) : undefined),
   });
 
+  const [queryProblem, setQueryProblem] = useState<string | undefined>();
+
   function applyFilters(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -56,7 +58,10 @@ export function TypesListPage() {
       const value = typeof raw === "string" ? raw.trim() : "";
       if (value) next.set(key, value);
     }
-    setParams(next);
+    // Le serveur ignore une recherche d'un seul caractère : on le dit au lieu de l'ignorer.
+    const tooShort = (next.get("q") ?? "").length === 1;
+    setQueryProblem(tooShort ? "Deux caractères au moins" : undefined);
+    if (!tooShort) setParams(next);
   }
 
   return (
@@ -80,6 +85,8 @@ export function TypesListPage() {
             name="q"
             label="Recherche (code ou libellé)"
             description="Deux caractères au moins"
+            maxLength={100}
+            error={queryProblem}
             defaultValue={filters.q}
           />
           <SelectField

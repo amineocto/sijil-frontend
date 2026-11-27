@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "sijil-web-bouchons",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite", "--port", "5177", "--strictPort"],
+      "cwd": "sijil-web",
+      "port": 5177
+    }
+  ]
+}

@@ -253,7 +253,9 @@ export class SijilStub extends CatalogueStub {
 
   private create(body: { parties: Party[]; metadata: Record<string, unknown> }) {
     if (typeof body.metadata["numero"] !== "string") {
-      return problem(422, "Métadonnées invalides.", [{ field: "numero", code: "REQUIRED" }]);
+      return problem(422, "Métadonnées invalides.", [
+        { field: "metadata/numero", code: "REQUIRED" },
+      ]);
     }
     const id = crypto.randomUUID();
     this.documents.push({

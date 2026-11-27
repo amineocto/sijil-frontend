@@ -1,11 +1,13 @@
 import { useState } from "react";
 import {
+  contextProblem,
   parseContext,
   ROLE_LABELS,
   type CompletenessParty,
   type CompletenessRequest,
 } from "@/features/completeness/completeness";
 import { Button, SelectField, TextAreaField, TextField } from "@/shared/ui";
+import { at, EXTERNAL_ID, EXTERNAL_ID_HINT, idProblem, isIsoDate } from "@/shared/validation";
 
 const KINDS = [
   { value: "CLIENT", label: "Client" },
@@ -33,13 +35,30 @@ export function EvaluationForm({ submitLabel, pending, onSubmit }: EvaluationFor
     setParties(parties.map((p, i) => (i === index ? { ...p, ...change } : p)));
   };
   const complete = parties.filter((p) => p.externalId.trim() !== "");
+  const [checked, setChecked] = useState(false);
+  const problems = {
+    ...Object.fromEntries(
+      parties.flatMap((p, i) => {
+        const problem = idProblem(p.externalId, EXTERNAL_ID, {
+          required: false,
+          hint: EXTERNAL_ID_HINT,
+        });
+        return problem ? [[`party${String(i)}`, problem]] : [];
+      }),
+    ),
+    ...at("parties", complete.length === 0 ? "Indiquez au moins une partie" : undefined),
+    ...at("context", contextProblem(context)),
+    ...at("date", date && !isIsoDate(date) ? "Date invalide" : undefined),
+  };
 
   return (
     <form
       aria-label="Dossier à évaluer"
+      noValidate
       onSubmit={(event) => {
         event.preventDefault();
-        if (complete.length === 0) return;
+        setChecked(true);
+        if (Object.keys(problems).length > 0) return;
         onSubmit({
           parties: complete.map((p) => ({ ...p, externalId: p.externalId.trim() })),
           context: parseContext(context),
@@ -62,6 +81,12 @@ export function EvaluationForm({ submitLabel, pending, onSubmit }: EvaluationFor
               label={`Identifiant de la partie ${String(index + 1)}`}
               value={party.externalId}
               maxLength={32}
+              error={
+                checked
+                  ? (problems[`party${String(index)}`] ??
+                    (index === 0 ? problems["parties"] : undefined))
+                  : undefined
+              }
               onChange={(event) => {
                 update(index, { externalId: event.currentTarget.value });
               }}
@@ -91,6 +116,7 @@ export function EvaluationForm({ submitLabel, pending, onSubmit }: EvaluationFor
           label="Contexte du dossier"
           description="Une condition par ligne, par exemple segment=SALARIE"
           rows={2}
+          error={checked ? problems["context"] : undefined}
           value={context}
           onChange={(event) => {
             setContext(event.currentTarget.value);
@@ -100,13 +126,14 @@ export function EvaluationForm({ submitLabel, pending, onSubmit }: EvaluationFor
           label="Date d'évaluation"
           description="Aujourd'hui par défaut"
           type="date"
+          error={checked ? problems["date"] : undefined}
           value={date}
           onChange={(event) => {
             setDate(event.currentTarget.value);
           }}
         />
         <div>
-          <Button type="submit" loading={pending} disabled={complete.length === 0}>
+          <Button type="submit" loading={pending}>
             {submitLabel}
           </Button>
         </div>

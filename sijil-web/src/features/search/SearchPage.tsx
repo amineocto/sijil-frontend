@@ -9,6 +9,7 @@ import { formatDate, PARTY_OPTIONS, PARTY_TYPE_LABELS } from "@/shared/labels";
 import type { PartyType } from "@/shared/types";
 import { Button, SelectField, TextField } from "@/shared/ui";
 import { Page, Section } from "@/shared/ui/page";
+import { textProblem } from "@/shared/validation";
 
 export type SearchMode = "dossier" | "texte" | "completude";
 
@@ -40,6 +41,8 @@ function DossierLookup() {
   const navigate = useNavigate();
   const [type, setType] = useState<PartyType>("CLIENT");
   const [id, setId] = useState("");
+  const [checked, setChecked] = useState(false);
+  const problem = textProblem(id, { required: true, max: 64 });
   const recents = recentDossiers();
   return (
     <>
@@ -51,9 +54,11 @@ function DossierLookup() {
         <form
           aria-label="Ouvrir un dossier depuis la recherche"
           className="grid gap-4 sm:grid-cols-[12rem_1fr_auto] sm:items-end"
+          noValidate
           onSubmit={(event) => {
             event.preventDefault();
-            if (id.trim()) void navigate(dossierPath(type, id.trim()));
+            setChecked(true);
+            if (!problem) void navigate(dossierPath(type, id.trim()));
           }}
         >
           <SelectField
@@ -68,6 +73,8 @@ function DossierLookup() {
             label="Identifiant"
             required
             placeholder="Ex. C123456"
+            maxLength={64}
+            error={checked ? problem : undefined}
             value={id}
             onChange={(e) => {
               setId(e.currentTarget.value);

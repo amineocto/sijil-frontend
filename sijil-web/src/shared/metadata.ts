@@ -8,6 +8,12 @@ export interface MetadataField {
   required: boolean;
   options: string[];
   maxLength?: number;
+  minLength?: number;
+  pattern?: string;
+  minimum?: number;
+  maximum?: number;
+  /** Nombre entier (`integer`) plutôt que décimal. */
+  integer?: boolean;
 }
 
 export function fieldsOf(schema: MetadataSchema | undefined): MetadataField[] {
@@ -19,6 +25,11 @@ export function fieldsOf(schema: MetadataSchema | undefined): MetadataField[] {
     required: required.has(name),
     options: p.enum ?? [],
     ...(p.maxLength === undefined ? {} : { maxLength: p.maxLength }),
+    ...(p.minLength === undefined ? {} : { minLength: p.minLength }),
+    ...(p.pattern === undefined ? {} : { pattern: p.pattern }),
+    ...(p.minimum === undefined ? {} : { minimum: p.minimum }),
+    ...(p.maximum === undefined ? {} : { maximum: p.maximum }),
+    ...(p.type === "integer" ? { integer: true } : {}),
   }));
 }
 

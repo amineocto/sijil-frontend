@@ -55,7 +55,9 @@ La visite guidée (`features/tour`) présente les écrans selon le profil de l'u
 - **Client** : `openapi-fetch` typé par `src/api/schema.d.ts`. `call()` (`shared/api.ts`) transforme une réponse en échec en `ApiError` (statut, message, `correlationId`, erreurs par champ).
 - **États** : `QueryState` rend chargement, erreur (avec référence) et, sur demande, un affichage dédié au 404.
 - **Concurrence** : écritures avec `If-Match` (ETag) ; un 412 est expliqué à l'utilisateur.
-- **Formulaires** : React Hook Form et Zod ; les erreurs du serveur (`errors[].field`, pointeur JSON) sont rattachées au champ.
+- **Formulaires** : tout ce que le navigateur peut contrôler l'est **avant l'envoi**, avec les règles du serveur : contrats du BFF et de `sijil-api`, schéma de métadonnées du type, schéma de définition d'un type (`draft-editor/definitionChecks.ts`). Rien n'est envoyé, aucun fichier compris, tant qu'un champ est signalé. Les contrôles communs sont dans `shared/validation.ts`. Les formulaires désactivent la validation native du navigateur (`noValidate`) pour afficher leurs propres messages en français.
+- **Refus du serveur** : il reste juge. Ses erreurs (`errors[].field`, pointeur JSON, par exemple `metadata/numero`) sont rattachées au champ, et leurs codes traduits en phrases (`serverProblems`).
+- **Aperçu** : un PDF ou une image s'affiche dès l'ouverture d'un document. Un autre format attend un clic, car il se télécharge.
 
 ## Interface
 

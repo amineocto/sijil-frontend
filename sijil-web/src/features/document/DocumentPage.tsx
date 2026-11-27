@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
 import { LoadingState } from "@sijil/ui-kit";
-import { AccessFields } from "@/shared/AccessFields";
+import { AccessFields, accessProblem } from "@/shared/AccessFields";
 import { accessHeaders, type Access } from "@/shared/access";
 import { api, callWithETag, isApiError } from "@/shared/api";
 import { displayValue, humanize } from "@/shared/metadata";
@@ -52,6 +52,7 @@ export function DocumentSheet({
 }) {
   const [access, setAccess] = useState<Access>({});
   const [draft, setDraft] = useState<Access>({});
+  const [accessChecked, setAccessChecked] = useState(false);
   const document = useQuery({
     queryKey: ["document", id, access],
     queryFn: () =>
@@ -73,12 +74,18 @@ export function DocumentSheet({
           <form
             aria-label="Motif d'accès"
             className="flex flex-col gap-4"
+            noValidate
             onSubmit={(event) => {
               event.preventDefault();
-              setAccess(draft);
+              setAccessChecked(true);
+              if (!accessProblem(draft)) setAccess(draft);
             }}
           >
-            <AccessFields value={draft} onChange={setDraft} />
+            <AccessFields
+              value={draft}
+              onChange={setDraft}
+              error={accessChecked ? accessProblem(draft) : undefined}
+            />
             <div>
               <Button type="submit">Consulter avec ce motif</Button>
             </div>

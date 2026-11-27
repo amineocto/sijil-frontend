@@ -22,14 +22,13 @@ describe("Fiche document", () => {
     expect(metadata).toHaveTextContent("AB12345");
     // Écart de type détecté par les traitements (lot 5).
     expect(screen.getByText("Type à vérifier")).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("PASSEPORT");
-    expect(await seriousViolations(container)).toEqual([]);
-
-    await user.click(screen.getByRole("button", { name: "Afficher l'aperçu" }));
+    // Le PDF s'affiche dès l'ouverture, sans clic.
     expect(await screen.findByTitle("Aperçu du document CIN")).toHaveAttribute(
       "src",
       "blob:apercu",
     );
+    expect(screen.getByRole("status")).toHaveTextContent("PASSEPORT");
+    expect(await seriousViolations(container)).toEqual([]);
 
     await user.click(screen.getByRole("tab", { name: "Versions et historique" }));
     expect(await screen.findByRole("table", { name: "Versions" })).toHaveTextContent("courante");
@@ -58,6 +57,8 @@ describe("Fiche document", () => {
 
     expect(await screen.findByText("Accès à justifier")).toBeInTheDocument();
     expect(screen.queryByText(/X-Access/)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Consulter avec ce motif" }));
+    expect(screen.getByText("Indiquez pourquoi vous consultez ce document")).toBeVisible();
     await user.type(screen.getByRole("textbox", { name: /Finalité/ }), "Contrôle interne");
     await user.click(screen.getByRole("button", { name: "Consulter avec ce motif" }));
 
@@ -71,7 +72,6 @@ describe("Fiche document", () => {
     );
     renderAt(OWN);
     const user = userEvent.setup();
-    await user.click(await screen.findByRole("button", { name: "Afficher l'aperçu" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("L'aperçu n'est pas disponible.");
     server.use(http.get("/api/documents/:id/preview", () => HttpResponse.error()));
     await user.click(screen.getByRole("button", { name: "Réessayer" }));
@@ -116,6 +116,37 @@ describe("Fiche document", () => {
     await user.type(screen.getByRole("textbox", { name: /Motif de la restauration/ }), "Erreur");
     await user.click(screen.getByRole("button", { name: "Restaurer" }));
     expect(await screen.findByRole("button", { name: "Supprimer" })).toBeInTheDocument();
+  });
+
+  it("contrôle motifs, métadonnées et fichier avant tout envoi", async () => {
+    let writes = 0;
+    server.use(
+      http.patch("/api/documents/:id", () => {
+        writes++;
+        return HttpResponse.json({}, { status: 500 });
+      }),
+      http.delete("/api/documents/:id", () => {
+        writes++;
+        return HttpResponse.json({}, { status: 500 });
+      }),
+    );
+    renderAt(OWN);
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole("button", { name: "Modifier les métadonnées" }));
+    const form = await screen.findByRole("form", { name: "Modifier les métadonnées" });
+    const numero = within(form).getByRole("textbox", { name: /Numéro/ });
+    await user.clear(numero);
+    await user.type(numero, "ab12");
+    await user.click(within(form).getByRole("button", { name: "Enregistrer" }));
+    expect(within(form).getByText("Lettres en majuscules attendues : AB12")).toBeVisible();
+    expect(within(form).getByText("Obligatoire")).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Supprimer" }));
+    await user.type(screen.getByRole("textbox", { name: /Motif de la suppression/ }), "ok");
+    await user.click(screen.getByRole("button", { name: "Confirmer la suppression" }));
+    expect(screen.getByText("Au moins 3 caractères")).toBeVisible();
+    expect(writes).toBe(0);
   });
 
   it("dépose une nouvelle version", async () => {

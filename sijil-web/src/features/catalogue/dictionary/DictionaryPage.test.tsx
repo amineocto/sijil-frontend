@@ -1,6 +1,7 @@
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DATA_OFFICE, SESSION } from "@/mocks/catalogue-data";
+import { termProblems } from "@/features/catalogue/dictionary/TermDrawer";
 import { renderAt, seriousViolations } from "@/test/render";
 import { stub } from "@/test/setup";
 
@@ -53,7 +54,7 @@ describe("Dictionnaire de métadonnées (ADR 0038)", () => {
     const form = screen.getByRole("form", { name: "Nouveau terme" });
     await user.click(within(form).getByRole("button", { name: "Enregistrer" }));
     expect(within(form).getByText(/Une minuscule puis lettres/)).toBeVisible();
-    expect(within(form).getByText("Le libellé français est obligatoire")).toBeVisible();
+    expect(within(form).getByText("Obligatoire")).toBeVisible();
 
     await user.type(within(form).getByLabelText(/^Nom technique/), "situationFamiliale");
     await user.type(within(form).getByLabelText(/^Libellé français/), "Situation familiale");
@@ -118,5 +119,41 @@ describe("Dictionnaire de métadonnées (ADR 0038)", () => {
     if (montant) montant.revision = 5;
     await user.click(within(stale).getByRole("button", { name: "Enregistrer" }));
     expect(await within(stale).findByRole("alert")).toHaveTextContent("Rechargez le terme");
+  });
+
+  it("contrôle un terme comme le contrat avant l'envoi", () => {
+    const base = {
+      code: "numeroCin",
+      labelFr: "Numéro",
+      labelAr: "",
+      labelEn: "",
+      definition: "",
+      format: "TEXT" as const,
+      maxLength: "",
+      pattern: "",
+      values: [],
+      minimum: "",
+      maximum: "",
+      personalData: "AUCUNE" as const,
+      filenetProperty: "",
+      status: "ACTIF" as const,
+    };
+    expect(termProblems(base, true)).toEqual({});
+    expect(termProblems({ ...base, code: "Numero", maxLength: "0", pattern: "[a-" }, true)).toEqual(
+      {
+        code: "Une minuscule puis lettres et chiffres, sans espace",
+        maxLength: "Nombre entier de 1 à 100 000",
+        pattern: "Expression régulière invalide",
+      },
+    );
+    expect(termProblems({ ...base, format: "ENUM" }, false)).toEqual({
+      values: "Ajoutez au moins une valeur",
+    });
+    expect(
+      termProblems({ ...base, format: "INTEGER", minimum: "5", maximum: "2.5" }, false),
+    ).toEqual({ maximum: "Nombre entier attendu" });
+    expect(termProblems({ ...base, format: "NUMBER", minimum: "5", maximum: "2" }, false)).toEqual({
+      maximum: "Le maximum doit être supérieur ou égal au minimum",
+    });
   });
 });

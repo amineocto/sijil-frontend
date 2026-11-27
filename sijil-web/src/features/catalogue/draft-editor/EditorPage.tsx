@@ -45,6 +45,10 @@ import {
 } from "@/shared/ui";
 import { CodeIcon, RUBRIC_ICONS } from "@/shared/ui/icons";
 import { NoDraft } from "@/features/catalogue/shared/NoDraft";
+import {
+  definitionProblems,
+  type DefinitionProblem,
+} from "@/features/catalogue/draft-editor/definitionChecks";
 
 /** Écran « Éditeur de brouillon » : formulaire par rubriques, enregistrement avec `If-Match`. */
 export function EditorPage() {
@@ -95,21 +99,25 @@ function EditorForm({ initial }: { initial: Schemas["Editor"] }) {
     },
     onError: (error) => {
       if (!isApiError(error)) return;
-      const notPlaced: string[] = [];
-      for (const { field, code } of error.fieldErrors) {
-        const name = fieldOfPointer(field);
-        if (name) {
-          form.setError(name as keyof EditorValues, {
-            type: "server",
-            message: errorLabel(code),
-          });
-        } else {
-          notPlaced.push(`${field} : ${errorLabel(code)}`);
-        }
-      }
-      setUnplaced(notPlaced);
+      place(
+        error.fieldErrors.map(({ field, code }) => ({ pointer: field, message: errorLabel(code) })),
+      );
     },
   });
+  // Erreurs (du navigateur ou du catalogue) rattachées au champ ou à la rubrique de leur pointeur.
+  const place = (problems: DefinitionProblem[]) => {
+    const notPlaced: string[] = [];
+    const byName = new Map<string, string[]>();
+    for (const { pointer, message } of problems) {
+      const name = fieldOfPointer(pointer);
+      if (name) byName.set(name, [...(byName.get(name) ?? []), message]);
+      else notPlaced.push(`${pointer} : ${message}`);
+    }
+    for (const [name, messages] of byName) {
+      form.setError(name as keyof EditorValues, { type: "server", message: messages.join(" ; ") });
+    }
+    setUnplaced(notPlaced);
+  };
   const editable = initial.status === "BROUILLON";
 
   return (
@@ -119,7 +127,9 @@ function EditorForm({ initial }: { initial: Schemas["Editor"] }) {
       className="flex flex-col gap-4"
       onSubmit={(event) =>
         void form.handleSubmit((values) => {
-          save.mutate(values);
+          const problems = definitionProblems(toDefinition(values));
+          if (problems.length > 0) place(problems);
+          else save.mutate(values);
         })(event)
       }
     >

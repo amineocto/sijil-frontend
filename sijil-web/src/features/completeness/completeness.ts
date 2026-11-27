@@ -30,6 +30,22 @@ export function evaluate(request: CompletenessRequest): Promise<CompletenessResu
   return call(api.POST("/api/completeness-evaluations", { body: request }));
 }
 
+/** Lignes du contexte mal formées : « clé=valeur », clé d'une lettre puis lettres et chiffres. */
+export function contextProblem(text: string): string | undefined {
+  const bad = text
+    .split("\n")
+    .map((line, i) => ({ line: line.trim(), n: i + 1 }))
+    .filter(({ line }) => line !== "")
+    .filter(({ line }) => {
+      const [key, ...rest] = line.split("=");
+      return !/^[a-zA-Z][a-zA-Z0-9]{0,31}$/.test(key?.trim() ?? "") || !rest.join("=").trim();
+    })
+    .map(({ n }) => n);
+  return bad.length
+    ? `Ligne${bad.length > 1 ? "s" : ""} ${bad.join(", ")} : écrivez clé=valeur, par exemple segment=SALARIE`
+    : undefined;
+}
+
 /** Lignes « clé=valeur » du contexte du dossier ; une ligne mal formée est ignorée. */
 export function parseContext(text: string): Record<string, string> {
   const context: Record<string, string> = {};

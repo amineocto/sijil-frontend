@@ -10,6 +10,27 @@ function draftOf(code: string) {
 }
 
 describe("Éditeur de brouillon", () => {
+  it("contrôle la forme de la définition avant d'enregistrer", async () => {
+    let puts = 0;
+    server.use(
+      http.put("/api/types/:code/editor", () => {
+        puts++;
+        return HttpResponse.json({}, { status: 500 });
+      }),
+    );
+    renderAt("/catalogue/types/RIB/brouillon");
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("tab", { name: /Stockage/ }));
+    const bucket = screen.getByRole("textbox", { name: /Emplacement de stockage/ });
+    await user.clear(bucket);
+    await user.type(bucket, "e");
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+    expect(
+      await screen.findByText(/Emplacement de stockage : Minuscules, chiffres et -/),
+    ).toBeVisible();
+    expect(puts).toBe(0);
+  });
+
   it("dit qu'il n'y a pas de brouillon, au brouillon comme à la soumission", async () => {
     server.use(
       http.get("/api/types/:code/editor", () =>

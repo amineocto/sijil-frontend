@@ -62,6 +62,7 @@ export function PartyLookup({
         type="search"
         autoComplete="off"
         placeholder="Identifiant du client, de la personne ou du compte"
+        maxLength={64}
         value={id}
         onChange={(e) => {
           setId(e.currentTarget.value);
