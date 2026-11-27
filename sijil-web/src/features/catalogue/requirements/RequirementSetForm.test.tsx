@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -147,6 +147,33 @@ describe("Formulaire d'un jeu d'exigences", () => {
     expect(within(card).getByText("Choisissez au moins un type")).toBeVisible();
     await user.click(within(card).getByRole("button", { name: "Supprimer Identité" }));
     expect(screen.getByRole("alert")).toHaveTextContent("Ajoutez au moins une exigence");
+  });
+
+  it("propose les champs du contexte déjà employés par les autres jeux", async () => {
+    server.use(
+      http.get("/api/requirement-sets", () =>
+        HttpResponse.json([
+          {
+            code: "AUTRE",
+            version: 1,
+            parcours: "eer",
+            status: "PUBLIE",
+            definition: {
+              label: "Autre jeu",
+              requirements: [{ ...IDENTITY, when: { produit: "PEL", segment: "PRO" } }],
+            },
+          },
+        ]),
+      ),
+    );
+    renderForm({ ...ONE, requirements: [{ ...IDENTITY, when: { segment: "PRO" } }] });
+    const input = screen.getByLabelText(/Nouvelle condition/);
+    const list = document.getElementById(input.getAttribute("list") ?? "");
+    await waitFor(() => {
+      expect([...(list?.querySelectorAll("option") ?? [])].map((o) => o.value)).toEqual([
+        "produit",
+      ]);
+    });
   });
 
   it("n'affiche aucun bouton de modification en lecture seule", () => {

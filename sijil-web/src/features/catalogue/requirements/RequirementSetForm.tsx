@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useId, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   CheckboxGroup,
   ChipsField,
@@ -6,7 +7,7 @@ import {
   Switch,
 } from "@/features/catalogue/draft-editor/rubrics/controls";
 import { useTypeIndex } from "@/features/dossier/typeIndex";
-import type { Schemas } from "@/shared/api";
+import { api, call, type Schemas } from "@/shared/api";
 import { PARTY_ROLE_LABELS, PARTY_TYPE_LABELS } from "@/shared/labels";
 import { Button, Heading, SelectField, Tag, TextField } from "@/shared/ui";
 import { AddIcon, DeleteIcon } from "@/shared/ui/icons";
@@ -389,6 +390,8 @@ function Conditions({
   onChange: (next: Record<string, Scalar | Scalar[]>) => void;
 }) {
   const [field, setField] = useState("");
+  const suggestionsId = useId();
+  const known = useContextFields();
   const entries = Object.entries(when);
   const valuesOf = (v: Scalar | Scalar[]) => (Array.isArray(v) ? v : [v]);
   const update = (key: string, texts: string[]) => {
@@ -425,28 +428,62 @@ function Conditions({
           />
         ))}
       {!readOnly && (
-        <div className="flex items-end gap-2">
-          <TextField
-            label="Nouvelle condition sur le champ"
-            description="Nom d'un champ du contexte transmis par le parcours, par exemple segment."
-            value={field}
-            onChange={(e) => {
-              setField(e.currentTarget.value.replace(/[^A-Za-z0-9]/g, ""));
-            }}
-          />
-          <Button
-            variant="secondary"
-            disabled={!/^[a-zA-Z][a-zA-Z0-9]{0,31}$/.test(field) || field in when}
-            onClick={() => {
-              onChange({ ...when, [field]: [] as Scalar[] });
-              setField("");
-            }}
-          >
-            <AddIcon className="size-4" />
-            Ajouter la condition
-          </Button>
+        <div className="flex flex-col gap-1.5">
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="min-w-56 flex-1 sm:max-w-sm">
+              <TextField
+                label="Nouvelle condition sur le champ"
+                list={suggestionsId}
+                autoComplete="off"
+                value={field}
+                onChange={(e) => {
+                  setField(e.currentTarget.value.replace(/[^A-Za-z0-9]/g, ""));
+                }}
+              />
+            </div>
+            <Button
+              variant="secondary"
+              disabled={!/^[a-zA-Z][a-zA-Z0-9]{0,31}$/.test(field) || field in when}
+              onClick={() => {
+                onChange({ ...when, [field]: [] as Scalar[] });
+                setField("");
+              }}
+            >
+              <AddIcon className="size-4" />
+              Ajouter la condition
+            </Button>
+          </div>
+          <p className="text-sm text-gray-600">
+            Un champ du contexte transmis par le parcours, par exemple segment. La liste propose les
+            champs déjà employés dans les jeux d&apos;exigences.
+          </p>
+          <datalist id={suggestionsId}>
+            {known
+              .filter((k) => !(k in when))
+              .map((k) => (
+                <option key={k} value={k} />
+              ))}
+          </datalist>
         </div>
       )}
     </div>
   );
+}
+
+/**
+ * Champs du contexte déjà employés dans les conditions des jeux d'exigences : suggestions pour
+ * éviter les fautes de frappe, tant qu'aucun référentiel des champs du contexte n'existe.
+ */
+function useContextFields(): string[] {
+  const sets = useQuery({
+    queryKey: ["requirement-sets"],
+    queryFn: () => call(api.GET("/api/requirement-sets", {})),
+  });
+  const fields = new Set<string>();
+  for (const set of (sets.data ?? []) as { definition?: Definition }[]) {
+    for (const r of set.definition?.requirements ?? []) {
+      for (const key of Object.keys(r.when ?? {})) fields.add(key);
+    }
+  }
+  return [...fields].sort();
 }
