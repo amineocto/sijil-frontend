@@ -12,6 +12,14 @@ function asReviewer() {
   stub.session = REVIEWER;
 }
 
+async function approveAndConfirm(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole("radio", { name: "Approuver et publier" }));
+  await user.click(screen.getByRole("button", { name: "Approuver et publier" }));
+  await user.click(
+    within(screen.getByRole("alertdialog")).getByRole("button", { name: "Publier la version" }),
+  );
+}
+
 describe("File de revue", () => {
   it("liste les versions en revue, sans violation axe", async () => {
     asReviewer();
@@ -60,7 +68,29 @@ describe("Revue d'une version", () => {
     expect(screen.getByText(/Différences avec la version publiée v1/)).toBeVisible();
     expect(await seriousViolations(container)).toEqual([]);
 
-    await user.click(screen.getByRole("button", { name: "Enregistrer la revue" }));
+    // Aucune décision n'est choisie d'avance, et rien ne part sans décision.
+    expect(screen.getByRole("radio", { name: "Approuver et publier" })).not.toBeChecked();
+    await user.click(screen.getByRole("button", { name: "Enregistrer la décision" }));
+    expect(screen.getByText("Choisissez une décision")).toBeVisible();
+
+    await user.click(screen.getByRole("radio", { name: "Approuver et publier" }));
+    await user.click(screen.getByRole("button", { name: "Approuver et publier" }));
+    const confirmation = screen.getByRole("alertdialog", {
+      name: "Publier la version 2 du type ATTESTATION_SALAIRE ?",
+    });
+    expect(confirmation).toHaveTextContent("Une version publiée ne se modifie plus");
+
+    // Annuler ne publie rien.
+    await user.click(within(confirmation).getByRole("button", { name: "Annuler" }));
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    expect(stub.types.find((t) => t.code === "ATTESTATION_SALAIRE")?.versions[0]?.status).toBe(
+      "EN_REVUE",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Approuver et publier" }));
+    await user.click(
+      within(screen.getByRole("alertdialog")).getByRole("button", { name: "Publier la version" }),
+    );
 
     expect(await screen.findByRole("status")).toHaveTextContent("état « Publié »");
     const version = stub.types.find((t) => t.code === "ATTESTATION_SALAIRE")?.versions[0];
@@ -74,11 +104,12 @@ describe("Revue d'une version", () => {
     renderAt(REVIEW);
 
     await user.click(await screen.findByRole("radio", { name: "Demander des modifications" }));
-    await user.click(screen.getByRole("button", { name: "Enregistrer la revue" }));
+    await user.click(screen.getByRole("button", { name: "Demander des modifications" }));
     expect(await screen.findByText("Motif obligatoire")).toBeVisible();
 
     await user.type(screen.getByRole("textbox", { name: /Motif/ }), "Préciser la finalité.");
-    await user.click(screen.getByRole("button", { name: "Enregistrer la revue" }));
+    await user.click(screen.getByRole("button", { name: "Demander des modifications" }));
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
 
     expect(await screen.findByRole("status")).toHaveTextContent("état « Brouillon »");
     expect(
@@ -91,7 +122,7 @@ describe("Revue d'une version", () => {
     const user = userEvent.setup();
     renderAt(REVIEW);
 
-    await user.click(await screen.findByRole("button", { name: "Enregistrer la revue" }));
+    await approveAndConfirm(user);
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Vous ne pouvez pas revoir une version que vous avez soumise",
@@ -102,11 +133,11 @@ describe("Revue d'une version", () => {
     asReviewer();
     const user = userEvent.setup();
     renderAt(REVIEW);
-    await screen.findByRole("button", { name: "Enregistrer la revue" });
+    await screen.findByRole("button", { name: "Enregistrer la décision" });
     const version = stub.types.find((t) => t.code === "ATTESTATION_SALAIRE")?.versions[0];
     if (version) version.revision += 1;
 
-    await user.click(screen.getByRole("button", { name: "Enregistrer la revue" }));
+    await approveAndConfirm(user);
 
     expect(await screen.findByText("La version a changé depuis votre lecture")).toBeVisible();
   });

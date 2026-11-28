@@ -10,6 +10,7 @@ import { Page } from "@/shared/ui/page";
 import { QueryState } from "@/shared/QueryState";
 import { useSession } from "@/shared/session";
 import { Button, Panel, SelectField, TextField } from "@/shared/ui";
+import { ProblemSummary } from "@/shared/refusedSubmit";
 
 const newTypeSchema = z.object({
   code: z
@@ -102,6 +103,9 @@ function NewTypeForm({ parcours }: { parcours: string[] }) {
         />
         {isApiError(create.error) && create.error.status !== 409 && (
           <ErrorState error={create.error} headingLevel={3} />
+        )}
+        {form.formState.submitCount > 0 && (
+          <ProblemSummary count={Object.keys(form.formState.errors).length} />
         )}
         <div>
           <Button type="submit" loading={create.isPending}>

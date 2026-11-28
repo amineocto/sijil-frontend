@@ -146,6 +146,12 @@ describe("Fiche document", () => {
     await user.type(screen.getByRole("textbox", { name: /Motif de la suppression/ }), "ok");
     await user.click(screen.getByRole("button", { name: "Confirmer la suppression" }));
     expect(screen.getByText("Au moins 3 caractères")).toBeVisible();
+    expect(screen.getByRole("textbox", { name: /Motif de la suppression/ })).toHaveFocus();
+    expect(
+      screen
+        .getAllByRole("alert")
+        .some((alert) => alert.textContent.includes("1 champ à corriger")),
+    ).toBe(true);
     expect(writes).toBe(0);
   });
 

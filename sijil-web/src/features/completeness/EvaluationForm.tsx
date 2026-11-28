@@ -8,6 +8,7 @@ import {
 } from "@/features/completeness/completeness";
 import { Button, SelectField, TextAreaField, TextField } from "@/shared/ui";
 import { at, EXTERNAL_ID, EXTERNAL_ID_HINT, idProblem, isIsoDate } from "@/shared/validation";
+import { useRefusedSubmit } from "@/shared/refusedSubmit";
 
 const KINDS = [
   { value: "CLIENT", label: "Client" },
@@ -50,15 +51,24 @@ export function EvaluationForm({ submitLabel, pending, onSubmit }: EvaluationFor
     ...at("context", contextProblem(context)),
     ...at("date", date && !isIsoDate(date) ? "Date invalide" : undefined),
   };
+  const {
+    container: formRef,
+    refuse,
+    summary: problemSummary,
+  } = useRefusedSubmit(Object.keys(problems).length);
 
   return (
     <form
+      ref={formRef}
       aria-label="Dossier à évaluer"
       noValidate
       onSubmit={(event) => {
         event.preventDefault();
         setChecked(true);
-        if (Object.keys(problems).length > 0) return;
+        if (Object.keys(problems).length > 0) {
+          refuse();
+          return;
+        }
         onSubmit({
           parties: complete.map((p) => ({ ...p, externalId: p.externalId.trim() })),
           context: parseContext(context),
@@ -132,6 +142,7 @@ export function EvaluationForm({ submitLabel, pending, onSubmit }: EvaluationFor
             setDate(event.currentTarget.value);
           }}
         />
+        {problemSummary}
         <div>
           <Button type="submit" loading={pending}>
             {submitLabel}

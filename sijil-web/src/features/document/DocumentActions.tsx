@@ -16,6 +16,7 @@ import {
   textProblem,
 } from "@/shared/validation";
 import { queryKeys } from "@/shared/queryKeys";
+import { useRefusedSubmit } from "@/shared/refusedSubmit";
 
 type Mode = "none" | "metadata" | "version" | "delete";
 
@@ -148,6 +149,11 @@ function EditMetadata({
     ...metadataProblems(fields, values),
     ...at("reason", textProblem(reason, { required: true, min: REASON.min, max: REASON.max })),
   };
+  const {
+    container: formRef,
+    refuse,
+    summary: problemSummary,
+  } = useRefusedSubmit(Object.keys(local).length);
   const save = useMutation({
     mutationFn: () =>
       call(
@@ -162,12 +168,14 @@ function EditMetadata({
   const errors = checked ? merged(local, server) : server;
   return (
     <form
+      ref={formRef}
       aria-label="Modifier les métadonnées"
       noValidate
       onSubmit={(e) => {
         e.preventDefault();
         setChecked(true);
         if (Object.keys(local).length === 0) save.mutate();
+        else refuse();
       }}
     >
       <div className="flex max-w-xl flex-col gap-4">
@@ -182,6 +190,7 @@ function EditMetadata({
             setReason(e.currentTarget.value);
           }}
         />
+        {problemSummary}
         <Failure error={save.error} />
         <div>
           <Button type="submit" loading={save.isPending}>
@@ -210,6 +219,7 @@ function NewVersion({
   const [checked, setChecked] = useState(false);
   const formats = type.data?.definition.formats ?? [];
   const problem = fileProblem(file, formats, type.data?.definition.maxSizeMb ?? 50);
+  const { container: formRef, refuse, summary: problemSummary } = useRefusedSubmit(problem ? 1 : 0);
   const send = useMutation({
     mutationFn: async () => {
       if (!file || !type.data) throw new Error("Choisissez un fichier.");
@@ -228,12 +238,14 @@ function NewVersion({
   });
   return (
     <form
+      ref={formRef}
       aria-label="Nouvelle version"
       noValidate
       onSubmit={(e) => {
         e.preventDefault();
         setChecked(true);
         if (!problem) send.mutate();
+        else refuse();
       }}
     >
       <div className="flex max-w-xl flex-col gap-4">
@@ -245,6 +257,7 @@ function NewVersion({
           error={checked ? problem : undefined}
         />
         {send.isPending && <ProgressBar value={progress} label="Envoi du fichier" />}
+        {problemSummary}
         <Failure error={send.error} />
         <div>
           <Button type="submit" loading={send.isPending} disabled={!type.data}>
@@ -268,6 +281,11 @@ function Delete({
   const [reason, setReason] = useState("");
   const [checked, setChecked] = useState(false);
   const reasonProblem = textProblem(reason, { required: true, min: REASON.min, max: REASON.max });
+  const {
+    container: formRef,
+    refuse,
+    summary: problemSummary,
+  } = useRefusedSubmit(reasonProblem ? 1 : 0);
   const remove = useMutation({
     mutationFn: () =>
       call(
@@ -282,12 +300,14 @@ function Delete({
   });
   return (
     <form
+      ref={formRef}
       aria-label="Supprimer le document"
       noValidate
       onSubmit={(e) => {
         e.preventDefault();
         setChecked(true);
         if (!reasonProblem) remove.mutate();
+        else refuse();
       }}
     >
       <div className="flex max-w-xl flex-col gap-4">
@@ -302,6 +322,7 @@ function Delete({
             setReason(e.currentTarget.value);
           }}
         />
+        {problemSummary}
         <Failure error={remove.error} />
         <div>
           <Button type="submit" variant="danger" loading={remove.isPending}>
@@ -325,6 +346,11 @@ function Restore({
   const [reason, setReason] = useState("");
   const [checked, setChecked] = useState(false);
   const reasonProblem = textProblem(reason, { required: true, min: REASON.min, max: REASON.max });
+  const {
+    container: formRef,
+    refuse,
+    summary: problemSummary,
+  } = useRefusedSubmit(reasonProblem ? 1 : 0);
   const restore = useMutation({
     mutationFn: () =>
       call(
@@ -337,12 +363,14 @@ function Restore({
   });
   return (
     <form
+      ref={formRef}
       aria-label="Restaurer le document"
       noValidate
       onSubmit={(e) => {
         e.preventDefault();
         setChecked(true);
         if (!reasonProblem) restore.mutate();
+        else refuse();
       }}
     >
       <div className="flex max-w-xl flex-col gap-4">
@@ -359,6 +387,7 @@ function Restore({
             setReason(e.currentTarget.value);
           }}
         />
+        {problemSummary}
         <Failure error={restore.error} />
         <div>
           <Button type="submit" loading={restore.isPending}>

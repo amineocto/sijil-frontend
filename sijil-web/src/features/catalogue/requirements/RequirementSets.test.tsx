@@ -1,6 +1,6 @@
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { REVIEWER } from "@/mocks/catalogue-data";
+import { REVIEWER, SESSION } from "@/mocks/catalogue-data";
 import { renderAt, seriousViolations } from "@/test/render";
 import { stub } from "@/test/setup";
 
@@ -78,13 +78,40 @@ describe("Exigences documentaires (L7-04)", () => {
     stub.session = { ...REVIEWER, user: "contributeur.demo" };
     const first = renderAt("/catalogue/exigences/EER_OUVERTURE/versions/1");
     await user.click(await screen.findByRole("button", { name: "Publier" }));
+    await user.click(
+      within(screen.getByRole("alertdialog")).getByRole("button", { name: "Publier la version" }),
+    );
     expect(await screen.findByText(/n'en est pas rédacteur/)).toBeVisible();
     first.unmount();
 
     stub.session = REVIEWER;
     renderAt("/catalogue/exigences/EER_OUVERTURE/versions/1");
     await user.click(await screen.findByRole("button", { name: "Publier" }));
+    const confirmation = screen.getByRole("alertdialog", {
+      name: "Publier la version 1 du jeu EER_OUVERTURE ?",
+    });
+    expect(confirmation).toHaveTextContent("Une version publiée ne se modifie plus");
+    await user.click(within(confirmation).getByRole("button", { name: "Annuler" }));
+    expect(screen.queryByText("Publié")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Publier" }));
+    await user.click(
+      within(screen.getByRole("alertdialog")).getByRole("button", { name: "Publier la version" }),
+    );
     expect(await screen.findByText("Publié")).toBeVisible();
+  });
+
+  it("ne publie pas un brouillon dont des modifications ne sont pas enregistrées", async () => {
+    const user = userEvent.setup();
+    stub.session = { ...SESSION, roles: [...SESSION.roles, "catalogue-reviseur"] };
+    renderAt("/catalogue/exigences/EER_OUVERTURE/versions/1");
+
+    const publish = await screen.findByRole("button", { name: "Publier" });
+    expect(publish).toBeEnabled();
+    await user.type(screen.getByLabelText(/Libellé du jeu/), " modifié");
+
+    expect(publish).toBeDisabled();
+    expect(screen.getByText(/Enregistrez le brouillon avant de publier/)).toBeVisible();
   });
 
   it("simule la définition affichée pour un dossier de test", async () => {

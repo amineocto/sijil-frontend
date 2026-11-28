@@ -61,6 +61,9 @@ Une adresse inconnue affiche « Page introuvable » dans la coquille (`app/NotFo
 - **États** : `QueryState` rend chargement, erreur (avec référence) et, sur demande, un affichage dédié au 404.
 - **Concurrence** : écritures avec `If-Match` (ETag) ; un 412 est expliqué à l'utilisateur.
 - **Formulaires** : tout ce que le navigateur peut contrôler l'est **avant l'envoi**, avec les règles du serveur : contrats du BFF et de `sijil-api`, schéma de métadonnées du type, schéma de définition d'un type (`draft-editor/definitionChecks.ts`). Rien n'est envoyé, aucun fichier compris, tant qu'un champ est signalé. Les contrôles communs sont dans `shared/validation.ts`. Les formulaires désactivent la validation native du navigateur (`noValidate`) pour afficher leurs propres messages en français.
+- **Formulaire refusé** : `shared/refusedSubmit.tsx` annonce le nombre de champs à corriger (`role="alert"`) et place le focus sur le premier champ en erreur. Tous les formulaires l'emploient.
+- **Actions irréversibles** : retirer un terme, publier un jeu d'exigences et publier une version de type passent par `ConfirmDialog` (`shared/ui`), qui dit la conséquence. Une publication est impossible tant que le formulaire a des modifications non enregistrées, et la revue ne présélectionne aucune décision.
+- **Dossier volumineux** : au-delà de 200 documents chargés, le dossier affiche un avertissement et le compteur porte un « + ».
 - **Refus du serveur** : il reste juge. Ses erreurs (`errors[].field`, pointeur JSON, par exemple `metadata/numero`) sont rattachées au champ, et leurs codes traduits en phrases (`serverProblems`).
 - **Aperçu** : un PDF ou une image s'affiche dès l'ouverture d'un document. Un autre format attend un clic, car il se télécharge.
 

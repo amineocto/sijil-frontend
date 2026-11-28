@@ -55,7 +55,10 @@ describe("Dépôt", () => {
     const user = userEvent.setup();
     await chooseCin(user);
     await user.click(await screen.findByRole("button", { name: "Déposer" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("Corrigez les champs signalés");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "3 champs à corriger : rien n'a été envoyé.",
+    );
+    expect(screen.getByRole("textbox", { name: /Numéro/ })).toHaveFocus();
     expect(screen.getByRole("textbox", { name: /Numéro/ })).toHaveAccessibleDescription(
       /Obligatoire/,
     );

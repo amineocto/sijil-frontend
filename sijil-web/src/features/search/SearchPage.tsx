@@ -11,6 +11,7 @@ import type { PartyType } from "@/shared/types";
 import { Button, SelectField, TextField } from "@/shared/ui";
 import { Page, Section } from "@/shared/ui/page";
 import { textProblem } from "@/shared/validation";
+import { useRefusedSubmit } from "@/shared/refusedSubmit";
 
 export type SearchMode = "dossier" | "texte" | "completude";
 
@@ -44,6 +45,7 @@ function DossierLookup() {
   const [id, setId] = useState("");
   const [checked, setChecked] = useState(false);
   const problem = textProblem(id, { required: true, max: 64 });
+  const { container: formRef, refuse, summary: problemSummary } = useRefusedSubmit(problem ? 1 : 0);
   const session = useSession();
   const recents = recentDossiers(session.data?.user);
   return (
@@ -54,6 +56,7 @@ function DossierLookup() {
           famille avec leur validité.
         </p>
         <form
+          ref={formRef}
           aria-label="Ouvrir un dossier depuis la recherche"
           className="grid gap-4 sm:grid-cols-[12rem_1fr_auto] sm:items-end"
           noValidate
@@ -61,6 +64,7 @@ function DossierLookup() {
             event.preventDefault();
             setChecked(true);
             if (!problem) void navigate(dossierPath(type, id.trim()));
+            else refuse();
           }}
         >
           <SelectField
@@ -84,6 +88,7 @@ function DossierLookup() {
           />
           <Button type="submit">Ouvrir le dossier</Button>
         </form>
+        {problemSummary}
       </Section>
       {recents.length > 0 && (
         <section aria-labelledby="dossiers-recents">

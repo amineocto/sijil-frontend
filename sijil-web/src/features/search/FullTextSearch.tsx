@@ -19,6 +19,7 @@ import {
   Th,
 } from "@/shared/ui";
 import { at, textProblem } from "@/shared/validation";
+import { useRefusedSubmit } from "@/shared/refusedSubmit";
 
 interface Criteria {
   q: string;
@@ -48,10 +49,16 @@ export function FullTextSearch() {
     ...at("q", textProblem(draft.q, { required: true, min: 2, max: 200 })),
     ...at("partyId", textProblem(draft.partyId, { required: true, max: 32 })),
   };
+  const {
+    container: formRef,
+    refuse,
+    summary: problemSummary,
+  } = useRefusedSubmit(Object.keys(problems).length);
   return (
     <div className="flex flex-col gap-6">
       <Panel>
         <form
+          ref={formRef}
           aria-label="Recherche plein texte"
           className="flex max-w-3xl flex-col gap-4"
           noValidate
@@ -60,6 +67,8 @@ export function FullTextSearch() {
             setChecked(true);
             if (Object.keys(problems).length === 0) {
               setCriteria({ ...draft, q: draft.q.trim(), partyId: draft.partyId.trim() });
+            } else {
+              refuse();
             }
           }}
         >
@@ -94,6 +103,7 @@ export function FullTextSearch() {
               }}
             />
           </div>
+          {problemSummary}
           <div>
             <Button type="submit">Chercher</Button>
           </div>

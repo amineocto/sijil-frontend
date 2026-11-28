@@ -166,6 +166,26 @@ describe("Dossier client", () => {
     });
   });
 
+  it("prévient quand le dossier dépasse ce qui est affiché, au lieu de le tronquer en silence", async () => {
+    let page = 0;
+    server.use(
+      http.get("/api/documents", () => {
+        page++;
+        const id = `00000000-0000-4000-8000-${String(page).padStart(12, "0")}`;
+        return HttpResponse.json({
+          items: [document(id, "eer", "STANDARD", { numero: `AB${String(page)}` })],
+          page: { size: 1, hasMore: true, nextCursor: `page-${String(page)}` },
+        });
+      }),
+    );
+    renderAt("/dossiers/client/CLI-42");
+
+    expect(await screen.findByText("Dossier affiché en partie")).toBeVisible();
+    expect(screen.getByText(/plus de 10 documents/)).toBeVisible();
+    expect(screen.getByRole("link", { name: "Documents · 10+" })).toBeInTheDocument();
+    expect(page).toBe(10);
+  });
+
   it("dit qu'aucun document n'est consultable", async () => {
     renderAt("/dossiers/personne/INCONNU");
     expect(await screen.findByText("Aucun document")).toBeInTheDocument();

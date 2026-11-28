@@ -50,6 +50,7 @@ import {
   type DefinitionProblem,
 } from "@/features/catalogue/draft-editor/definitionChecks";
 import { queryKeys } from "@/shared/queryKeys";
+import { ProblemSummary } from "@/shared/refusedSubmit";
 
 /** Écran « Éditeur de brouillon » : formulaire par rubriques, enregistrement avec `If-Match`. */
 export function EditorPage() {
@@ -171,6 +172,9 @@ function EditorForm({ initial }: { initial: Schemas["Editor"] }) {
       )}
       {isApiError(save.error) && ![412, 422].includes(save.error.status) && (
         <ErrorState error={save.error} headingLevel={3} />
+      )}
+      {form.formState.submitCount > 0 && (
+        <ProblemSummary count={problemCountOf(form.formState.errors)} />
       )}
       {editable && (
         <div className="flex flex-wrap gap-3">
@@ -355,4 +359,9 @@ function errorCount(rubrique: Rubrique, errors: FieldErrors<EditorValues>): numb
   const fields = (identity[rubrique.id] ?? []).filter((f) => errors[f]).length;
   const json = rubrique.jsonKeys.filter((key) => errors.json?.[key]).length;
   return fields + json;
+}
+
+function problemCountOf(errors: FieldErrors<EditorValues>): number {
+  const { json, ...fields } = errors;
+  return Object.keys(fields).length + Object.keys(json ?? {}).length;
 }

@@ -25,6 +25,7 @@ import { Preview } from "@/features/document/Preview";
 import { Button, Heading, Notice, Panel, Table, Tabs, Tag, Td, Th } from "@/shared/ui";
 import { KeyValues, Page, Section } from "@/shared/ui/page";
 import { CodeIcon, LIFECYCLE_ICONS, SENSITIVITY_ICONS } from "@/shared/ui/icons";
+import { useRefusedSubmit } from "@/shared/refusedSubmit";
 
 /**
  * Écran « Fiche document » : métadonnées, parties, aperçu, versions, historique et usages. Un
@@ -53,6 +54,11 @@ export function DocumentSheet({
   const [access, setAccess] = useState<Access>({});
   const [draft, setDraft] = useState<Access>({});
   const [accessChecked, setAccessChecked] = useState(false);
+  const {
+    container: formRef,
+    refuse,
+    summary: problemSummary,
+  } = useRefusedSubmit(accessProblem(draft) ? 1 : 0);
   const document = useQuery({
     queryKey: ["document", id, access],
     queryFn: () =>
@@ -72,6 +78,7 @@ export function DocumentSheet({
         </Notice>
         <Panel>
           <form
+            ref={formRef}
             aria-label="Motif d'accès"
             className="flex flex-col gap-4"
             noValidate
@@ -79,6 +86,7 @@ export function DocumentSheet({
               event.preventDefault();
               setAccessChecked(true);
               if (!accessProblem(draft)) setAccess(draft);
+              else refuse();
             }}
           >
             <AccessFields
@@ -86,6 +94,7 @@ export function DocumentSheet({
               onChange={setDraft}
               error={accessChecked ? accessProblem(draft) : undefined}
             />
+            {problemSummary}
             <div>
               <Button type="submit">Consulter avec ce motif</Button>
             </div>

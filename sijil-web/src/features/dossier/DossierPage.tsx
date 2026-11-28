@@ -43,8 +43,12 @@ import {
 } from "@/shared/ui/icons";
 import { DataTable, Page, Section } from "@/shared/ui/page";
 
-/** Pages lues au plus pour un dossier (20 documents par page côté `sijil-api`). */
 const MAX_PAGES = 10;
+
+interface LoadedDossier {
+  documents: DocumentView[];
+  hasMoreThanLoaded: boolean;
+}
 
 /**
  * Écran « Dossier » (poste CRC) : en-tête de la partie, onglets Documents et Complétude ; pièces
@@ -96,7 +100,7 @@ function Dossier({
   const party = `${PARTY_TYPE_LABELS[partyType] ?? partyType} ${partyId}`;
   const holder =
     partyType === "COMPTE" ? "compte" : partyType === "PERSONNE" ? "titulaire" : "client";
-  const openedDocument = documents.data?.find((d) => d.id === opened);
+  const openedDocument = documents.data?.documents.find((d) => d.id === opened);
   const base = dossierPath(partyType, partyId);
 
   return (
@@ -105,7 +109,7 @@ function Dossier({
         <Avatar size="lg" name={party} style={{ backgroundColor: "var(--color-orange-700)" }} />
       }
       title={party}
-      subtitle={documents.data && <Summary documents={documents.data} />}
+      subtitle={documents.data && <Summary documents={documents.data.documents} />}
       actions={
         <>
           {tab === "documents" && (
@@ -125,7 +129,7 @@ function Dossier({
       }
       tabs={[
         {
-          label: documents.data ? `Documents · ${String(documents.data.length)}` : "Documents",
+          label: documents.data ? `Documents · ${countLabel(documents.data)}` : "Documents",
           to: base,
           end: true,
         },
@@ -140,20 +144,30 @@ function Dossier({
           {canBreakGlass(session.data) && <BreakGlass onApply={setAccess} />}
           <section aria-label="Pièces du dossier">
             <QueryState query={documents}>
-              {(items) =>
-                items.length === 0 ? (
+              {(dossier) =>
+                dossier.documents.length === 0 ? (
                   <EmptyState
                     title="Aucun document"
                     description="Aucun document consultable avec vos droits pour cette partie."
                   />
                 ) : (
-                  <Pieces
-                    documents={items}
-                    types={types}
-                    onOpen={(id) => {
-                      setSelection({ document: id });
-                    }}
-                  />
+                  <>
+                    {dossier.hasMoreThanLoaded && (
+                      <Notice tone="warning" role="status" title="Dossier affiché en partie">
+                        Ce dossier contient plus de {String(dossier.documents.length)} documents :
+                        seuls les {String(dossier.documents.length)} plus récents sont affichés. Les
+                        compteurs « à renouveler » et « expirées » ne portent que sur ces documents.
+                        Pour retrouver une pièce plus ancienne, utilisez la recherche plein texte.
+                      </Notice>
+                    )}
+                    <Pieces
+                      documents={dossier.documents}
+                      types={types}
+                      onOpen={(id) => {
+                        setSelection({ document: id });
+                      }}
+                    />
+                  </>
                 )
               }
             </QueryState>
@@ -445,8 +459,8 @@ async function allDocuments(
   partyType: PartyType,
   partyId: string,
   access: Access,
-): Promise<DocumentView[]> {
-  const items: DocumentView[] = [];
+): Promise<LoadedDossier> {
+  const documents: DocumentView[] = [];
   let cursor: string | undefined;
   for (let i = 0; i < MAX_PAGES; i++) {
     const page = (await call(
@@ -457,9 +471,16 @@ async function allDocuments(
         },
       }),
     )) as unknown as DocumentPage;
-    items.push(...page.items);
-    if (!page.page.hasMore || !page.page.nextCursor) break;
+    documents.push(...page.items);
+    if (!page.page.hasMore || !page.page.nextCursor) {
+      return { documents, hasMoreThanLoaded: false };
+    }
     cursor = page.page.nextCursor;
   }
-  return items;
+  return { documents, hasMoreThanLoaded: true };
+}
+
+function countLabel(dossier: LoadedDossier): string {
+  const count = String(dossier.documents.length);
+  return dossier.hasMoreThanLoaded ? `${count}+` : count;
 }

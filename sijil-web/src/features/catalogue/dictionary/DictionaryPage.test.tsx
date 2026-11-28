@@ -121,6 +121,30 @@ describe("Dictionnaire de métadonnées (ADR 0038)", () => {
     expect(await within(stale).findByRole("alert")).toHaveTextContent("Rechargez le terme");
   });
 
+  it("demande une confirmation avant de retirer un terme, et rien ne part si on annule", async () => {
+    stub.session = DATA_OFFICE;
+    const user = userEvent.setup();
+    renderAt("/catalogue/dictionnaire");
+
+    await user.click(await screen.findByRole("button", { name: "Modifier numeroCin" }));
+    const form = await screen.findByRole("form", { name: "Modification du terme numeroCin" });
+    await user.selectOptions(within(form).getByLabelText(/^Statut/), "RETIRE");
+    await user.click(within(form).getByRole("button", { name: "Enregistrer" }));
+
+    const confirmation = screen.getByRole("alertdialog", { name: /^Retirer le terme / });
+    expect(confirmation).toHaveTextContent("Cette action est définitive");
+    await user.click(within(confirmation).getByRole("button", { name: "Annuler" }));
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    expect(stub.terms.find((t) => t.code === "numeroCin")?.status).toBe("ACTIF");
+
+    await user.click(within(form).getByRole("button", { name: "Enregistrer" }));
+    await user.click(
+      within(screen.getByRole("alertdialog")).getByRole("button", { name: "Retirer le terme" }),
+    );
+    await screen.findByRole("status");
+    expect(stub.terms.find((t) => t.code === "numeroCin")?.status).toBe("RETIRE");
+  });
+
   it("contrôle un terme comme le contrat avant l'envoi", () => {
     const base = {
       code: "numeroCin",

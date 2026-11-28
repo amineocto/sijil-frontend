@@ -1,4 +1,5 @@
 export { Button, type ButtonProps, type ButtonVariant } from "@/shared/ui/Button";
+export { ConfirmDialog } from "@/shared/ui/ConfirmDialog";
 export {
   CheckboxField,
   FileField,

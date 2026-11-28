@@ -9,7 +9,7 @@ import { api, call, isApiError, type Schemas } from "@/shared/api";
 import { Page } from "@/shared/ui/page";
 import { QueryState } from "@/shared/QueryState";
 import { canContributeToCatalogue, canReview, useSession } from "@/shared/session";
-import { Button, Heading, Notice, Panel, Tag, TextField } from "@/shared/ui";
+import { Button, ConfirmDialog, Heading, Notice, Panel, Tag, TextField } from "@/shared/ui";
 import {
   cleaned,
   problemsOf,
@@ -17,6 +17,7 @@ import {
   type Definition,
 } from "@/features/catalogue/requirements/RequirementSetForm";
 import { CODE_HINT, idProblem, UPPER_CODE } from "@/shared/validation";
+import { useRefusedSubmit } from "@/shared/refusedSubmit";
 
 type RequirementSet = Schemas["RequirementSet"];
 
@@ -68,7 +69,13 @@ function Editor({ set }: { set: RequirementSet | undefined }) {
   const editable = draft && canContributeToCatalogue(session.data, set?.parcours);
   const codeProblem =
     set === undefined ? idProblem(code, UPPER_CODE, { hint: CODE_HINT }) : undefined;
-  const valid = !codeProblem && Object.keys(problemsOf(definition)).length === 0;
+  const problemCount = (codeProblem ? 1 : 0) + Object.keys(problemsOf(definition)).length;
+  const valid = problemCount === 0;
+  const {
+    container: editorRef,
+    refuse,
+    summary: problemSummary,
+  } = useRefusedSubmit<HTMLDivElement>(problemCount);
 
   const save = useMutation({
     mutationFn: (d: Definition) =>
@@ -89,6 +96,7 @@ function Editor({ set }: { set: RequirementSet | undefined }) {
             }),
           ),
     onSuccess: (saved) => {
+      setHasUnsavedChanges(false);
       void queries.invalidateQueries({ queryKey: ["requirement-sets"] });
       void navigate(`/catalogue/exigences/${saved.code}/versions/${String(saved.version)}`, {
         replace: true,
@@ -112,6 +120,8 @@ function Editor({ set }: { set: RequirementSet | undefined }) {
     },
   });
   const simulate = useMutation({ mutationFn: evaluate });
+  const [confirmingPublication, setConfirmingPublication] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   return (
     <Page
@@ -120,25 +130,31 @@ function Editor({ set }: { set: RequirementSet | undefined }) {
       width="wide"
     >
       <Panel className="flex flex-col gap-4">
-        {set === undefined && (
-          <TextField
-            label="Code du jeu"
-            description="Majuscules, chiffres et _ ; par exemple CREDIT_IMMO_PARTICULIER"
-            required
-            maxLength={64}
-            error={checked ? codeProblem : undefined}
-            value={code}
-            onChange={(event) => {
-              setCode(event.currentTarget.value.toUpperCase());
+        <div ref={editorRef} className="flex flex-col gap-4">
+          {set === undefined && (
+            <TextField
+              label="Code du jeu"
+              description="Majuscules, chiffres et _ ; par exemple CREDIT_IMMO_PARTICULIER"
+              required
+              maxLength={64}
+              error={checked ? codeProblem : undefined}
+              value={code}
+              onChange={(event) => {
+                setCode(event.currentTarget.value.toUpperCase());
+              }}
+            />
+          )}
+          <RequirementSetForm
+            value={definition}
+            onChange={(next) => {
+              setDefinition(next);
+              setHasUnsavedChanges(true);
             }}
+            readOnly={!editable}
+            showErrors={checked}
           />
-        )}
-        <RequirementSetForm
-          value={definition}
-          onChange={setDefinition}
-          readOnly={!editable}
-          showErrors={checked}
-        />
+        </div>
+        {problemSummary}
         {save.error && <Problem error={save.error} title="Enregistrement refusé" />}
         {publish.error && <Problem error={publish.error} title="Publication refusée" />}
         <div className="flex flex-wrap gap-3">
@@ -149,6 +165,7 @@ function Editor({ set }: { set: RequirementSet | undefined }) {
               onClick={() => {
                 setChecked(true);
                 if (valid) save.mutate(cleaned(definition));
+                else refuse();
               }}
             >
               Enregistrer le brouillon
@@ -158,14 +175,38 @@ function Editor({ set }: { set: RequirementSet | undefined }) {
             <Button
               variant="secondary"
               loading={publish.isPending}
+              disabled={hasUnsavedChanges}
               onClick={() => {
-                publish.mutate(set);
+                setConfirmingPublication(true);
               }}
             >
               Publier
             </Button>
           )}
         </div>
+        {set?.status === "BROUILLON" && canReview(session.data) && hasUnsavedChanges && (
+          <p className="text-sm text-gray-600">
+            Enregistrez le brouillon avant de publier : la publication porte sur la version
+            enregistrée.
+          </p>
+        )}
+        {confirmingPublication && set && (
+          <ConfirmDialog
+            title={`Publier la version ${String(set.version)} du jeu ${set.code} ?`}
+            confirmLabel="Publier la version"
+            pending={publish.isPending}
+            onCancel={() => {
+              setConfirmingPublication(false);
+            }}
+            onConfirm={() => {
+              setConfirmingPublication(false);
+              publish.mutate(set);
+            }}
+          >
+            Une version publiée ne se modifie plus : elle s&apos;applique aux évaluations de
+            complétude du parcours {set.parcours} et remplace la version publiée précédente.
+          </ConfirmDialog>
+        )}
       </Panel>
       {canContributeToCatalogue(session.data) && (
         <Panel className="flex flex-col gap-4">

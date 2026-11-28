@@ -37,9 +37,14 @@ jobs:
         with:
           node-version: "22"
           cache: npm
-      # @awb/ui n'est pas versionné (B-032) : le paquet doit être fourni à la CI.
+      # @awb/ui n'est pas versionné (B-032) : tant que le paquet n'est pas fourni à la CI (registre
+      # interne ou artefact privé), cette étape échoue. Le contrôle du contrat est sauté ici, faute
+      # de dépôt sijil-kit voisin : il ne tourne qu'en local.
       - name: make install
         run: make install
+      - name: Navigateur des scénarios Playwright
+        run: npx playwright install --with-deps chromium
+        working-directory: sijil-web
       - name: npm run ci
         run: npm run ci
 

@@ -55,7 +55,9 @@ test("un contributeur rédige et soumet, un réviseur approuve, le type est publ
       .getByRole("row", { name: /Libellé › français/ }),
   ).toContainText("Carte nationale d'identité électronique");
   expect(await seriousViolations(page)).toEqual([]);
-  await page.getByRole("button", { name: "Enregistrer la revue" }).click();
+  await page.getByRole("radio", { name: "Approuver et publier" }).check();
+  await page.getByRole("button", { name: "Approuver et publier" }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Publier la version" }).click();
   await expect(page.getByRole("status")).toContainText("Publié");
 
   // Le type est publié : il quitte la file de revue, la v2 est la version publiée.

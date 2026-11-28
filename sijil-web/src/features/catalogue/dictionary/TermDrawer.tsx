@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { LoadingState } from "@sijil/ui-kit";
 import { api, call, isApiError, type Schemas } from "@/shared/api";
-import { Button, Notice, SelectField, TextAreaField, TextField } from "@/shared/ui";
+import { Button, ConfirmDialog, Notice, SelectField, TextAreaField, TextField } from "@/shared/ui";
 import { Drawer } from "@/shared/ui/Drawer";
 import { ChipsField } from "@/features/catalogue/draft-editor/rubrics/controls";
 import {
@@ -13,6 +13,7 @@ import {
   type TermFormat,
 } from "@/features/catalogue/dictionary/terms";
 import { at, textProblem, type Problems } from "@/shared/validation";
+import { useRefusedSubmit } from "@/shared/refusedSubmit";
 
 const CODE = /^[a-z][A-Za-z0-9]{0,63}$/;
 
@@ -240,6 +241,14 @@ function TermForm({
     setV((previous) => ({ ...previous, ...patch }));
   };
   const problems = termProblems(v, !current);
+  const {
+    container: formRef,
+    refuse,
+    summary: problemSummary,
+  } = useRefusedSubmit(Object.keys(problems).length);
+  const [confirmingWithdrawal, setConfirmingWithdrawal] = useState(false);
+  const withdrawsTheTerm =
+    current !== undefined && current.status !== "RETIRE" && v.status === "RETIRE";
   const shown = (key: string) => (checked ? problems[key] : undefined);
 
   const save = useMutation({
@@ -265,6 +274,7 @@ function TermForm({
 
   return (
     <form
+      ref={formRef}
       aria-label={
         readOnly && current
           ? `Terme ${current.code}`
@@ -277,7 +287,12 @@ function TermForm({
       onSubmit={(e) => {
         e.preventDefault();
         setChecked(true);
-        if (Object.keys(problems).length === 0) save.mutate();
+        if (Object.keys(problems).length > 0) {
+          refuse();
+          return;
+        }
+        if (withdrawsTheTerm) setConfirmingWithdrawal(true);
+        else save.mutate();
       }}
     >
       <fieldset disabled={readOnly} className="flex min-w-0 flex-col gap-4">
@@ -441,6 +456,7 @@ function TermForm({
           />
         )}
       </fieldset>
+      {problemSummary}
       {save.error && (
         <Notice tone="danger" role="alert" title="Enregistrement refusé">
           {isApiError(save.error) ? save.error.message : "Une erreur est survenue."}
@@ -456,6 +472,24 @@ function TermForm({
           {readOnly ? "Fermer" : "Annuler"}
         </Button>
       </div>
+      {confirmingWithdrawal && current && (
+        <ConfirmDialog
+          title={`Retirer le terme ${current.labelFr} ?`}
+          confirmLabel="Retirer le terme"
+          danger
+          pending={save.isPending}
+          onCancel={() => {
+            setConfirmingWithdrawal(false);
+          }}
+          onConfirm={() => {
+            setConfirmingWithdrawal(false);
+            save.mutate();
+          }}
+        >
+          Un terme retiré ne peut plus être modifié ni choisi dans un type de document. Les types
+          déjà publiés qui l&apos;emploient ne changent pas. Cette action est définitive.
+        </ConfirmDialog>
+      )}
     </form>
   );
 }

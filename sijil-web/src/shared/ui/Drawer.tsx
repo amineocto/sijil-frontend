@@ -1,8 +1,6 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import { CloseIcon } from "@/shared/ui/icons";
-
-const FOCUSABLE =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+import { useModalFocus } from "@/shared/ui/modal";
 
 /**
  * Volet latéral modal, à l'image du `SideDrawer` d'@awb/ui (bandeau blanc, titre, croix, ombre),
@@ -29,26 +27,7 @@ export function Drawer({
   children: ReactNode;
 }) {
   const panel = useRef<HTMLDivElement>(null);
-  const close = useRef(onClose);
-  useEffect(() => {
-    close.current = onClose;
-  }, [onClose]);
-  useEffect(() => {
-    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    panel.current?.querySelector<HTMLElement>("[data-autofocus]")?.focus();
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        close.current();
-        return;
-      }
-      if (event.key === "Tab" && panel.current) trapFocus(panel.current, event);
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("keydown", onKeyDown);
-      opener?.focus();
-    };
-  }, []);
+  useModalFocus(panel, onClose);
 
   return (
     <div
@@ -78,19 +57,4 @@ export function Drawer({
       </div>
     </div>
   );
-}
-
-/** Garde le focus dans le volet : Tab sur le dernier élément revient au premier, et inversement. */
-function trapFocus(container: HTMLElement, event: KeyboardEvent) {
-  const items = [...container.querySelectorAll<HTMLElement>(FOCUSABLE)];
-  const first = items[0];
-  const last = items.at(-1);
-  const active = document.activeElement;
-  if (event.shiftKey && (active === first || !container.contains(active))) {
-    event.preventDefault();
-    last?.focus();
-  } else if (!event.shiftKey && (active === last || !container.contains(active))) {
-    event.preventDefault();
-    first?.focus();
-  }
 }

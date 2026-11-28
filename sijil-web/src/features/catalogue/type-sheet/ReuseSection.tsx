@@ -5,6 +5,7 @@ import { api, call, isApiError, type Schemas } from "@/shared/api";
 import { canContributeToCatalogue, useSession } from "@/shared/session";
 import { Button, Heading, Notice, Panel, TextAreaField } from "@/shared/ui";
 import { queryKeys } from "@/shared/queryKeys";
+import { useRefusedSubmit } from "@/shared/refusedSubmit";
 
 /**
  * Parcours qui réutilisent le type, et déclaration de réutilisation par le parcours de
@@ -45,6 +46,7 @@ function ReuseForm({ code, parcours }: { code: string; parcours: string }) {
   const queryClient = useQueryClient();
   const [purpose, setPurpose] = useState("");
   const [error, setError] = useState<string>();
+  const { container: formRef, refuse, summary: problemSummary } = useRefusedSubmit(error ? 1 : 0);
   const [idempotencyKey] = useState(() => crypto.randomUUID());
   const declare = useMutation({
     mutationFn: (body: Schemas["NewReuse"]) =>
@@ -66,6 +68,7 @@ function ReuseForm({ code, parcours }: { code: string; parcours: string }) {
   }
   return (
     <form
+      ref={formRef}
       noValidate
       className="flex max-w-xl flex-col gap-4"
       onSubmit={(e) => {
@@ -73,6 +76,7 @@ function ReuseForm({ code, parcours }: { code: string; parcours: string }) {
         const text = purpose.trim();
         if (text === "" || text.length > 500) {
           setError("Finalité obligatoire, 500 caractères au plus");
+          refuse();
           return;
         }
         setError(undefined);
@@ -89,6 +93,7 @@ function ReuseForm({ code, parcours }: { code: string; parcours: string }) {
           setPurpose(e.currentTarget.value);
         }}
       />
+      {problemSummary}
       <div>
         <Button type="submit" loading={declare.isPending}>
           Déclarer la réutilisation
