@@ -13,8 +13,9 @@ ADR du backend qui concernent le front, à lire dans `sijil-kit/docs/adr/` :
 
 | ADR | Sujet |
 |---|---|
-| 0032 | BFF unique `sijil-bff` et front unique `sijil-web` |
+| 0032 | BFF unique `admin-channel` et front unique `sijil-web` |
 | 0038 | Dictionnaire de métadonnées tenu par le Data Office |
 | 0039 | Politique de rétention et base légale facultatives |
 | 0041 | Administration des parcours (proposée) |
 | 0042 | Séparation du front dans le dépôt `sijil-frontend` |
+| 0043 | Familles `omnichannel` et `channel` ; le BFF s'appelle `admin-channel` (son client Keycloak reste `sijil-bff`) |

@@ -35,8 +35,8 @@ contract-sync: ## Recopie le contrat du BFF depuis ../sijil-kit puis régénère
 dev: ## Front en développement sur les bouchons MSW
 	npm run dev -w sijil-web
 
-dev-bff: ## Front en développement contre le BFF local (make run-sijil-bff dans sijil-kit)
+dev-bff: ## Front en développement contre le BFF local (make run-admin-channel dans sijil-kit)
 	VITE_MOCKS=false npm run dev -w sijil-web
 
-build: ## Build de production, embarqué par sijil-bff (voir sijil-kit, sijil-bff/pom.xml)
+build: ## Build de production, embarqué par admin-channel (voir sijil-kit, channel/admin-channel/pom.xml)
 	npm run build -w sijil-web

@@ -2,7 +2,7 @@ import type { MetadataField } from "@/shared/metadata";
 
 /**
  * Contrôles faits dans le navigateur avant tout envoi : les mêmes règles que le serveur (contrats
- * `sijil-bff.yaml` et `sijil-api.yaml`, schéma de métadonnées du type), dites en mots de métier.
+ * `admin-channel.yaml` et `sijil-api.yaml`, schéma de métadonnées du type), dites en mots de métier.
  * Le serveur reste juge : ses refus s'affichent aussi, rattachés au champ.
  */
 export type Problems = Record<string, string>;

@@ -15,7 +15,7 @@ import {
 const PAGE_SIZE = 20;
 const CORRELATION = { "X-Correlation-Id": "demo-correlation-id" };
 
-/** Bouchon des écrans du catalogue de `sijil-bff` (`contracts/sijil-bff.yaml`, ADR 0032). */
+/** Bouchon des écrans du catalogue de `admin-channel` (`contracts/admin-channel.yaml`, ADR 0032). */
 export class CatalogueStub {
   types: MockType[] = initialTypes();
   session: Schemas["Session"] = SESSION;

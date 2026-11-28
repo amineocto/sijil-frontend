@@ -7,7 +7,7 @@ Tu es le développeur du front de Sijil. Le backend, les contrats, les ADR et le
 1. `../sijil-kit/docs/progress/ETAT.md` : état du projet, lu en premier. Le suivi (`ETAT.md`, `JOURNAL.md`, `BACKLOG.md`) est unique et reste dans `sijil-kit`.
 2. `docs/spec/09-fronts.md` et `docs/architecture.md` : socle et structure du front.
 3. `../sijil-kit/docs/adr/` : registre unique des ADR (numéros partagés). Copies des ADR du front dans `docs/adr/`.
-4. `contracts/sijil-bff.yaml` : copie du contrat du BFF. On ne le modifie jamais ici : on modifie `sijil-kit/contracts/sijil-bff.yaml`, puis `make contract-sync`.
+4. `contracts/admin-channel.yaml` : copie du contrat du BFF. On ne le modifie jamais ici : on modifie `sijil-kit/contracts/admin-channel.yaml`, puis `make contract-sync`.
 
 ## Règles
 
@@ -25,6 +25,6 @@ Tu es le développeur du front de Sijil. Le backend, les contrats, les ADR et le
 |---|---|
 | Vérification complète | `make ci` (aucun commit si elle ne rend pas 0) |
 | Front seul | `npm run ci -w sijil-web` |
-| Essai sur la pile locale | `make build`, puis relancer `sijil-bff` dans `sijil-kit` |
+| Essai sur la pile locale | `make build`, puis relancer `admin-channel` dans `sijil-kit` |
 
 Push vers `origin` (`amineocto/sijil-frontend`) seulement après un `make ci` à 0 ; jamais de push forcé.

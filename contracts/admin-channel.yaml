@@ -1,8 +1,11 @@
 openapi: 3.1.0
 info:
-  title: sijil-bff
-  version: 2.2.0
+  title: admin-channel
+  version: 2.2.1
   description: |
+    2.2.1 : le BFF s'appelle `admin-channel` (module `channel/admin-channel`, ADR 0043) ; aucune
+    opération ne change.
+
     BFF unique du front `sijil-web` (documents et catalogue), endpoints par écran (09-fronts.md,
     L4E-02, L3B-02, ADR 0032). 2.0.0 : la session réunit les rôles des documents et du catalogue,
     et `parcours` devient une liste ; les écrans du catalogue (`/api/parcours`, `/api/types/**`,

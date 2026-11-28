@@ -1,6 +1,6 @@
 # 09 — Socle commun des fronts
 
-Un seul front, **sijil-web**, servi par le BFF unique `sijil-bff` (ADR 0032) : documents (lot 4 et suivants) et catalogue des types sous `/catalogue` (lot 3, ancien `sijil-catalogue-web`). Il s'appuie sur `ui-kit/`.
+Un seul front, **sijil-web**, servi par le BFF unique `admin-channel` (ADR 0032) : documents (lot 4 et suivants) et catalogue des types sous `/catalogue` (lot 3, ancien `sijil-catalogue-web`). Il s'appuie sur `ui-kit/`.
 
 ## Principes
 

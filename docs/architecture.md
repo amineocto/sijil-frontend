@@ -5,13 +5,13 @@
 ## Vue d'ensemble
 
 ```text
-Navigateur ── même origine ──> sijil-bff (sijil-kit) ──> sijil-api, sijil-catalogue, vision360-api
+Navigateur ── même origine ──> admin-channel (sijil-kit) ──> sijil-api, sijil-catalogue, vision360-api
    │                              │
    │  fichiers statiques          └─ session OIDC (Keycloak), CSRF, en-têtes de sécurité
    └─ /api/* (JSON)
 ```
 
-- Le front ne parle qu'à `sijil-bff`, sur la même origine. Aucun jeton dans le navigateur : la session est celle du BFF, un 401 relance la connexion.
+- Le front ne parle qu'à `admin-channel`, sur la même origine. Aucun jeton dans le navigateur : la session est celle du BFF, un 401 relance la connexion.
 - Le front n'est pas une barrière de sécurité : il masque ce que l'utilisateur ne peut pas faire, le BFF refuse.
 - Seul l'envoi d'un fichier va directement au stockage, par l'URL présignée d'une session de dépôt (quarantaine, 5 minutes).
 
@@ -20,7 +20,7 @@ Navigateur ── même origine ──> sijil-bff (sijil-kit) ──> sijil-api,
 ```text
 sijil-web/src/
   app/          routes (routes.tsx), Layout (menu, en-tête, visite guidée), styles globaux
-  api/          schema.d.ts, généré depuis contracts/sijil-bff.yaml : ne jamais éditer
+  api/          schema.d.ts, généré depuis contracts/admin-channel.yaml : ne jamais éditer
   features/     une fonctionnalité par dossier, qui n'importe pas une autre fonctionnalité
   shared/       transverse : client API, session et profils, libellés, champs, ui/ (composants, icônes)
   mocks/        bouchons MSW du BFF (développement et tests)

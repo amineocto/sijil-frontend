@@ -39,7 +39,7 @@ function problem(status: number, detail: string, errors?: { field: string; code:
 }
 
 /**
- * Bouchon de `sijil-bff` (`contracts/sijil-bff.yaml`) : documents, finalité exigée pour un autre
+ * Bouchon de `admin-channel` (`contracts/admin-channel.yaml`) : documents, finalité exigée pour un autre
  * parcours, dépôt avec envoi direct et quarantaine simulée (admis au deuxième suivi), versions,
  * métadonnées, suppression logique et restauration.
  */

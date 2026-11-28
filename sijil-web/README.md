@@ -4,7 +4,7 @@ Sijil web (sous-lot **4E**, L4E-03 à L4E-05) : recherche, fiche document, dép�
 
 ## BFF et session
 
-- Le front parle à `sijil-bff` (contrat `contracts/sijil-bff.yaml` (copie du dépôt sijil-kit)) sur la même origine : connexion OIDC par le BFF, un 401 relance la connexion, « Se déconnecter » close la session du BFF puis celle de l'IdP. Aucun jeton dans le navigateur.
+- Le front parle à `admin-channel` (contrat `contracts/admin-channel.yaml` (copie du dépôt sijil-kit)) sur la même origine : connexion OIDC par le BFF, un 401 relance la connexion, « Se déconnecter » close la session du BFF puis celle de l'IdP. Aucun jeton dans le navigateur.
 - L'aperçu est lu par le BFF (jamais d'URL présignée de lecture côté navigateur) puis affiché depuis la mémoire du navigateur. Seul l'envoi d'un fichier va directement vers la quarantaine, par l'URL présignée de la session (un objet, 5 minutes).
 - La finalité (document d'un autre parcours) et le motif de bris de glace (document restreint) sont saisis par l'utilisateur et relayés en en-têtes, jamais dans l'adresse.
 - **Données de démonstration** : en développement et dans les tests, le BFF est remplacé par des bouchons MSW (`src/mocks`), sans aucune donnée réelle ; `?demo=lecteur` change d'utilisateur. Le service worker de MSW (`public/`) n'est jamais livré dans le build de production.
@@ -17,7 +17,7 @@ Sijil web (sous-lot **4E**, L4E-03 à L4E-05) : recherche, fiche document, dép�
 | Régénérer le client depuis le contrat                                                         | `npm run api -w sijil-web` |
 | Vérification complète (contrat, lint, format, types, tests et axe, build, budget, Playwright) | `npm run ci -w sijil-web`  |
 
-Avec le BFF réel : `VITE_MOCKS=false npm run dev -w sijil-web` (proxy vers `SIJIL_BFF_URL`, par défaut `http://localhost:8082`, lancé par `make run-sijil-bff`).
+Avec le BFF réel : `VITE_MOCKS=false npm run dev -w sijil-web` (proxy vers `SIJIL_BFF_URL`, par défaut `http://localhost:8082`, lancé par `make run-admin-channel`).
 
 ## Écrans
 

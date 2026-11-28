@@ -2,7 +2,7 @@
 
 Front unique de **Sijil**, la plateforme documentaire d'AWB : recherche et dossiers clients, fiche document, dépôt, complétude, et catalogue des types (plan de classement, exigences, dictionnaire de métadonnées, revues, partage 360).
 
-Le backend vit dans le dépôt voisin **[sijil-kit](https://github.com/amineocto/sijil)** : API, catalogue, worker et `sijil-bff`, le BFF qui sert ce front et porte la session (ADR 0032).
+Le backend vit dans le dépôt voisin **[sijil-kit](https://github.com/amineocto/sijil)** : API, catalogue, worker et `admin-channel`, le BFF qui sert ce front et porte la session (ADR 0032).
 
 ```text
 workspace-ged/
@@ -17,7 +17,7 @@ workspace-ged/
 | `sijil-web/` | L'application React (Vite, TypeScript strict, TanStack Query, React Router, React Hook Form + Zod) |
 | `ui-kit/` | `@sijil/ui-kit` : thème, composants d'état (chargement, vide, erreur), client HTTP avec CSRF, i18n |
 | `vendor/` | Paquet `@awb/ui` construit depuis le dépôt de la banque, **jamais versionné** (ADR 0037, B-032) |
-| `contracts/sijil-bff.yaml` | Copie du contrat du BFF ; la source est `sijil-kit/contracts/sijil-bff.yaml` |
+| `contracts/admin-channel.yaml` | Copie du contrat du BFF ; la source est `sijil-kit/contracts/admin-channel.yaml` |
 | `docs/` | Documentation du front : architecture, socle commun, ADR propres au front |
 
 ## Démarrer
@@ -46,7 +46,7 @@ make dev-bff
 
 ## Lien avec le BFF
 
-`sijil-bff` embarque le build de ce dépôt (`sijil-web/dist`) dans ses ressources statiques. Il le lit dans `../sijil-frontend/sijil-web/dist` par défaut (propriété Maven `sijil.web.dist` dans `sijil-kit/apps/sijil-bff/pom.xml`). Ordre de livraison : `make build` ici, puis le build du BFF dans `sijil-kit`.
+`admin-channel` embarque le build de ce dépôt (`sijil-web/dist`) dans ses ressources statiques. Il le lit dans `../sijil-frontend/sijil-web/dist` par défaut (propriété Maven `sijil.web.dist` dans `sijil-kit/channel/admin-channel/pom.xml`). Ordre de livraison : `make build` ici, puis le build du BFF dans `sijil-kit`.
 
 ## Documentation
 
