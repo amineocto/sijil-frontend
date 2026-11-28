@@ -18,7 +18,7 @@ jobs:
     name: Secrets (gitleaks)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       - name: gitleaks (historique et arbre de travail)
@@ -32,7 +32,7 @@ jobs:
     name: Front (contrat, lint, types, tests, axe, build, Playwright)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: "22"
@@ -52,7 +52,7 @@ jobs:
     name: Dépendances vulnérables (Trivy)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Trivy (HIGH et CRITICAL bloquants)
         run: |
           docker run --rm -v "$PWD:/repo" -w /repo aquasec/trivy:0.76.2@sha256:8f6bb947dbc528902e11f2f5be52f7b519f6a39d5d148f41166f2040499768fb \
