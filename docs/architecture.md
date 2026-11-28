@@ -49,9 +49,14 @@ ui-kit/src/     @sijil/ui-kit : thème, états, client HTTP et ApiError, i18n
 
 La visite guidée (`features/tour`) présente les écrans selon le profil de l'utilisateur.
 
+Une adresse inconnue affiche « Page introuvable » dans la coquille (`app/NotFoundPage.tsx`). Un écran qui échoue au rendu ou au chargement affiche `app/RouteError.tsx`, avec « Recharger la page », à la place de l'écran par défaut du routeur.
+
+**Dossiers récemment ouverts** (`shared/recentDossiers.ts`) : gardés par utilisateur, dans le stockage de session du navigateur seulement, et effacés à la déconnexion. Ce sont des identifiants de clients : rien n'en est écrit dans le stockage durable.
+
 ## Données
 
 - **TanStack Query** pour tout appel au BFF. Clés de cache nommées par ressource (`["editor", code]`, `["requirement-sets"]`…) ; une écriture invalide les clés concernées.
+- **Clés de cache** : une ressource, une clé. Les deux ressources d'un type ont chacune la leur dans `shared/queryKeys.ts` : la fiche du catalogue (`/api/types/{code}`) et le type publié servi au dépôt (`/api/document-types/{code}`). Une revue approuvée invalide les deux.
 - **Client** : `openapi-fetch` typé par `src/api/schema.d.ts`. `call()` (`shared/api.ts`) transforme une réponse en échec en `ApiError` (statut, message, `correlationId`, erreurs par champ).
 - **États** : `QueryState` rend chargement, erreur (avec référence) et, sur demande, un affichage dédié au 404.
 - **Concurrence** : écritures avec `If-Match` (ETag) ; un 412 est expliqué à l'utilisateur.

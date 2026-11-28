@@ -4,6 +4,7 @@ import { ErrorState } from "@sijil/ui-kit";
 import { api, call, isApiError, type Schemas } from "@/shared/api";
 import { canContributeToCatalogue, useSession } from "@/shared/session";
 import { Button, Heading, Notice, Panel, TextAreaField } from "@/shared/ui";
+import { queryKeys } from "@/shared/queryKeys";
 
 /**
  * Parcours qui réutilisent le type, et déclaration de réutilisation par le parcours de
@@ -53,7 +54,8 @@ function ReuseForm({ code, parcours }: { code: string; parcours: string }) {
           body,
         }),
       ),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["type", code] }),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: queryKeys.catalogueType(code) }),
   });
   if (declare.isSuccess) {
     return (

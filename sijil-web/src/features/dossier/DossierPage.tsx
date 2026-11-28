@@ -14,7 +14,7 @@ import {
   type Validity,
 } from "@/features/dossier/dossier";
 import { dossierPath, partyTypeOf } from "@/features/dossier/paths";
-import { rememberDossier } from "@/features/dossier/recents";
+import { rememberDossier } from "@/shared/recentDossiers";
 import { useTypeIndex } from "@/features/dossier/typeIndex";
 import { accessHeaders, type Access } from "@/shared/access";
 import { api, call } from "@/shared/api";
@@ -89,9 +89,10 @@ function Dossier({
     queryKey: ["dossier", partyType, partyId, access],
     queryFn: () => allDocuments(partyType, partyId, access),
   });
+  const user = session.data?.user;
   useEffect(() => {
-    rememberDossier(partyType, partyId);
-  }, [partyType, partyId]);
+    rememberDossier(user, partyType, partyId);
+  }, [user, partyType, partyId]);
   const party = `${PARTY_TYPE_LABELS[partyType] ?? partyType} ${partyId}`;
   const holder =
     partyType === "COMPTE" ? "compte" : partyType === "PERSONNE" ? "titulaire" : "client";

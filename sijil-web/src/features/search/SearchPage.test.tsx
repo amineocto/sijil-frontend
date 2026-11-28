@@ -31,8 +31,8 @@ describe("Recherche", () => {
   });
 
   it("propose les dossiers récemment ouverts", async () => {
-    localStorage.setItem(
-      "sijil-dossiers-recents",
+    sessionStorage.setItem(
+      "sijil-dossiers-recents:T00002",
       JSON.stringify([{ type: "CLIENT", id: "C123456", openedAt: "2026-11-24T09:00:00Z" }]),
     );
     renderAt("/");
@@ -41,6 +41,6 @@ describe("Recherche", () => {
       "href",
       "/dossiers/client/C123456",
     );
-    localStorage.clear();
+    sessionStorage.clear();
   });
 });

@@ -3,9 +3,10 @@ import { Avatar } from "@awb/ui";
 import { Link, useNavigate } from "react-router";
 import { CompletenessPanel } from "@/features/completeness/CompletenessPanel";
 import { dossierPath } from "@/features/dossier/paths";
-import { recentDossiers } from "@/features/dossier/recents";
+import { recentDossiers } from "@/shared/recentDossiers";
 import { FullTextSearch } from "@/features/search/FullTextSearch";
 import { formatDate, PARTY_OPTIONS, PARTY_TYPE_LABELS } from "@/shared/labels";
+import { useSession } from "@/shared/session";
 import type { PartyType } from "@/shared/types";
 import { Button, SelectField, TextField } from "@/shared/ui";
 import { Page, Section } from "@/shared/ui/page";
@@ -43,7 +44,8 @@ function DossierLookup() {
   const [id, setId] = useState("");
   const [checked, setChecked] = useState(false);
   const problem = textProblem(id, { required: true, max: 64 });
-  const recents = recentDossiers();
+  const session = useSession();
+  const recents = recentDossiers(session.data?.user);
   return (
     <>
       <Section title="Ouvrir un dossier">

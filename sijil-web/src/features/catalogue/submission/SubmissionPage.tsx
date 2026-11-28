@@ -8,6 +8,7 @@ import { QueryState } from "@/shared/QueryState";
 import { RUBRIQUES, rubriqueOf } from "@/features/catalogue/shared/rubriques";
 import { Button, Notice, Panel, TextLink } from "@/shared/ui";
 import { NoDraft } from "@/features/catalogue/shared/NoDraft";
+import { queryKeys } from "@/shared/queryKeys";
 
 /** Écran « Soumission » : contrôles automatiques du serveur, erreurs par rubrique. */
 export function SubmissionPage() {
@@ -43,7 +44,7 @@ function Submission({ draft }: { draft: Schemas["Editor"] }) {
       ),
     onSuccess: (submitted) => {
       queryClient.setQueryData(["editor", draft.code], submitted);
-      void queryClient.invalidateQueries({ queryKey: ["type", draft.code] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.catalogueType(draft.code) });
     },
   });
 

@@ -15,6 +15,7 @@ import {
   serverProblems,
   textProblem,
 } from "@/shared/validation";
+import { queryKeys } from "@/shared/queryKeys";
 
 type Mode = "none" | "metadata" | "version" | "delete";
 
@@ -107,7 +108,7 @@ export function DocumentActions({ document, etag }: { document: DocumentView; et
 
 function useType(code: string) {
   return useQuery({
-    queryKey: ["type", code],
+    queryKey: queryKeys.publishedType(code),
     queryFn: () =>
       call(
         api.GET("/api/document-types/{code}", { params: { path: { code } } }),

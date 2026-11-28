@@ -49,6 +49,7 @@ import {
   definitionProblems,
   type DefinitionProblem,
 } from "@/features/catalogue/draft-editor/definitionChecks";
+import { queryKeys } from "@/shared/queryKeys";
 
 /** Écran « Éditeur de brouillon » : formulaire par rubriques, enregistrement avec `If-Match`. */
 export function EditorPage() {
@@ -95,7 +96,7 @@ function EditorForm({ initial }: { initial: Schemas["Editor"] }) {
       setUnplaced([]);
       form.reset(values);
       queryClient.setQueryData(["editor", initial.code], saved);
-      void queryClient.invalidateQueries({ queryKey: ["type", initial.code] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.catalogueType(initial.code) });
     },
     onError: (error) => {
       if (!isApiError(error)) return;

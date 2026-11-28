@@ -19,6 +19,7 @@ import {
   TextField,
   TextLink,
 } from "@/shared/ui";
+import { queryKeys } from "@/shared/queryKeys";
 
 /** Écran « Revue » : différences avec la version publiée, puis approbation ou demande de modifications. */
 export function ReviewPage() {
@@ -35,7 +36,7 @@ export function ReviewPage() {
       ),
   });
   const sheet = useQuery({
-    queryKey: ["type", code],
+    queryKey: queryKeys.catalogueType(code),
     queryFn: () => call(api.GET("/api/types/{code}", { params: { path: { code } } })),
   });
   return (
@@ -143,7 +144,9 @@ function Decision({
     onSuccess: (done) => {
       onDone(done);
       void queryClient.invalidateQueries({ queryKey: ["version", reviewed.code] });
-      void queryClient.invalidateQueries({ queryKey: ["type", reviewed.code] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.catalogueType(reviewed.code) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.publishedType(reviewed.code) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.publishedTypes });
       void queryClient.invalidateQueries({ queryKey: ["reviews"] });
     },
   });

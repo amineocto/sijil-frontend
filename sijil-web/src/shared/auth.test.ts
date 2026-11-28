@@ -1,6 +1,7 @@
 import { http, HttpResponse } from "msw";
 import { api, call, LOGIN_PATH, navigation, RETURN_KEY, takeReturnPath } from "@/shared/api";
 import { logout } from "@/shared/logout";
+import { recentDossiers, rememberDossier } from "@/shared/recentDossiers";
 import { server } from "@/test/setup";
 
 describe("Session du BFF", () => {
@@ -46,8 +47,11 @@ describe("Session du BFF", () => {
     );
     const assign = vi.spyOn(navigation, "assign").mockImplementation(() => undefined);
 
+    rememberDossier("T00002", "CLIENT", "C123456");
+
     await logout();
 
+    expect(recentDossiers("T00002")).toEqual([]);
     expect(header).toBe("jeton-csrf");
     expect(assign).toHaveBeenCalledWith("https://idp/logout?post_logout=1");
   });

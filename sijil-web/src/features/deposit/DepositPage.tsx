@@ -32,6 +32,7 @@ import {
   PARTY_ID_HINT,
   serverProblems,
 } from "@/shared/validation";
+import { queryKeys } from "@/shared/queryKeys";
 
 /** Intervalle de suivi de la quarantaine. */
 export const RECEPTION_POLL_MS = 2000;
@@ -46,7 +47,7 @@ export function DepositPage() {
   const session = useSession();
   const [code, setCode] = useState<string | null>(null);
   const types = useQuery({
-    queryKey: ["types"],
+    queryKey: queryKeys.publishedTypes,
     enabled: canContribute(session.data),
     queryFn: () => call(api.GET("/api/document-types")) as unknown as Promise<Items<TypeSummary>>,
   });
@@ -121,7 +122,7 @@ export function DepositPage() {
 
 function DepositForm({ code }: { code: string }) {
   const type = useQuery({
-    queryKey: ["type", code],
+    queryKey: queryKeys.publishedType(code),
     queryFn: () =>
       call(
         api.GET("/api/document-types/{code}", { params: { path: { code } } }),

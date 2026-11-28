@@ -22,6 +22,7 @@ import {
   Th,
 } from "@/shared/ui";
 import { CodeIcon, FAMILY_ICONS } from "@/shared/ui/icons";
+import { queryKeys } from "@/shared/queryKeys";
 
 type Version = Schemas["TypeVersion"];
 
@@ -29,7 +30,7 @@ type Version = Schemas["TypeVersion"];
 export function TypeSheetPage() {
   const code = useParams()["code"] ?? "";
   const sheet = useQuery({
-    queryKey: ["type", code],
+    queryKey: queryKeys.catalogueType(code),
     queryFn: () => call(api.GET("/api/types/{code}", { params: { path: { code } } })),
   });
   if (sheet.data) return <Sheet sheet={sheet.data} />;
